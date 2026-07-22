@@ -1,14 +1,9 @@
-// Initial sample transactions matching the Excel structure
-let transactions = [
-  { id: "TXN-20260722-001", date: "2026-07-22", category: "餐飲", desc: "敘敘苑燒肉", currency: "JPY", amount: 18000, payer: "A", split: "SPLIT_5050", aShare: 9000, bShare: 9000, netBowesA: 9000 },
-  { id: "TXN-20260722-002", date: "2026-07-22", category: "購物", desc: "藥妝店面膜 (B獨用)", currency: "JPY", amount: 3500, payer: "A", split: "FOR_B", aShare: 0, bShare: 3500, netBowesA: 3500 },
-  { id: "TXN-20260722-003", date: "2026-07-22", category: "交通", desc: "Suica 卡增值 (A自己)", currency: "JPY", amount: 5000, payer: "A", split: "FOR_A", aShare: 5000, bShare: 0, netBowesA: 0 },
-  { id: "TXN-20260722-004", date: "2026-07-23", category: "住宿", desc: "東京飯店兩晚住宿", currency: "HKD", amount: 2400, payer: "B", split: "SPLIT_5050", aShare: 1200, bShare: 1200, netBowesA: -1200 },
-  { id: "TXN-20260722-005", date: "2026-07-23", category: "餐飲", desc: "築地市場海鮮丼", currency: "JPY", amount: 6000, payer: "B", split: "SPLIT_5050", aShare: 3000, bShare: 3000, netBowesA: -3000 }
-];
+// 🔗 Google Apps Script Deployment URL
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbw3_rdPUNs_QCFVZYDw9tp50sWuJ9P_BuJAUz8DyX4kwrpFJ-U101cquz2ZvMIm5j8mxQ/exec";
 
-// Budget settings state
-let budgets = JSON.parse(localStorage.getItem('trip_budgets')) || {
+// Local State
+let transactions = [];
+let budgets = {
   A: { JPY: 150000, HKD: 5000 },
   B: { JPY: 150000, HKD: 5000 }
 };
@@ -22,15 +17,17 @@ const categoryIcons = {
   '雜項': '📦'
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Set default date to today
+document.addEventListener('DOMContentLoaded', async () => {
+  // Set default date picker to today
   document.getElementById('txn-date').valueAsDate = new Date();
 
   initModalEvents();
-  renderAll();
 
-  // Add transaction form submission
-  document.getElementById('txn-form').addEventListener('submit', (e) => {
+  // Load latest budget & transaction records from Google Sheets
+  await loadDataFromGAS();
+
+  // Handle new transaction form submission
+  document.getElementById('txn-form').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const date = document.getElementById('txn-date').value;
@@ -65,14 +62,106 @@ document.addEventListener('DOMContentLoaded', () => {
       date, category, desc, currency, amount, payer, split, aShare, bShare, netBowesA
     };
 
+    // Optimistically update UI
     transactions.unshift(newTxn);
     renderAll();
 
-    // Reset fields
+    // Reset input fields
     document.getElementById('txn-desc').value = '';
     document.getElementById('txn-amount').value = '';
+
+    // Async sync to Google Sheets
+    await syncTransactionToGAS(newTxn);
   });
 });
+
+/**
+ * 📡 Fetch initial data from Google Sheets (GET)
+ */
+async function loadDataFromGAS() {
+  try {
+    const res = await fetch(GAS_WEB_APP_URL);
+    const data = await res.json();
+
+    if (data.status === 'SUCCESS') {
+      // Parse Budgets sheet data
+      if (data.budgets && data.budgets.length > 0) {
+        data.budgets.forEach(row => {
+          if (row.person && row.currency) {
+            budgets[row.person][row.currency] = parseFloat(row.budget) || 0;
+          }
+        });
+      }
+
+      // Parse Transactions sheet data
+      if (data.transactions && data.transactions.length > 0) {
+        transactions = data.transactions.map(row => ({
+          id: row.transaction_id,
+          date: row.date ? String(row.date).substring(0, 10) : '',
+          category: row.category,
+          desc: row.description,
+          currency: row.currency,
+          amount: parseFloat(row.amount) || 0,
+          payer: row.payer,
+          split: row.split_mode,
+          aShare: parseFloat(row.a_share) || 0,
+          bShare: parseFloat(row.b_share) || 0,
+          netBowesA: parseFloat(row.net_b_owes_a) || 0
+        })).reverse(); // Most recent first
+      }
+    }
+  } catch (err) {
+    console.warn("Unable to load cloud data, falling back to initial state:", err);
+  } finally {
+    renderAll();
+  }
+}
+
+/**
+ * 📤 Send a new transaction to Google Sheets (POST)
+ */
+async function syncTransactionToGAS(txn) {
+  try {
+    await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' }, // Avoid CORS preflight OPTIONS request
+      body: JSON.stringify({
+        action: 'ADD_TXN',
+        transaction_id: txn.id,
+        date: txn.date,
+        category: txn.category,
+        description: txn.desc,
+        currency: txn.currency,
+        amount: txn.amount,
+        payer: txn.payer,
+        split_mode: txn.split,
+        a_share: txn.aShare,
+        b_share: txn.bShare,
+        net_b_owes_a: txn.netBowesA
+      })
+    });
+  } catch (err) {
+    console.error("Failed to sync transaction to Google Sheets:", err);
+  }
+}
+
+/**
+ * 📤 Send updated budget to Google Sheets (POST)
+ */
+async function syncBudgetsToGAS() {
+  try {
+    await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'UPDATE_BUDGETS',
+        budgets: budgets
+      })
+    });
+  } catch (err) {
+    console.error("Failed to sync budget to Google Sheets:", err);
+  }
+}
 
 function renderAll() {
   renderSummary();
@@ -96,19 +185,19 @@ function renderSummary() {
     }
   });
 
-  // Update JPY UI
+  // Render JPY Summary
   document.getElementById('spent-a-jpy').textContent = spentA.JPY.toLocaleString();
   document.getElementById('rem-a-jpy').textContent = (budgets.A.JPY - spentA.JPY).toLocaleString();
   document.getElementById('spent-b-jpy').textContent = spentB.JPY.toLocaleString();
   document.getElementById('rem-b-jpy').textContent = (budgets.B.JPY - spentB.JPY).toLocaleString();
 
-  // Update HKD UI
+  // Render HKD Summary
   document.getElementById('spent-a-hkd').textContent = spentA.HKD.toLocaleString();
   document.getElementById('rem-a-hkd').textContent = (budgets.A.HKD - spentA.HKD).toLocaleString();
   document.getElementById('spent-b-hkd').textContent = spentB.HKD.toLocaleString();
   document.getElementById('rem-b-hkd').textContent = (budgets.B.HKD - spentB.HKD).toLocaleString();
 
-  // Update settlement text
+  // Render Settlement Status
   let settlementHTML = [];
   ['JPY', 'HKD'].forEach(curr => {
     let val = netOwes[curr];
@@ -170,15 +259,17 @@ function initModalEvents() {
 
   closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
-  budgetForm.addEventListener('submit', (e) => {
+  budgetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     budgets.A.JPY = parseFloat(document.getElementById('budget-a-jpy-input').value) || 0;
     budgets.B.JPY = parseFloat(document.getElementById('budget-b-jpy-input').value) || 0;
     budgets.A.HKD = parseFloat(document.getElementById('budget-a-hkd-input').value) || 0;
     budgets.B.HKD = parseFloat(document.getElementById('budget-b-hkd-input').value) || 0;
 
-    localStorage.setItem('trip_budgets', JSON.stringify(budgets));
     renderSummary();
     modal.classList.add('hidden');
+
+    // Async sync updated budget back to Google Sheets
+    await syncBudgetsToGAS();
   });
 }
