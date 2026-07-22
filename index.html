@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日本旅遊記帳本</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Google Fonts: Noto Sans TC & Outfits -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <h1>🇯🇵 日本旅費記帳</h1>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="app-container">
+
+    <!-- 1. 新增消費 TAB -->
+    <section id="tab-add" class="tab-content active">
+      <div class="card">
+        <h2>新增消費記錄</h2>
+        <form id="expense-form">
+          
+          <div class="form-group">
+            <label for="date">消費日期</label>
+            <input type="date" id="date" required>
+          </div>
+
+          <div class="form-group">
+            <label for="category">消費類別</label>
+            <select id="category" required>
+              <option value="餐飲">🍱 餐飲</option>
+              <option value="交通">🚃 交通</option>
+              <option value="住宿">🏨 住宿</option>
+              <option value="購物">🛍️ 購物</option>
+              <option value="景點">🎟️ 景點</option>
+              <option value="雜項">📦 雜項</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="description">項目描述</label>
+            <input type="text" id="description" placeholder="例：敘敘苑燒肉、藥妝店" required>
+          </div>
+
+          <div class="form-group">
+            <label>幣別</label>
+            <div class="segmented-control">
+              <input type="radio" id="cur-jpy" name="currency" value="JPY" checked>
+              <label for="cur-jpy">日元 (JPY)</label>
+              
+              <input type="radio" id="cur-hkd" name="currency" value="HKD">
+              <label for="cur-hkd">港幣 (HKD)</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="amount">金額</label>
+            <input type="number" id="amount" placeholder="0" step="1" min="1" required>
+          </div>
+
+          <div class="form-group">
+            <label>付款人</label>
+            <div class="radio-tile-group">
+              <input type="radio" id="payer-a" name="payer" value="A" checked>
+              <label for="payer-a" class="radio-tile">A 付款</label>
+
+              <input type="radio" id="payer-b" name="payer" value="B">
+              <label for="payer-b" class="radio-tile">B 付款</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>分攤模式</label>
+            <div class="radio-tile-group vertical">
+              <input type="radio" id="split-5050" name="split_mode" value="SPLIT_5050" checked>
+              <label for="split-5050" class="radio-tile">
+                <strong>兩人平分 (50/50)</strong>
+                <small>各負擔 50%</small>
+              </label>
+
+              <input type="radio" id="split-fora" name="split_mode" value="FOR_A">
+              <label for="split-fora" class="radio-tile">
+                <strong>A 獨用 (FOR_A)</strong>
+                <small>全部由 A 負擔</small>
+              </label>
+
+              <input type="radio" id="split-forb" name="split_mode" value="FOR_B">
+              <label for="split-forb" class="radio-tile">
+                <strong>B 獨用 (FOR_B)</strong>
+                <small>全部由 B 負擔</small>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn-primary">
+            <span class="btn-text">儲存消費</span>
+            <span class="spinner hidden"></span>
+          </button>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. 消費明細 TAB -->
+    <section id="tab-transactions" class="tab-content">
+      <div class="section-header">
+        <h2>消費明細</h2>
+        <button id="clear-local-btn" class="btn-text-only">重置測試資料</button>
+      </div>
+      <div id="transactions-list" class="transactions-list">
+        <!-- 動態渲染明細卡片 -->
+      </div>
+    </section>
+
+    <!-- 3. 總覽與結算 TAB -->
+    <section id="tab-summary" class="tab-content">
+      
+      <!-- 結算結果總卡片 -->
+      <div class="card settlement-card">
+        <h2>⚖️ 最終結算結果</h2>
+        <div class="settlement-item" id="settlement-jpy">
+          <span class="currency-badge">JPY</span>
+          <span class="result-text">計算中...</span>
+        </div>
+        <div class="settlement-item" id="settlement-hkd">
+          <span class="currency-badge">HKD</span>
+          <span class="result-text">計算中...</span>
+        </div>
+      </div>
+
+      <!-- 預算與統計 -->
+      <div class="card">
+        <h2>💰 預算與個人支出狀況</h2>
+        
+        <div class="budget-section">
+          <h3>日元 (JPY)</h3>
+          <div class="budget-grid">
+            <div class="budget-box">
+              <p class="name">A 的 JPY</p>
+              <p class="detail">預算：<span id="budget-a-jpy">150,000</span></p>
+              <p class="detail">已用：<span id="spent-a-jpy">0</span></p>
+              <p class="remaining">剩餘：<span id="rem-a-jpy">150,000</span></p>
+            </div>
+            <div class="budget-box">
+              <p class="name">B 的 JPY</p>
+              <p class="detail">預算：<span id="budget-b-jpy">150,000</span></p>
+              <p class="detail">已用：<span id="spent-b-jpy">0</span></p>
+              <p class="remaining">剩餘：<span id="rem-b-jpy">150,000</span></p>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="budget-section">
+          <h3>港幣 (HKD)</h3>
+          <div class="budget-grid">
+            <div class="budget-box">
+              <p class="name">A 的 HKD</p>
+              <p class="detail">預算：<span id="budget-a-hkd">5,000</span></p>
+              <p class="detail">已用：<span id="spent-a-hkd">0</span></p>
+              <p class="remaining">剩餘：<span id="rem-a-hkd">5,000</span></p>
+            </div>
+            <div class="budget-box">
+              <p class="name">B 的 HKD</p>
+              <p class="detail">預算：<span id="budget-b-hkd">5,000</span></p>
+              <p class="detail">已用：<span id="spent-b-hkd">0</span></p>
+              <p class="remaining">剩餘：<span id="rem-b-hkd">5,000</span></p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tab-add">
+      <span class="icon">➕</span>
+      <span class="label">記帳</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-transactions">
+      <span class="icon">📜</span>
+      <span class="label">明細</span>
+    </button>
+    <button class="nav-btn" data-tab="tab-summary">
+      <span class="icon">📊</span>
+      <span class="label">結算</span>
+    </button>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
