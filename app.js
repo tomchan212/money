@@ -1,288 +1,184 @@
-// ==========================================
-// 1. 設定與全域變數
-// ==========================================
-// 預留 GAS 連線 URL（替換為你部署後的 Web App URL）
-const GAS_WEB_APP_URL = 'YOUR_APPS_SCRIPT_URL';
+// Initial sample transactions matching the Excel structure
+let transactions = [
+  { id: "TXN-20260722-001", date: "2026-07-22", category: "餐飲", desc: "敘敘苑燒肉", currency: "JPY", amount: 18000, payer: "A", split: "SPLIT_5050", aShare: 9000, bShare: 9000, netBowesA: 9000 },
+  { id: "TXN-20260722-002", date: "2026-07-22", category: "購物", desc: "藥妝店面膜 (B獨用)", currency: "JPY", amount: 3500, payer: "A", split: "FOR_B", aShare: 0, bShare: 3500, netBowesA: 3500 },
+  { id: "TXN-20260722-003", date: "2026-07-22", category: "交通", desc: "Suica 卡增值 (A自己)", currency: "JPY", amount: 5000, payer: "A", split: "FOR_A", aShare: 5000, bShare: 0, netBowesA: 0 },
+  { id: "TXN-20260722-004", date: "2026-07-23", category: "住宿", desc: "東京飯店兩晚住宿", currency: "HKD", amount: 2400, payer: "B", split: "SPLIT_5050", aShare: 1200, bShare: 1200, netBowesA: -1200 },
+  { id: "TXN-20260722-005", date: "2026-07-23", category: "餐飲", desc: "築地市場海鮮丼", currency: "JPY", amount: 6000, payer: "B", split: "SPLIT_5050", aShare: 3000, bShare: 3000, netBowesA: -3000 }
+];
 
-// 本地測試資料庫與初始預算
-const INITIAL_BUDGETS = {
+// Budget settings state
+let budgets = JSON.parse(localStorage.getItem('trip_budgets')) || {
   A: { JPY: 150000, HKD: 5000 },
   B: { JPY: 150000, HKD: 5000 }
 };
 
-let transactions = JSON.parse(localStorage.getItem('japan_expenses')) || [];
-
-// 類別圖示對應
-const CATEGORY_ICONS = {
+const categoryIcons = {
   '餐飲': '🍱',
-  '交通': '🚃',
+  '交通': '🚗',
   '住宿': '🏨',
   '購物': '🛍️',
   '景點': '🎟️',
   '雜項': '📦'
 };
 
-// ==========================================
-// 2. 初始化與事件監聽
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  // 設定預設日期為今天 (YYYY-MM-DD)
-  document.getElementById('date').valueToDate = new Date();
-  document.getElementById('date').value = new Date().toISOString().split('T')[0];
+  // Set default date to today
+  document.getElementById('txn-date').valueAsDate = new Date();
 
-  initNavigation();
-  initFormValidation();
-  renderApp();
-});
+  initModalEvents();
+  renderAll();
 
-// Tab 頁面切換
-function initNavigation() {
-  const navButtons = document.querySelectorAll('.nav-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
+  // Add transaction form submission
+  document.getElementById('txn-form').addEventListener('submit', (e) => {
+    e.preventDefault();
 
-  navButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTab = btn.getAttribute('data-tab');
+    const date = document.getElementById('txn-date').value;
+    const category = document.getElementById('txn-category').value;
+    const desc = document.getElementById('txn-desc').value;
+    const currency = document.getElementById('txn-currency').value;
+    const amount = parseFloat(document.getElementById('txn-amount').value);
+    const payer = document.getElementById('txn-payer').value;
+    const split = document.getElementById('txn-split').value;
 
-      navButtons.forEach(b => b.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
+    let aShare = 0, bShare = 0, netBowesA = 0;
 
-      btn.classList.add('active');
-      document.getElementById(targetTab).classList.add('active');
-    });
-  });
-
-  // 重置資料按鈕
-  document.getElementById('clear-local-btn').addEventListener('click', () => {
-    if (confirm('確定要清空本地測試資料嗎？')) {
-      transactions = [];
-      localStorage.removeItem('japan_expenses');
-      renderApp();
+    if (split === 'SPLIT_5050') {
+      aShare = amount / 2;
+      bShare = amount / 2;
+    } else if (split === 'FOR_A') {
+      aShare = amount;
+      bShare = 0;
+    } else if (split === 'FOR_B') {
+      aShare = 0;
+      bShare = amount;
     }
-  });
-}
 
-// 幣別輸入防呆 (日元整數 / 港幣小數)
-function initFormValidation() {
-  const currencyRadios = document.querySelectorAll('input[name="currency"]');
-  const amountInput = document.getElementById('amount');
-
-  currencyRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
-      if (e.target.value === 'JPY') {
-        amountInput.step = "1";
-        amountInput.placeholder = "0";
-      } else {
-        amountInput.step = "0.1";
-        amountInput.placeholder = "0.0";
-      }
-    });
-  });
-}
-
-// ==========================================
-// 3. 核心拆帳邏輯演算法
-// ==========================================
-function calculateShares(amount, payer, splitMode) {
-  let aShare = 0;
-  let bShare = 0;
-
-  if (splitMode === 'SPLIT_5050') {
-    aShare = amount / 2;
-    bShare = amount / 2;
-  } else if (splitMode === 'FOR_A') {
-    aShare = amount;
-    bShare = 0;
-  } else if (splitMode === 'FOR_B') {
-    aShare = 0;
-    bShare = amount;
-  }
-
-  // 對 A 而言的淨債務變動：
-  // 若 Payer 是 A -> B 欠 A，增加 positive (bShare)
-  // 若 Payer 是 B -> A 欠 B，減少 negative (-aShare)
-  const netBOwesA = (payer === 'A') ? bShare : -aShare;
-
-  return { aShare, bShare, netBOwesA };
-}
-
-// ==========================================
-// 4. 表單提交處理
-// ==========================================
-const form = document.getElementById('expense-form');
-form.addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const submitBtn = document.getElementById('submit-btn');
-  const btnText = submitBtn.querySelector('.btn-text');
-  const spinner = submitBtn.querySelector('.spinner');
-
-  // UI Loading 狀態
-  btnText.textContent = "處理中...";
-  spinner.classList.remove('hidden');
-  submitBtn.disabled = true;
-
-  // 取得表單值
-  const date = document.getElementById('date').value;
-  const category = document.getElementById('category').value;
-  const description = document.getElementById('description').value;
-  const currency = document.querySelector('input[name="currency"]:checked').value;
-  const amount = parseFloat(document.getElementById('amount').value);
-  const payer = document.querySelector('input[name="payer"]:checked').value;
-  const splitMode = document.querySelector('input[name="split_mode"]:checked').value;
-
-  // 計算分攤
-  const { aShare, bShare, netBOwesA } = calculateShares(amount, payer, splitMode);
-
-  const newTransaction = {
-    transaction_id: `TXN-${Date.now()}`,
-    date,
-    category,
-    description,
-    currency,
-    amount,
-    payer,
-    split_mode: splitMode,
-    a_share: aShare,
-    b_share: bShare,
-    net_b_owes_a: netBOwesA
-  };
-
-  // 嘗試發送到 Google Apps Script，若無 URL 則備用存到 localStorage
-  if (GAS_WEB_APP_URL && GAS_WEB_APP_URL !== 'YOUR_APPS_SCRIPT_URL') {
-    await submitExpenseToGAS(newTransaction);
-  } else {
-    // 模擬網路延遲 400ms
-    await new Promise(resolve => setTimeout(resolve, 400));
-    transactions.unshift(newTransaction);
-    localStorage.setItem('japan_expenses', JSON.stringify(transactions));
-  }
-
-  // 還原按鈕狀態 & 重置表單
-  btnText.textContent = "儲存消費";
-  spinner.classList.add('hidden');
-  submitBtn.disabled = false;
-
-  form.reset();
-  document.getElementById('date').value = date; // 保持日期
-
-  // 重新渲染 UI 並切換到明細頁
-  renderApp();
-  document.querySelector('.nav-btn[data-tab="tab-transactions"]').click();
-});
-
-// 發送 Fetch POST 至 GAS
-async function submitExpenseToGAS(data) {
-  try {
-    const response = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      mode: 'no-cors' // GAS Web App 預設跨域處理
-    });
-    // no-cors 模式下更新本地快照
-    transactions.unshift(data);
-    localStorage.setItem('japan_expenses', JSON.stringify(transactions));
-  } catch (error) {
-    console.error('儲存至 Apps Script 失敗:', error);
-    alert('無法連線至雲端資料庫，已儲存於本地。');
-  }
-}
-
-// ==========================================
-// 5. 渲染明細與 Summary 統計
-// ==========================================
-function renderApp() {
-  renderTransactions();
-  renderSummary();
-}
-
-function renderTransactions() {
-  const listContainer = document.getElementById('transactions-list');
-  listContainer.innerHTML = '';
-
-  if (transactions.length === 0) {
-    listContainer.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 20px;">尚無消費記錄</p>';
-    return;
-  }
-
-  transactions.forEach(item => {
-    const icon = CATEGORY_ICONS[item.category] || '💰';
-    
-    // 債務文字描述
-    let debtText = '';
-    if (item.net_b_owes_a > 0) {
-      debtText = `B 欠 A ${item.net_b_owes_a.toLocaleString()} ${item.currency}`;
-    } else if (item.net_b_owes_a < 0) {
-      debtText = `A 欠 B ${Math.abs(item.net_b_owes_a).toLocaleString()} ${item.currency}`;
+    if (payer === 'A') {
+      netBowesA = bShare;
     } else {
-      debtText = '各自負擔';
+      netBowesA = -aShare;
     }
 
-    const card = document.createElement('div');
-    card.className = 'txn-card';
-    card.innerHTML = `
-      <div class="txn-left">
-        <div class="txn-icon">${icon}</div>
-        <div>
-          <div class="txn-title">${escapeHtml(item.description)}</div>
-          <div class="txn-sub">${item.date} · ${item.payer} 付款 (${item.split_mode})</div>
-        </div>
-      </div>
-      <div class="txn-right">
-        <div class="txn-amount">${item.amount.toLocaleString()} ${item.currency}</div>
-        <div class="txn-debt">${debtText}</div>
-      </div>
-    `;
-    listContainer.appendChild(card);
+    const newTxn = {
+      id: `TXN-${date.replace(/-/g, '')}-${String(transactions.length + 1).padStart(3, '0')}`,
+      date, category, desc, currency, amount, payer, split, aShare, bShare, netBowesA
+    };
+
+    transactions.unshift(newTxn);
+    renderAll();
+
+    // Reset fields
+    document.getElementById('txn-desc').value = '';
+    document.getElementById('txn-amount').value = '';
   });
+});
+
+function renderAll() {
+  renderSummary();
+  renderTxnList();
 }
 
 function renderSummary() {
-  // 統計總支出與淨債務
   let spentA = { JPY: 0, HKD: 0 };
   let spentB = { JPY: 0, HKD: 0 };
-  let netBOwesA = { JPY: 0, HKD: 0 };
+  let netOwes = { JPY: 0, HKD: 0 };
 
   transactions.forEach(t => {
-    const cur = t.currency;
-    spentA[cur] += t.a_share;
-    spentB[cur] += t.b_share;
-    netBOwesA[cur] += t.net_b_owes_a;
+    if (t.currency === 'JPY') {
+      spentA.JPY += t.aShare;
+      spentB.JPY += t.bShare;
+      netOwes.JPY += t.netBowesA;
+    } else if (t.currency === 'HKD') {
+      spentA.HKD += t.aShare;
+      spentB.HKD += t.bShare;
+      netOwes.HKD += t.netBowesA;
+    }
   });
 
-  // 1. 更新結算結果
-  updateSettlementUI('settlement-jpy', 'JPY', netBOwesA.JPY);
-  updateSettlementUI('settlement-hkd', 'HKD', netBOwesA.HKD);
-
-  // 2. 更新預算進度
+  // Update JPY UI
   document.getElementById('spent-a-jpy').textContent = spentA.JPY.toLocaleString();
-  document.getElementById('rem-a-jpy').textContent = (INITIAL_BUDGETS.A.JPY - spentA.JPY).toLocaleString();
-
+  document.getElementById('rem-a-jpy').textContent = (budgets.A.JPY - spentA.JPY).toLocaleString();
   document.getElementById('spent-b-jpy').textContent = spentB.JPY.toLocaleString();
-  document.getElementById('rem-b-jpy').textContent = (INITIAL_BUDGETS.B.JPY - spentB.JPY).toLocaleString();
+  document.getElementById('rem-b-jpy').textContent = (budgets.B.JPY - spentB.JPY).toLocaleString();
 
+  // Update HKD UI
   document.getElementById('spent-a-hkd').textContent = spentA.HKD.toLocaleString();
-  document.getElementById('rem-a-hkd').textContent = (INITIAL_BUDGETS.A.HKD - spentA.HKD).toLocaleString();
-
+  document.getElementById('rem-a-hkd').textContent = (budgets.A.HKD - spentA.HKD).toLocaleString();
   document.getElementById('spent-b-hkd').textContent = spentB.HKD.toLocaleString();
-  document.getElementById('rem-b-hkd').textContent = (INITIAL_BUDGETS.B.HKD - spentB.HKD).toLocaleString();
+  document.getElementById('rem-b-hkd').textContent = (budgets.B.HKD - spentB.HKD).toLocaleString();
+
+  // Update settlement text
+  let settlementHTML = [];
+  ['JPY', 'HKD'].forEach(curr => {
+    let val = netOwes[curr];
+    if (val > 0) {
+      settlementHTML.push(`👧 B 需給 👦 A: <b>${val.toLocaleString()} ${curr}</b>`);
+    } else if (val < 0) {
+      settlementHTML.push(`👦 A 需給 👧 B: <b>${Math.abs(val).toLocaleString()} ${curr}</b>`);
+    }
+  });
+
+  document.getElementById('net-settlement-text').innerHTML = 
+    settlementHTML.length > 0 ? settlementHTML.join('<br>') : '🎉 目前雙方完全平帳，互不相欠！';
 }
 
-function updateSettlementUI(elementId, currency, netValue) {
-  const container = document.getElementById(elementId);
-  const textSpan = container.querySelector('.result-text');
-
-  if (netValue > 0) {
-    textSpan.innerHTML = `👉 <strong style="color:#d97706;">B 需給 A ${netValue.toLocaleString()} ${currency}</strong>`;
-  } else if (netValue < 0) {
-    textSpan.innerHTML = `👉 <strong style="color:#d97706;">A 需給 B ${Math.abs(netValue).toLocaleString()} ${currency}</strong>`;
-  } else {
-    textSpan.textContent = `✅ 雙方金額平衡，互不相欠`;
+function renderTxnList() {
+  const container = document.getElementById('txn-list');
+  if (transactions.length === 0) {
+    container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:16px;">尚無記帳紀錄 📝</div>';
+    return;
   }
+
+  container.innerHTML = transactions.map(t => `
+    <div class="txn-item">
+      <div class="txn-info">
+        <div class="txn-icon">${categoryIcons[t.category] || '📦'}</div>
+        <div>
+          <div class="txn-desc">${t.desc}</div>
+          <div class="txn-sub">${t.date} · ${t.payer === 'A' ? '👦 A 付款' : '👧 B 付款'}</div>
+        </div>
+      </div>
+      <div class="txn-amount">
+        <div class="txn-val">${t.amount.toLocaleString()} ${t.currency}</div>
+        <div class="txn-sub">${getSplitBadge(t.split)}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
-// XSS 防護輔助函式
-function escapeHtml(str) {
-  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+function getSplitBadge(split) {
+  if (split === 'SPLIT_5050') return '👥 50/50 平分';
+  if (split === 'FOR_A') return '👦 A 獨用';
+  if (split === 'FOR_B') return '👧 B 獨用';
+  return '';
+}
+
+function initModalEvents() {
+  const modal = document.getElementById('budget-modal');
+  const openBtn = document.getElementById('open-budget-modal');
+  const closeBtn = document.getElementById('close-budget-modal');
+  const budgetForm = document.getElementById('budget-form');
+
+  openBtn.addEventListener('click', () => {
+    document.getElementById('budget-a-jpy-input').value = budgets.A.JPY;
+    document.getElementById('budget-b-jpy-input').value = budgets.B.JPY;
+    document.getElementById('budget-a-hkd-input').value = budgets.A.HKD;
+    document.getElementById('budget-b-hkd-input').value = budgets.B.HKD;
+    modal.classList.remove('hidden');
+  });
+
+  closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+
+  budgetForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    budgets.A.JPY = parseFloat(document.getElementById('budget-a-jpy-input').value) || 0;
+    budgets.B.JPY = parseFloat(document.getElementById('budget-b-jpy-input').value) || 0;
+    budgets.A.HKD = parseFloat(document.getElementById('budget-a-hkd-input').value) || 0;
+    budgets.B.HKD = parseFloat(document.getElementById('budget-b-hkd-input').value) || 0;
+
+    localStorage.setItem('trip_budgets', JSON.stringify(budgets));
+    renderSummary();
+    modal.classList.add('hidden');
+  });
 }
