@@ -1,203 +1,466 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>日本旅遊記帳本</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- Google Fonts: Noto Sans TC & Outfits -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <title>✈️ 日本雙幣別旅遊記帳 🇯🇵</title>
+  <style>
+    :root {
+      --primary: #ff6b6b;
+      --bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --text: #2d3436;
+      --muted: #636e72;
+      --border: #edf2f7;
+      --radius: 16px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 40px; }
+
+    header {
+      background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 100%);
+      color: white; padding: 24px 16px; text-align: center;
+      border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;
+      box-shadow: 0 4px 15px rgba(255, 117, 140, 0.3);
+    }
+    header h1 { font-size: 1.5rem; margin-bottom: 4px; }
+    header p { font-size: 0.85rem; opacity: 0.9; }
+
+    .container { max-width: 500px; margin: 0 auto; padding: 16px; }
+
+    .card {
+      background: var(--card-bg); border-radius: var(--radius);
+      padding: 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+
+    .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+    }
+    .card-title { font-size: 1.1rem; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+
+    .btn-action {
+      background: #fff0f3; color: var(--primary); border: 1px solid #ffccd5;
+      padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold;
+    }
+
+    /* 表單樣式 */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .form-control {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 0.95rem; background: #fafafa; outline: none;
+    }
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+
+    .btn-submit {
+      width: 100%; background: var(--primary); color: white; border: none;
+      padding: 12px; border-radius: 12px; font-size: 1rem; font-weight: bold;
+      cursor: pointer; margin-top: 8px; transition: 0.2s;
+    }
+    .btn-submit:active { transform: scale(0.98); }
+
+    /* 總覽 & 預算卡片 */
+    .person-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: bold; }
+    .person-a { color: #2b6cb0; }
+    .person-b { color: #d69e2e; }
+
+    .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    .stat-box { background: #f8fafc; border-radius: 12px; padding: 12px; border: 1px solid var(--border); }
+    .stat-box h4 { font-size: 0.85rem; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+    .stat-num { font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+    .text-green { color: #38a169; }
+    .text-red { color: #e53e3e; }
+
+    /* 明細列表 */
+    .txn-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px dashed var(--border);
+    }
+    .txn-item:last-child { border-bottom: none; }
+    .txn-info { display: flex; align-items: center; gap: 10px; }
+    .txn-icon {
+      width: 38px; height: 38px; border-radius: 50%; background: #fff5f5;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .txn-desc { font-weight: bold; font-size: 0.9rem; }
+    .txn-sub { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .txn-amount { text-align: right; }
+    .txn-val { font-weight: bold; font-size: 0.95rem; }
+
+    /* Modal 彈出視窗 */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 16px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-card {
+      background: white; border-radius: var(--radius); width: 100%; max-width: 400px;
+      padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+  </style>
 </head>
 <body>
 
-  <!-- App Header -->
-  <header class="app-header">
-    <h1>🇯🇵 日本旅費記帳</h1>
+  <header>
+    <h1>✈️ 日本旅遊記帳 🇯🇵</h1>
+    <p>雙幣別自動算賬與預算追蹤 💴 💵</p>
   </header>
 
-  <!-- Main Content Container -->
-  <main class="app-container">
+  <div class="container">
 
-    <!-- 1. 新增消費 TAB -->
-    <section id="tab-add" class="tab-content active">
-      <div class="card">
-        <h2>新增消費記錄</h2>
-        <form id="expense-form">
-          
-          <div class="form-group">
-            <label for="date">消費日期</label>
-            <input type="date" id="date" required>
+    <!-- 📊 1. 預算與花費總覽 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">💰 預算與花費總覽</div>
+        <button class="btn-action" id="open-budget-modal">✏️ 改預算</button>
+      </div>
+
+      <!-- JPY 區塊 -->
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 0.85rem; color: var(--muted); font-weight: bold; margin-bottom: 6px;">💴 日元 (JPY) 狀況</div>
+        <div class="summary-grid">
+          <div class="stat-box">
+            <h4><span class="person-badge person-a">👦 A (男孩)</span></h4>
+            <div>花費: <span id="spent-a-jpy">0</span> JPY</div>
+            <div class="stat-num text-green">剩 <span id="rem-a-jpy">150,000</span></div>
           </div>
+          <div class="stat-box">
+            <h4><span class="person-badge person-b">👧 B (女孩)</span></h4>
+            <div>花費: <span id="spent-b-jpy">0</span> JPY</div>
+            <div class="stat-num text-green">剩 <span id="rem-b-jpy">150,000</span></div>
+          </div>
+        </div>
+      </div>
 
+      <!-- HKD 區塊 -->
+      <div>
+        <div style="font-size: 0.85rem; color: var(--muted); font-weight: bold; margin-bottom: 6px;">💵 港幣 (HKD) 狀況</div>
+        <div class="summary-grid">
+          <div class="stat-box">
+            <h4><span class="person-badge person-a">👦 A (男孩)</span></h4>
+            <div>花費: <span id="spent-a-hkd">0</span> HKD</div>
+            <div class="stat-num text-green">剩 <span id="rem-a-hkd">5,000</span></div>
+          </div>
+          <div class="stat-box">
+            <h4><span class="person-badge person-b">👧 B (女孩)</span></h4>
+            <div>花費: <span id="spent-b-hkd">0</span> HKD</div>
+            <div class="stat-num text-green">剩 <span id="rem-b-hkd">5,000</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🤝 最終雙方結算卡片 -->
+      <div style="margin-top: 16px; background: #fff9db; padding: 12px; border-radius: 12px; border: 1px solid #fcc419;">
+        <div style="font-size: 0.85rem; font-weight: bold; color: #f59f00; margin-bottom: 4px;">🤝 淨債務結算 (誰欠誰)</div>
+        <div id="net-settlement-text" style="font-size: 0.9rem; font-weight: bold; color: #2d3436;">目前雙方清算無欠款</div>
+      </div>
+    </div>
+
+    <!-- ➕ 2. 新增消費表單 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">➕ 記一筆賬</div>
+      </div>
+      <form id="txn-form">
+        <div class="form-row">
           <div class="form-group">
-            <label for="category">消費類別</label>
-            <select id="category" required>
+            <label>📅 日期</label>
+            <input type="date" id="txn-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>🏷️ 分類</label>
+            <select id="txn-category" class="form-control">
               <option value="餐飲">🍱 餐飲</option>
-              <option value="交通">🚃 交通</option>
+              <option value="交通">🚗 交通</option>
               <option value="住宿">🏨 住宿</option>
               <option value="購物">🛍️ 購物</option>
               <option value="景點">🎟️ 景點</option>
               <option value="雜項">📦 雜項</option>
             </select>
           </div>
-
-          <div class="form-group">
-            <label for="description">項目描述</label>
-            <input type="text" id="description" placeholder="例：敘敘苑燒肉、藥妝店" required>
-          </div>
-
-          <div class="form-group">
-            <label>幣別</label>
-            <div class="segmented-control">
-              <input type="radio" id="cur-jpy" name="currency" value="JPY" checked>
-              <label for="cur-jpy">日元 (JPY)</label>
-              
-              <input type="radio" id="cur-hkd" name="currency" value="HKD">
-              <label for="cur-hkd">港幣 (HKD)</label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="amount">金額</label>
-            <input type="number" id="amount" placeholder="0" step="1" min="1" required>
-          </div>
-
-          <div class="form-group">
-            <label>付款人</label>
-            <div class="radio-tile-group">
-              <input type="radio" id="payer-a" name="payer" value="A" checked>
-              <label for="payer-a" class="radio-tile">A 付款</label>
-
-              <input type="radio" id="payer-b" name="payer" value="B">
-              <label for="payer-b" class="radio-tile">B 付款</label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label>分攤模式</label>
-            <div class="radio-tile-group vertical">
-              <input type="radio" id="split-5050" name="split_mode" value="SPLIT_5050" checked>
-              <label for="split-5050" class="radio-tile">
-                <strong>兩人平分 (50/50)</strong>
-                <small>各負擔 50%</small>
-              </label>
-
-              <input type="radio" id="split-fora" name="split_mode" value="FOR_A">
-              <label for="split-fora" class="radio-tile">
-                <strong>A 獨用 (FOR_A)</strong>
-                <small>全部由 A 負擔</small>
-              </label>
-
-              <input type="radio" id="split-forb" name="split_mode" value="FOR_B">
-              <label for="split-forb" class="radio-tile">
-                <strong>B 獨用 (FOR_B)</strong>
-                <small>全部由 B 負擔</small>
-              </label>
-            </div>
-          </div>
-
-          <button type="submit" id="submit-btn" class="btn-primary">
-            <span class="btn-text">儲存消費</span>
-            <span class="spinner hidden"></span>
-          </button>
-
-        </form>
-      </div>
-    </section>
-
-    <!-- 2. 消費明細 TAB -->
-    <section id="tab-transactions" class="tab-content">
-      <div class="section-header">
-        <h2>消費明細</h2>
-        <button id="clear-local-btn" class="btn-text-only">重置測試資料</button>
-      </div>
-      <div id="transactions-list" class="transactions-list">
-        <!-- 動態渲染明細卡片 -->
-      </div>
-    </section>
-
-    <!-- 3. 總覽與結算 TAB -->
-    <section id="tab-summary" class="tab-content">
-      
-      <!-- 結算結果總卡片 -->
-      <div class="card settlement-card">
-        <h2>⚖️ 最終結算結果</h2>
-        <div class="settlement-item" id="settlement-jpy">
-          <span class="currency-badge">JPY</span>
-          <span class="result-text">計算中...</span>
         </div>
-        <div class="settlement-item" id="settlement-hkd">
-          <span class="currency-badge">HKD</span>
-          <span class="result-text">計算中...</span>
-        </div>
-      </div>
 
-      <!-- 預算與統計 -->
-      <div class="card">
-        <h2>💰 預算與個人支出狀況</h2>
+        <div class="form-group">
+          <label>📝 項目描述</label>
+          <input type="text" id="txn-desc" class="form-control" placeholder="例：敘敘苑燒肉 / Suica 增值" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>💱 幣別</label>
+            <select id="txn-currency" class="form-control">
+              <option value="JPY">💴 JPY</option>
+              <option value="HKD">💵 HKD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💰 金額</label>
+            <input type="number" id="txn-amount" class="form-control" placeholder="0" min="1" step="any" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>💳 先付款的人</label>
+            <select id="txn-payer" class="form-control">
+              <option value="A">👦 A (男孩)</option>
+              <option value="B">👧 B (女孩)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>⚖️ 分攤方式</label>
+            <select id="txn-split" class="form-control">
+              <option value="SPLIT_5050">👥 50/50 平分</option>
+              <option value="FOR_A">👦 A 自己買</option>
+              <option value="FOR_B">👧 B 自己買</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">新增消費明細 ✨</button>
+      </form>
+    </div>
+
+    <!-- 📄 3. 最近消費明細列表 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📄 明細紀錄</div>
+      </div>
+      <div id="txn-list">
+        <!-- JS 自動生成紀錄列表 -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ✏️ 修改預算的 Modal 彈窗 -->
+  <div id="budget-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem;">✏️ 修改初始預算</h3>
+        <button class="modal-close" id="close-budget-modal">&times;</button>
+      </div>
+      <form id="budget-form">
+        <div style="margin-bottom: 12px; font-weight: bold; font-size: 0.85rem; color: var(--primary);">💴 日元 (JPY) 預算</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>👦 A 預算</label>
+            <input type="number" id="budget-a-jpy-input" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>👧 B 預算</label>
+            <input type="number" id="budget-b-jpy-input" class="form-control" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px; font-weight: bold; font-size: 0.85rem; color: var(--primary); margin-top: 8px;">💵 港幣 (HKD) 預算</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>👦 A 預算</label>
+            <input type="number" id="budget-a-hkd-input" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label>👧 B 預算</label>
+            <input type="number" id="budget-b-hkd-input" class="form-control" required>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" style="margin-top: 12px;">儲存新預算 💾</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript 邏輯程式碼 -->
+  <script>
+    // 預設 5 筆示範資料
+    let transactions = [
+      { id: "TXN-20260722-001", date: "2026-07-22", category: "餐飲", desc: "敘敘苑燒肉", currency: "JPY", amount: 18000, payer: "A", split: "SPLIT_5050", aShare: 9000, bShare: 9000, netBowesA: 9000 },
+      { id: "TXN-20260722-002", date: "2026-07-22", category: "購物", desc: "藥妝店面膜 (B獨用)", currency: "JPY", amount: 3500, payer: "A", split: "FOR_B", aShare: 0, bShare: 3500, netBowesA: 3500 },
+      { id: "TXN-20260722-003", date: "2026-07-22", category: "交通", desc: "Suica 卡增值 (A自己)", currency: "JPY", amount: 5000, payer: "A", split: "FOR_A", aShare: 5000, bShare: 0, netBowesA: 0 },
+      { id: "TXN-20260722-004", date: "2026-07-23", category: "住宿", desc: "東京飯店兩晚住宿", currency: "HKD", amount: 2400, payer: "B", split: "SPLIT_5050", aShare: 1200, bShare: 1200, netBowesA: -1200 },
+      { id: "TXN-20260722-005", date: "2026-07-23", category: "餐飲", desc: "築地市場海鮮丼", currency: "JPY", amount: 6000, payer: "B", split: "SPLIT_5050", aShare: 3000, bShare: 3000, netBowesA: -3000 }
+    ];
+
+    // 預算快照設定
+    let budgets = JSON.parse(localStorage.getItem('trip_budgets')) || {
+      A: { JPY: 150000, HKD: 5000 },
+      B: { JPY: 150000, HKD: 5000 }
+    };
+
+    const categoryIcons = {
+      '餐飲': '🍱', '交通': '🚗', '住宿': '🏨', '購物': '🛍️', '景點': '🎟️', '雜項': '📦'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // 預設今日日期
+      document.getElementById('txn-date').valueAsDate = new Date();
+
+      initModalEvents();
+      renderAll();
+
+      // 新增記帳表單提交
+      document.getElementById('txn-form').addEventListener('submit', (e) => {
+        e.preventDefault();
         
-        <div class="budget-section">
-          <h3>日元 (JPY)</h3>
-          <div class="budget-grid">
-            <div class="budget-box">
-              <p class="name">A 的 JPY</p>
-              <p class="detail">預算：<span id="budget-a-jpy">150,000</span></p>
-              <p class="detail">已用：<span id="spent-a-jpy">0</span></p>
-              <p class="remaining">剩餘：<span id="rem-a-jpy">150,000</span></p>
-            </div>
-            <div class="budget-box">
-              <p class="name">B 的 JPY</p>
-              <p class="detail">預算：<span id="budget-b-jpy">150,000</span></p>
-              <p class="detail">已用：<span id="spent-b-jpy">0</span></p>
-              <p class="remaining">剩餘：<span id="rem-b-jpy">150,000</span></p>
+        const date = document.getElementById('txn-date').value;
+        const category = document.getElementById('txn-category').value;
+        const desc = document.getElementById('txn-desc').value;
+        const currency = document.getElementById('txn-currency').value;
+        const amount = parseFloat(document.getElementById('txn-amount').value);
+        const payer = document.getElementById('txn-payer').value;
+        const split = document.getElementById('txn-split').value;
+
+        // 計算 A / B 應負擔金額及淨債務
+        let aShare = 0, bShare = 0, netBowesA = 0;
+
+        if (split === 'SPLIT_5050') {
+          aShare = amount / 2;
+          bShare = amount / 2;
+        } else if (split === 'FOR_A') {
+          aShare = amount;
+          bShare = 0;
+        } else if (split === 'FOR_B') {
+          aShare = 0;
+          bShare = amount;
+        }
+
+        if (payer === 'A') {
+          netBowesA = bShare;
+        } else { // 付款人為 B
+          netBowesA = -aShare;
+        }
+
+        const newTxn = {
+          id: `TXN-${date.replace(/-/g, '')}-${String(transactions.length + 1).padStart(3, '0')}`,
+          date, category, desc, currency, amount, payer, split, aShare, bShare, netBowesA
+        };
+
+        transactions.unshift(newTxn);
+        renderAll();
+
+        // 重置欄位
+        document.getElementById('txn-desc').value = '';
+        document.getElementById('txn-amount').value = '';
+      });
+    });
+
+    // 重新渲染畫面 (Summary 與 列表)
+    function renderAll() {
+      renderSummary();
+      renderTxnList();
+    }
+
+    function renderSummary() {
+      let spentA = { JPY: 0, HKD: 0 };
+      let spentB = { JPY: 0, HKD: 0 };
+      let netOwes = { JPY: 0, HKD: 0 };
+
+      transactions.forEach(t => {
+        if (t.currency === 'JPY') {
+          spentA.JPY += t.aShare;
+          spentB.JPY += t.bShare;
+          netOwes.JPY += t.netBowesA;
+        } else if (t.currency === 'HKD') {
+          spentA.HKD += t.aShare;
+          spentB.HKD += t.bShare;
+          netOwes.HKD += t.netBowesA;
+        }
+      });
+
+      // 更新 JPY 數據
+      document.getElementById('spent-a-jpy').textContent = spentA.JPY.toLocaleString();
+      document.getElementById('rem-a-jpy').textContent = (budgets.A.JPY - spentA.JPY).toLocaleString();
+      document.getElementById('spent-b-jpy').textContent = spentB.JPY.toLocaleString();
+      document.getElementById('rem-b-jpy').textContent = (budgets.B.JPY - spentB.JPY).toLocaleString();
+
+      // 更新 HKD 數據
+      document.getElementById('spent-a-hkd').textContent = spentA.HKD.toLocaleString();
+      document.getElementById('rem-a-hkd').textContent = (budgets.A.HKD - spentA.HKD).toLocaleString();
+      document.getElementById('spent-b-hkd').textContent = spentB.HKD.toLocaleString();
+      document.getElementById('rem-b-hkd').textContent = (budgets.B.HKD - spentB.HKD).toLocaleString();
+
+      // 結算文字
+      let settlementHTML = [];
+      ['JPY', 'HKD'].forEach(curr => {
+        let val = netOwes[curr];
+        if (val > 0) {
+          settlementHTML.push(`👧 B 需給 👦 A: <b>${val.toLocaleString()} ${curr}</b>`);
+        } else if (val < 0) {
+          settlementHTML.push(`👦 A 需給 👧 B: <b>${Math.abs(val).toLocaleString()} ${curr}</b>`);
+        }
+      });
+
+      document.getElementById('net-settlement-text').innerHTML = 
+        settlementHTML.length > 0 ? settlementHTML.join('<br>') : '🎉 目前雙方完全平帳，互不相欠！';
+    }
+
+    function renderTxnList() {
+      const container = document.getElementById('txn-list');
+      if (transactions.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:var(--muted); padding:16px;">尚無記帳紀錄 📝</div>';
+        return;
+      }
+
+      container.innerHTML = transactions.map(t => `
+        <div class="txn-item">
+          <div class="txn-info">
+            <div class="txn-icon">${categoryIcons[t.category] || '📦'}</div>
+            <div>
+              <div class="txn-desc">${t.desc}</div>
+              <div class="txn-sub">${t.date} · ${t.payer === 'A' ? '👦 A 付款' : '👧 B 付款'}</div>
             </div>
           </div>
-        </div>
-
-        <hr class="divider">
-
-        <div class="budget-section">
-          <h3>港幣 (HKD)</h3>
-          <div class="budget-grid">
-            <div class="budget-box">
-              <p class="name">A 的 HKD</p>
-              <p class="detail">預算：<span id="budget-a-hkd">5,000</span></p>
-              <p class="detail">已用：<span id="spent-a-hkd">0</span></p>
-              <p class="remaining">剩餘：<span id="rem-a-hkd">5,000</span></p>
-            </div>
-            <div class="budget-box">
-              <p class="name">B 的 HKD</p>
-              <p class="detail">預算：<span id="budget-b-hkd">5,000</span></p>
-              <p class="detail">已用：<span id="spent-b-hkd">0</span></p>
-              <p class="remaining">剩餘：<span id="rem-b-hkd">5,000</span></p>
-            </div>
+          <div class="txn-amount">
+            <div class="txn-val">${t.amount.toLocaleString()} ${t.currency}</div>
+            <div class="txn-sub">${getSplitBadge(t.split)}</div>
           </div>
         </div>
+      `).join('');
+    }
 
-      </div>
+    function getSplitBadge(split) {
+      if (split === 'SPLIT_5050') return '👥 50/50 平分';
+      if (split === 'FOR_A') return '👦 A 獨用';
+      if (split === 'FOR_B') return '👧 B 獨用';
+      return '';
+    }
 
-    </section>
+    // Modal 邏輯
+    function initModalEvents() {
+      const modal = document.getElementById('budget-modal');
+      const openBtn = document.getElementById('open-budget-modal');
+      const closeBtn = document.getElementById('close-budget-modal');
+      const budgetForm = document.getElementById('budget-form');
 
-  </main>
+      openBtn.addEventListener('click', () => {
+        document.getElementById('budget-a-jpy-input').value = budgets.A.JPY;
+        document.getElementById('budget-b-jpy-input').value = budgets.B.JPY;
+        document.getElementById('budget-a-hkd-input').value = budgets.A.HKD;
+        document.getElementById('budget-b-hkd-input').value = budgets.B.HKD;
+        modal.classList.remove('hidden');
+      });
 
-  <!-- Bottom Navigation Bar -->
-  <nav class="bottom-nav">
-    <button class="nav-btn active" data-tab="tab-add">
-      <span class="icon">➕</span>
-      <span class="label">記帳</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-transactions">
-      <span class="icon">📜</span>
-      <span class="label">明細</span>
-    </button>
-    <button class="nav-btn" data-tab="tab-summary">
-      <span class="icon">📊</span>
-      <span class="label">結算</span>
-    </button>
-  </nav>
+      closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
 
-  <script src="app.js"></script>
+      budgetForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        budgets.A.JPY = parseFloat(document.getElementById('budget-a-jpy-input').value) || 0;
+        budgets.B.JPY = parseFloat(document.getElementById('budget-b-jpy-input').value) || 0;
+        budgets.A.HKD = parseFloat(document.getElementById('budget-a-hkd-input').value) || 0;
+        budgets.B.HKD = parseFloat(document.getElementById('budget-b-hkd-input').value) || 0;
+
+        localStorage.setItem('trip_budgets', JSON.stringify(budgets));
+        renderSummary();
+        modal.classList.add('hidden');
+      });
+    }
+  </script>
 </body>
 </html>
