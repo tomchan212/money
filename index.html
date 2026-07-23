@@ -177,6 +177,75 @@
     </div>
   </div>
 
+  <!-- ✏️ 編輯明細紀錄 Modal 彈窗 -->
+  <div id="edit-txn-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>✏️ 編輯消費明細</h3>
+        <button class="modal-close" id="close-edit-modal">&times;</button>
+      </div>
+      <form id="edit-txn-form">
+        <input type="hidden" id="edit-txn-id">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-txn-date">📅 日期</label>
+            <input type="date" id="edit-txn-date" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="edit-txn-category">🏷️ 分類</label>
+            <select id="edit-txn-category" class="form-control">
+              <option value="餐飲">🍱 餐飲</option>
+              <option value="交通">🚗 交通</option>
+              <option value="住宿">🏨 住宿</option>
+              <option value="購物">🛍️ 購物</option>
+              <option value="景點">🎟️ 景點</option>
+              <option value="雜項">📦 雜項</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-txn-desc">📝 項目描述</label>
+          <input type="text" id="edit-txn-desc" class="form-control" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-txn-currency">💱 幣別</label>
+            <select id="edit-txn-currency" class="form-control">
+              <option value="JPY">💴 JPY</option>
+              <option value="HKD">💵 HKD</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-txn-amount">💰 金額</label>
+            <input type="number" id="edit-txn-amount" class="form-control" min="1" step="any" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-txn-payer">💳 先付款的人</label>
+            <select id="edit-txn-payer" class="form-control">
+              <option value="A">👦 A (男孩)</option>
+              <option value="B">👧 B (女孩)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-txn-split">⚖️ 分攤方式</label>
+            <select id="edit-txn-split" class="form-control">
+              <option value="SPLIT_5050">👥 50/50 平分</option>
+              <option value="FOR_A">👦 A 自己買</option>
+              <option value="FOR_B">👧 B 自己買</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" style="margin-top: 12px;">儲存變更 💾</button>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
