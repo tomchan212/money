@@ -38,24 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const payer = document.getElementById('txn-payer').value;
     const split = document.getElementById('txn-split').value;
 
-    let aShare = 0, bShare = 0, netBowesA = 0;
-
-    if (split === 'SPLIT_5050') {
-      aShare = amount / 2;
-      bShare = amount / 2;
-    } else if (split === 'FOR_A') {
-      aShare = amount;
-      bShare = 0;
-    } else if (split === 'FOR_B') {
-      aShare = 0;
-      bShare = amount;
-    }
-
-    if (payer === 'A') {
-      netBowesA = bShare;
-    } else {
-      netBowesA = -aShare;
-    }
+    const { aShare, bShare, netBowesA } = calculateShares(amount, payer, split);
 
     const newTxn = {
       id: `TXN-${date.replace(/-/g, '')}-${String(transactions.length + 1).padStart(3, '0')}`,
@@ -73,7 +56,64 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Async sync to Google Sheets
     await syncTransactionToGAS(newTxn);
   });
+
+  // Handle Edit transaction form submission
+  document.getElementById('edit-txn-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('edit-txn-id').value;
+    const date = document.getElementById('edit-txn-date').value;
+    const category = document.getElementById('edit-txn-category').value;
+    const desc = document.getElementById('edit-txn-desc').value;
+    const currency = document.getElementById('edit-txn-currency').value;
+    const amount = parseFloat(document.getElementById('edit-txn-amount').value);
+    const payer = document.getElementById('edit-txn-payer').value;
+    const split = document.getElementById('edit-txn-split').value;
+
+    const { aShare, bShare, netBowesA } = calculateShares(amount, payer, split);
+
+    // Find and update local record
+    const index = transactions.findIndex(t => t.id === id);
+    if (index !== -1) {
+      const updatedTxn = {
+        id, date, category, desc, currency, amount, payer, split, aShare, bShare, netBowesA
+      };
+      transactions[index] = updatedTxn;
+      renderAll();
+
+      document.getElementById('edit-txn-modal').classList.add('hidden');
+
+      // Async sync updated transaction to Google Sheets
+      await syncTransactionToGAS(updatedTxn);
+    }
+  });
 });
+
+/**
+ * Calculate shares and net balance
+ */
+function calculateShares(amount, payer, split) {
+  let aShare = 0, bShare = 0, netBowesA = 0;
+
+  if (split === 'SPLIT_5050') {
+    aShare = amount / 2;
+    bShare = amount / 2;
+  } else if (split === 'FOR_A') {
+    aShare = amount;
+    bShare = 0;
+  } else if (split === 'FOR_B') {
+    aShare = 0;
+    bShare = amount;
+  }
+
+  if (payer === 'A') {
+    netBowesA = bShare;
+  } else {
+    netBowesA = -aShare;
+  }
+
+  return { aShare, bShare, netBowesA };
+}
 
 /**
  * 📡 Fetch initial data from Google Sheets (GET)
@@ -84,7 +124,6 @@ async function loadDataFromGAS() {
     const data = await res.json();
 
     if (data.status === 'SUCCESS') {
-      // Parse Budgets sheet data
       if (data.budgets && data.budgets.length > 0) {
         data.budgets.forEach(row => {
           if (row.person && row.currency) {
@@ -93,7 +132,6 @@ async function loadDataFromGAS() {
         });
       }
 
-      // Parse Transactions sheet data
       if (data.transactions && data.transactions.length > 0) {
         transactions = data.transactions.map(row => ({
           id: row.transaction_id,
@@ -107,7 +145,7 @@ async function loadDataFromGAS() {
           aShare: parseFloat(row.a_share) || 0,
           bShare: parseFloat(row.b_share) || 0,
           netBowesA: parseFloat(row.net_b_owes_a) || 0
-        })).reverse(); // Most recent first
+        })).reverse();
       }
     }
   } catch (err) {
@@ -118,13 +156,13 @@ async function loadDataFromGAS() {
 }
 
 /**
- * 📤 Send a new transaction to Google Sheets (POST)
+ * 📤 Send new or updated transaction to Google Sheets (POST)
  */
 async function syncTransactionToGAS(txn) {
   try {
     await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' }, // Avoid CORS preflight OPTIONS request
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         action: 'ADD_TXN',
         transaction_id: txn.id,
@@ -185,19 +223,16 @@ function renderSummary() {
     }
   });
 
-  // Render JPY Summary
   document.getElementById('spent-a-jpy').textContent = spentA.JPY.toLocaleString();
   document.getElementById('rem-a-jpy').textContent = (budgets.A.JPY - spentA.JPY).toLocaleString();
   document.getElementById('spent-b-jpy').textContent = spentB.JPY.toLocaleString();
   document.getElementById('rem-b-jpy').textContent = (budgets.B.JPY - spentB.JPY).toLocaleString();
 
-  // Render HKD Summary
   document.getElementById('spent-a-hkd').textContent = spentA.HKD.toLocaleString();
   document.getElementById('rem-a-hkd').textContent = (budgets.A.HKD - spentA.HKD).toLocaleString();
   document.getElementById('spent-b-hkd').textContent = spentB.HKD.toLocaleString();
   document.getElementById('rem-b-hkd').textContent = (budgets.B.HKD - spentB.HKD).toLocaleString();
 
-  // Render Settlement Status
   let settlementHTML = [];
   ['JPY', 'HKD'].forEach(curr => {
     let val = netOwes[curr];
@@ -228,13 +263,35 @@ function renderTxnList() {
           <div class="txn-sub">${t.date} · ${t.payer === 'A' ? '👦 A 付款' : '👧 B 付款'}</div>
         </div>
       </div>
-      <div class="txn-amount">
-        <div class="txn-val">${t.amount.toLocaleString()} ${t.currency}</div>
-        <div class="txn-sub">${getSplitBadge(t.split)}</div>
+      <div class="txn-amount" style="display:flex; align-items:center; gap:8px;">
+        <div>
+          <div class="txn-val">${t.amount.toLocaleString()} ${t.currency}</div>
+          <div class="txn-sub">${getSplitBadge(t.split)}</div>
+        </div>
+        <button class="btn-action" style="padding:4px 8px; font-size:0.75rem;" onclick="openEditModal('${t.id}')">✏️</button>
       </div>
     </div>
   `).join('');
 }
+
+/**
+ * Populates edit form with record data and displays the modal
+ */
+window.openEditModal = function(id) {
+  const txn = transactions.find(t => t.id === id);
+  if (!txn) return;
+
+  document.getElementById('edit-txn-id').value = txn.id;
+  document.getElementById('edit-txn-date').value = txn.date;
+  document.getElementById('edit-txn-category').value = txn.category;
+  document.getElementById('edit-txn-desc').value = txn.desc;
+  document.getElementById('edit-txn-currency').value = txn.currency;
+  document.getElementById('edit-txn-amount').value = txn.amount;
+  document.getElementById('edit-txn-payer').value = txn.payer;
+  document.getElementById('edit-txn-split').value = txn.split;
+
+  document.getElementById('edit-txn-modal').classList.remove('hidden');
+};
 
 function getSplitBadge(split) {
   if (split === 'SPLIT_5050') return '👥 50/50 平分';
@@ -244,20 +301,21 @@ function getSplitBadge(split) {
 }
 
 function initModalEvents() {
-  const modal = document.getElementById('budget-modal');
-  const openBtn = document.getElementById('open-budget-modal');
-  const closeBtn = document.getElementById('close-budget-modal');
+  // Budget Modal
+  const budgetModal = document.getElementById('budget-modal');
+  const openBudgetBtn = document.getElementById('open-budget-modal');
+  const closeBudgetBtn = document.getElementById('close-budget-modal');
   const budgetForm = document.getElementById('budget-form');
 
-  openBtn.addEventListener('click', () => {
+  openBudgetBtn.addEventListener('click', () => {
     document.getElementById('budget-a-jpy-input').value = budgets.A.JPY;
     document.getElementById('budget-b-jpy-input').value = budgets.B.JPY;
     document.getElementById('budget-a-hkd-input').value = budgets.A.HKD;
     document.getElementById('budget-b-hkd-input').value = budgets.B.HKD;
-    modal.classList.remove('hidden');
+    budgetModal.classList.remove('hidden');
   });
 
-  closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+  closeBudgetBtn.addEventListener('click', () => budgetModal.classList.add('hidden'));
 
   budgetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -267,9 +325,13 @@ function initModalEvents() {
     budgets.B.HKD = parseFloat(document.getElementById('budget-b-hkd-input').value) || 0;
 
     renderSummary();
-    modal.classList.add('hidden');
+    budgetModal.classList.add('hidden');
 
-    // Async sync updated budget back to Google Sheets
     await syncBudgetsToGAS();
   });
+
+  // Edit Transaction Modal Close Event
+  const editModal = document.getElementById('edit-txn-modal');
+  const closeEditBtn = document.getElementById('close-edit-modal');
+  closeEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
 }
