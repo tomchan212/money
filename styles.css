@@ -1,7 +1,7 @@
 /* ===== Reset & Base ===== */
 @font-face {
-  font-family: "HanyiYongZi";
-  src: url("fonts/hanyiyongzidingshenggaofanti.ttf") format("truetype");
+  font-family: "TengXiangMianBao";
+  src: url("fonts/tengxiangmianbaotifanti.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -53,7 +53,7 @@
   --type-label: 0.88rem;
   --type-caption: 0.82rem;
   --type-micro: 0.76rem;
-  --font-app: "HanyiYongZi", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --font-app: "TengXiangMianBao", "PingFang TC", "Microsoft JhengHei", sans-serif;
 }
 
 html.theme-cyberpunk {
