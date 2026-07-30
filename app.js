@@ -1176,6 +1176,7 @@ function syncExpenseEssentialsUi(prefix = 'expense') {
   const payerChip = $(`#${prefix}-payer-chip`);
   if (payerIconEl) payerIconEl.innerHTML = personImg(payer, 'lg');
   payerChip?.setAttribute('aria-label', `邊個畀錢：${payerName}`);
+  payerChip?.setAttribute('data-payer-value', payer);
 
   const splitIconEl = $(`#${prefix}-split-chip-icon`);
   const splitChip = $(`#${prefix}-split-chip`);
@@ -1189,6 +1190,7 @@ function syncExpenseEssentialsUi(prefix = 'expense') {
     if (splitIconEl) splitIconEl.innerHTML = personImg('B', 'lg');
     splitChip?.setAttribute('aria-label', '樣嘢點計：女生自己嘅');
   }
+  splitChip?.setAttribute('data-split-value', split);
 
   if (prefix === 'expense') updateExpenseSplitHint();
 }
