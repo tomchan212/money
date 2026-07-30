@@ -141,9 +141,20 @@ html.theme-cyberpunk .app-container {
 }
 
 .app-header h1 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+}
+
+.header-plane-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .subtitle {
