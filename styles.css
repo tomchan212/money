@@ -151,10 +151,11 @@ html.theme-cyberpunk .app-container {
 }
 
 .header-plane-icon {
-  width: 1.75rem;
-  height: 1.75rem;
-  object-fit: contain;
-  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  min-height: 2rem;
+  vertical-align: -0.35em;
 }
 
 .subtitle {
