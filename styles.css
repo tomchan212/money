@@ -150,12 +150,11 @@ html.theme-cyberpunk .app-container {
   letter-spacing: 0.02em;
 }
 
-.header-plane-icon {
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
-  min-height: 2rem;
-  vertical-align: -0.35em;
+.header-plane-emoji {
+  font-size: 1em;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: -0.05em;
 }
 
 .subtitle {
