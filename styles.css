@@ -1606,6 +1606,30 @@ button.currency-label.badge-all.active {
   text-align: center;
 }
 
+#expense-payer-chip,
+#edit-payer-chip {
+  background: linear-gradient(160deg, #fff8ee 0%, #f5e6c8 100%);
+  border-color: #e8d4b0;
+}
+
+#expense-payer-chip:hover,
+#edit-payer-chip:hover {
+  border-color: #d4b888;
+  box-shadow: 0 3px 10px rgba(212, 184, 136, 0.22);
+}
+
+#expense-split-chip,
+#edit-split-chip {
+  background: linear-gradient(160deg, #eef6ff 0%, #c5dcf0 100%);
+  border-color: #a8c8e8;
+}
+
+#expense-split-chip:hover,
+#edit-split-chip:hover {
+  border-color: #8eb5dc;
+  box-shadow: 0 3px 10px rgba(142, 181, 220, 0.22);
+}
+
 .expense-essentials-row .form-hint {
   margin-top: 0.35rem;
 }
@@ -5210,6 +5234,18 @@ html.theme-cyberpunk .expense-cycle-chip {
   background: #121226 !important;
   border-color: var(--border-soft);
   box-shadow: none;
+}
+
+html.theme-cyberpunk #expense-payer-chip,
+html.theme-cyberpunk #edit-payer-chip {
+  background: linear-gradient(160deg, rgba(245, 230, 200, 0.18) 0%, rgba(232, 212, 176, 0.12) 100%) !important;
+  border-color: rgba(232, 212, 176, 0.45);
+}
+
+html.theme-cyberpunk #expense-split-chip,
+html.theme-cyberpunk #edit-split-chip {
+  background: linear-gradient(160deg, rgba(197, 220, 240, 0.2) 0%, rgba(168, 200, 232, 0.14) 100%) !important;
+  border-color: rgba(168, 200, 232, 0.45);
 }
 
 html.theme-cyberpunk .expense-cycle-chip-caption {
