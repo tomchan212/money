@@ -2,7 +2,7 @@
 @font-face {
   font-family: "Canva Handwriting Style TC";
   src: url("fonts/CanvaHandwritingStyleTC.ttf") format("truetype");
-  font-weight: normal;
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -12,6 +12,13 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 :root {
