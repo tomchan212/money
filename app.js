@@ -613,7 +613,7 @@ function split5050PayerTagHtml(tx, variant = 'tag') {
     personImg(tx.payer, payerSize),
     splitIconHtml('SPLIT_5050', splitSize),
     variant,
-    `一人一半 · ${payerName}畀`
+    `一人一半 · ${payerName}俾`
   );
 }
 
@@ -635,7 +635,7 @@ function helpPaySplitTagHtml(tx, variant = 'tag') {
     personImg(tx.payer, size),
     personImg(beneficiary, size),
     variant,
-    `${payerName}幫${benName}畀`
+    `${payerName}幫${benName}俾`
   );
 }
 
@@ -680,7 +680,7 @@ function loanFlowTagHtml(tx, variant = 'tag') {
     personImg(tx.payer, size),
     personImg(borrower, size),
     variant,
-    `${payerName}借畀${borrowerName}`
+    `${payerName}借俾${borrowerName}`
   );
 }
 
@@ -798,13 +798,13 @@ function splitTagHtml(tx) {
     const borrower = getLoanBorrower(tx);
     const payerName = tx.payer === 'A' ? '男孩' : '女生';
     const borrowerName = borrower === 'A' ? '男孩' : '女生';
-    return `<span class="detail-split-help" aria-label="${payerName}借畀${borrowerName}">${personImg(tx.payer, 'inline')} 借畀 ${personImg(borrower, 'inline')}</span>`;
+    return `<span class="detail-split-help" aria-label="${payerName}借俾${borrowerName}">${personImg(tx.payer, 'inline')} 借俾 ${personImg(borrower, 'inline')}</span>`;
   }
   if (isHelpPaySplit(tx)) {
     const beneficiary = getSplitBeneficiary(tx);
     const payerName = tx.payer === 'A' ? '男孩' : '女生';
     const benName = beneficiary === 'A' ? '男孩' : '女生';
-    return `<span class="detail-split-help" aria-label="${payerName}幫${benName}畀">${personImg(tx.payer, 'inline')} 幫 ${personImg(beneficiary, 'inline')} 畀</span>`;
+    return `<span class="detail-split-help" aria-label="${payerName}幫${benName}俾">${personImg(tx.payer, 'inline')} 幫 ${personImg(beneficiary, 'inline')} 俾</span>`;
   }
   if (tx.split_mode === 'FOR_A') {
     return `${personImg('A', 'inline')} 自己嘅`;
@@ -1175,7 +1175,7 @@ function syncExpenseEssentialsUi(prefix = 'expense') {
   const payerIconEl = $(`#${prefix}-payer-chip-icon`);
   const payerChip = $(`#${prefix}-payer-chip`);
   if (payerIconEl) payerIconEl.innerHTML = personImg(payer, 'lg');
-  payerChip?.setAttribute('aria-label', `邊個畀錢：${payerName}`);
+  payerChip?.setAttribute('aria-label', `邊個俾錢：${payerName}`);
   payerChip?.setAttribute('data-payer-value', payer);
 
   const splitIconEl = $(`#${prefix}-split-chip-icon`);
@@ -1525,12 +1525,12 @@ function syncQuickFilterChips() {
     else if (payer === 'B') payerIconEl.innerHTML = personImg('B', 'md');
     else payerIconEl.innerHTML = uiIconHtml('creditCard', 'md');
   }
-  if (payerLabelEl) payerLabelEl.textContent = '邊個畀';
+  if (payerLabelEl) payerLabelEl.textContent = '邊個俾';
   payerChip?.classList.toggle('is-active', Boolean(payer));
   payerChip?.setAttribute('aria-pressed', payer ? 'true' : 'false');
   payerChip?.setAttribute(
     'aria-label',
-    payer === 'A' ? '邊個畀：男孩' : payer === 'B' ? '邊個畀：女生' : '邊個畀：全部'
+    payer === 'A' ? '邊個俾：男孩' : payer === 'B' ? '邊個俾：女生' : '邊個俾：全部'
   );
 
   const splitMode = QUICK_SPLIT_CYCLE.includes(listFilters.splitMode)
@@ -1652,8 +1652,8 @@ function setDayFilter(day) {
  * - 接近 0 = 大家唔欠（一段數完結）
  *
  * 每筆點計（computeShares）：
- * - 一人一半：畀錢嗰個墊咗一半 → 另一個欠一半
- * - 幫 A / 幫 B：邊個幫邊個畀，邊個就要還
+ * - 一人一半：俾錢嗰個墊咗一半 → 另一個欠一半
+ * - 幫 A / 幫 B：邊個幫邊個俾，邊個就要還
  * - 還錢 / 借錢：淨係搬欠數，唔入旅費預算；借幾多欠幾多（唔會除二）
  */
 function resolveSplitModeForCompute(tx) {
@@ -2587,7 +2587,7 @@ function buildHelpPayMatrixHtml(txs, currency, options = {}) {
   const netLabel = options.finalSectionFollows ? '消費對消：' : '而家要還：';
 
   const scrollTable = `<div class="explain-scroll-wrap explain-scroll-matrix" style="max-height:${EXPLAIN_SCROLL_MAX}px">
-    <table class="help-pay-matrix" aria-label="幫畀對照表">
+    <table class="help-pay-matrix" aria-label="幫俾對照表">
       <thead>
         <tr>
           <th scope="col">記錄</th>
@@ -2730,10 +2730,10 @@ function buildWhyCalcItemsHtml(tx) {
   return html;
 }
 
-/** 總覽「邊個幫邊個畀」：未有互相幫畀時嘅空狀態。 */
+/** 總覽「邊個幫邊個俾」：未有互相幫俾時嘅空狀態。 */
 function helpPayEmptyHtml(currency) {
   return `<div class="help-pay-stack help-pay-empty-state">
-    <div class="help-pay-row help-pay-empty">${personImg('A', 'inline')} 同 ${personImg('B', 'inline')} 暫時未有互相幫畀</div>
+    <div class="help-pay-row help-pay-empty">${personImg('A', 'inline')} 同 ${personImg('B', 'inline')} 暫時未有互相幫俾</div>
     <div class="help-pay-row help-pay-net help-pay-net-settled">
       <span class="help-pay-net-label">對消後（未計還錢）</span>
       <span class="help-pay-net-result">大家唔欠 ${moneyFigHtml(0, currency)}</span>
@@ -2741,14 +2741,14 @@ function helpPayEmptyHtml(currency) {
   </div>`;
 }
 
-/** 總覽「邊個幫邊個畀」：每行一條，避免金額換行。 */
+/** 總覽「邊個幫邊個俾」：每行一條，避免金額換行。 */
 function helpPayText(bHelpedA, aHelpedB, currency) {
   const rows = [];
   if (aHelpedB > 0) {
-    rows.push(`${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 畀咗 ${moneyFigHtml(aHelpedB, currency)}`);
+    rows.push(`${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 俾咗 ${moneyFigHtml(aHelpedB, currency)}`);
   }
   if (bHelpedA > 0) {
-    rows.push(`${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 畀咗 ${moneyFigHtml(bHelpedA, currency)}`);
+    rows.push(`${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 俾咗 ${moneyFigHtml(bHelpedA, currency)}`);
   }
   if (!rows.length) return '';
 
@@ -2817,25 +2817,25 @@ function explainTransactionNet(tx) {
     formula = `${payer} 還咗 ${amount} 俾 ${payee}（唔計入消費，淨係用嚟還數）`;
   } else if (isLoanTransaction(tx)) {
     const payee = personImg(getLoanBorrower(tx), 'inline');
-    formula = `${payer} 借咗 ${amount} 現金畀 ${payee}（唔計消費，淨係增加欠數）`;
+    formula = `${payer} 借咗 ${amount} 現金俾 ${payee}（唔計消費，淨係增加欠數）`;
   } else switch (tx.split_mode) {
     case 'FOR_A':
       formula =
         tx.payer === 'A'
-          ? `${personImg('A', 'inline')} 自己嘅嘢，自己畀 → 唔使互相還`
-          : `${payer} 幫 ${personImg('A', 'inline')} 畀咗 ${amount} → ${personImg('A', 'inline')} 要還返 ${payer}`;
+          ? `${personImg('A', 'inline')} 自己嘅嘢，自己俾 → 唔使互相還`
+          : `${payer} 幫 ${personImg('A', 'inline')} 俾咗 ${amount} → ${personImg('A', 'inline')} 要還返 ${payer}`;
       break;
     case 'FOR_B':
       formula =
         tx.payer === 'B'
-          ? `${personImg('B', 'inline')} 自己嘅嘢，自己畀 → 唔使互相還`
-          : `${payer} 幫 ${personImg('B', 'inline')} 畀咗 ${amount} → ${personImg('B', 'inline')} 要還返 ${payer}`;
+          ? `${personImg('B', 'inline')} 自己嘅嘢，自己俾 → 唔使互相還`
+          : `${payer} 幫 ${personImg('B', 'inline')} 俾咗 ${amount} → ${personImg('B', 'inline')} 要還返 ${payer}`;
       break;
     default:
       formula =
         tx.payer === 'A'
-          ? `${payer} 先畀 ${amount}，一人一半 → ${personImg('B', 'inline')} 要還一半 ${half}`
-          : `${payer} 先畀 ${amount}，一人一半 → ${personImg('A', 'inline')} 要還一半 ${half}`;
+          ? `${payer} 先俾 ${amount}，一人一半 → ${personImg('B', 'inline')} 要還一半 ${half}`
+          : `${payer} 先俾 ${amount}，一人一半 → ${personImg('A', 'inline')} 要還一半 ${half}`;
   }
 
   const net = tx.net_b_owes_a;
@@ -2910,7 +2910,7 @@ function buildTransactionDetailHtml(tx) {
   }
 
   html += `
-      <dt>${uiIconHtml('creditCard', 'label')} 邊個畀錢</dt>
+      <dt>${uiIconHtml('creditCard', 'label')} 邊個俾錢</dt>
       <dd>${payerLabel}</dd>
       <dt>${uiIconHtml('expense', 'label')} 樣嘢點計</dt>
       <dd>${splitHtml}</dd>`;
@@ -3053,7 +3053,7 @@ function renderExplainStepItem(tx) {
     ? '<span class="explain-step-tag explain-step-tag-loan">借錢</span>'
     : '';
   const desc = isLoanTransaction(tx)
-    ? `${personImg(tx.payer, 'inline')} 借咗 ${escapeHtml(formatMoney(tx.amount, tx.currency))} 畀 ${personImg(getLoanBorrower(tx), 'inline')}`
+    ? `${personImg(tx.payer, 'inline')} 借咗 ${escapeHtml(formatMoney(tx.amount, tx.currency))} 俾 ${personImg(getLoanBorrower(tx), 'inline')}`
     : escapeHtml(getTransactionTitle(tx));
   return `<li class="explain-step-item">
     <button type="button" class="explain-step-btn" data-detail-key="${txKey}" aria-label="查看詳情">
@@ -3143,7 +3143,7 @@ function renderSettlementExplain() {
     html += `<p class="explain-rules-compact">而家呢段未還清嘅數，點樣計出嚟</p>`;
 
     html += `<div class="explain-section">
-      <div class="explain-section-title">① 邊個幫邊個畀</div>`;
+      <div class="explain-section-title">① 邊個幫邊個俾</div>`;
     if (expenseContrib.length === 0) {
       html += `<p class="explain-empty">未有要互相還嘅消費</p>`;
     } else {
@@ -3252,7 +3252,7 @@ function updateSettlementChromeVisibility(net = calcSummary().net) {
   const showRepay =
     currencyView === 'jpy' ? jpyDebt : currencyView === 'hkd' ? hkdDebt : jpyDebt || hkdDebt;
 
-  // 即使未有互相幫畀，都顯示空狀態，唔好成個 block 收埋
+  // 即使未有互相幫俾，都顯示空狀態，唔好成個 block 收埋
   $('#help-pay-block')?.classList.remove('hidden');
   $('#settlement-actions')?.classList.toggle('hidden', !showRepay);
 }
@@ -3682,18 +3682,18 @@ function updateExpenseSplitHint() {
   const split = getExpenseSplitModeValue('expense');
 
   if (split === 'FOR_B' && payer === 'A') {
-    hint.innerHTML = `${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 畀 → ${personImg('B', 'inline')} 要還全額`;
+    hint.innerHTML = `${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 俾 → ${personImg('B', 'inline')} 要還全額`;
   } else if (split === 'FOR_A' && payer === 'B') {
-    hint.innerHTML = `${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 畀 → ${personImg('A', 'inline')} 要還全額`;
+    hint.innerHTML = `${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 俾 → ${personImg('A', 'inline')} 要還全額`;
   } else if (split === 'SPLIT_5050') {
     hint.innerHTML =
       payer === 'A'
-        ? `${personImg('A', 'inline')} 畀，${personImg('B', 'inline')} 還一半`
-        : `${personImg('B', 'inline')} 畀，${personImg('A', 'inline')} 還一半`;
+        ? `${personImg('A', 'inline')} 俾，${personImg('B', 'inline')} 還一半`
+        : `${personImg('B', 'inline')} 俾，${personImg('A', 'inline')} 還一半`;
   } else if (split === 'FOR_A' && payer === 'A') {
-    hint.innerHTML = `${personImg('A', 'inline')} 自己嘅，自己畀 → 唔使還`;
+    hint.innerHTML = `${personImg('A', 'inline')} 自己嘅，自己俾 → 唔使還`;
   } else if (split === 'FOR_B' && payer === 'B') {
-    hint.innerHTML = `${personImg('B', 'inline')} 自己嘅，自己畀 → 唔使還`;
+    hint.innerHTML = `${personImg('B', 'inline')} 自己嘅，自己俾 → 唔使還`;
   } else {
     hint.innerHTML = '';
   }
@@ -3940,7 +3940,7 @@ function updateLoanModalView() {
   const submitBtn = $('#loan-submit-btn');
 
   if (contextEl) {
-    contextEl.innerHTML = `${personImg(lender, 'inline')} 借現金畀 ${personImg(borrower, 'inline')} · ${escapeHtml(currency)}`;
+    contextEl.innerHTML = `${personImg(lender, 'inline')} 借現金俾 ${personImg(borrower, 'inline')} · ${escapeHtml(currency)}`;
   }
   updateMoneyPrefix($('#loan-amount-prefix'), currency);
   if (submitBtn) submitBtn.disabled = isMutating;
