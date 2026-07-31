@@ -4368,14 +4368,119 @@ button.currency-label.badge-all.active {
   max-width: 100%;
 }
 
-.page-size-item select {
+.page-size-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.custom-select-wrap.page-size-select {
+  position: relative;
+}
+
+.custom-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
   width: 100%;
-  padding: 0.45rem 0.5rem;
-  border: 1.5px solid #ece6e9;
+  min-width: 5.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 2px solid #f0e8eb;
   border-radius: var(--radius-sm);
-  font-size: 0.82rem;
-  font-family: inherit;
   background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.custom-select-trigger:hover {
+  border-color: rgba(255, 117, 140, 0.45);
+}
+
+.page-size-select.is-open .custom-select-trigger {
+  border-color: var(--pink-start);
+  box-shadow: 0 3px 10px rgba(255, 117, 140, 0.18);
+}
+
+.custom-select-trigger:focus-visible {
+  outline: 2px solid var(--pink-start);
+  outline-offset: 2px;
+}
+
+.custom-select-value {
+  min-width: 0;
+  text-align: left;
+}
+
+.custom-select-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.page-size-select.is-open .custom-select-chevron {
+  transform: rotate(180deg);
+}
+
+.custom-select-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  background: #fff;
+  border: 2px solid #f0e8eb;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+}
+
+.custom-select-menu.hidden {
+  display: none;
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border: 1.5px solid #f0e8eb;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.custom-select-option:hover {
+  border-color: rgba(255, 117, 140, 0.45);
+}
+
+.custom-select-option.selected {
+  border-color: var(--pink-start);
+  background: linear-gradient(135deg, rgba(255, 117, 140, 0.14), rgba(255, 182, 193, 0.2));
+  color: var(--pink-start);
+}
+
+.custom-select-option:focus-visible {
+  outline: 2px solid var(--pink-start);
+  outline-offset: 1px;
 }
 
 .page-select-item {
@@ -6539,8 +6644,41 @@ html.theme-cyberpunk .day-scope-toggle .toggle-btn:not(.active) {
   background: #121226 !important;
 }
 
+html.theme-cyberpunk .custom-select-trigger {
+  background: #121226 !important;
+  border-color: var(--border-soft);
+  color: var(--text-dark);
+  box-shadow: none;
+}
+
+html.theme-cyberpunk .page-size-select.is-open .custom-select-trigger {
+  border-color: #00f6ff;
+  box-shadow: 0 0 12px rgba(0, 246, 255, 0.22);
+}
+
+html.theme-cyberpunk .custom-select-menu {
+  background: #0f1020 !important;
+  border-color: var(--border-soft);
+  box-shadow: 0 0 18px rgba(0, 246, 255, 0.16);
+}
+
+html.theme-cyberpunk .custom-select-option {
+  background: #121226 !important;
+  border-color: var(--border-soft);
+  color: var(--text-dark);
+}
+
+html.theme-cyberpunk .custom-select-option:hover {
+  border-color: rgba(0, 246, 255, 0.45);
+}
+
+html.theme-cyberpunk .custom-select-option.selected {
+  border-color: #00f6ff;
+  background: linear-gradient(135deg, rgba(255, 43, 214, 0.22), rgba(0, 246, 255, 0.14)) !important;
+  color: #9af7ff;
+}
+
 html.theme-cyberpunk .filter-grid-advanced select,
-html.theme-cyberpunk .page-size-item select,
 html.theme-cyberpunk .page-select-item select,
 html.theme-cyberpunk .filter-grid select,
 html.theme-cyberpunk .filter-grid input[type="date"],
