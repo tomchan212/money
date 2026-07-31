@@ -2885,6 +2885,48 @@ button.currency-label.badge-all.active {
   margin: 0 0 0.35rem;
 }
 
+.explain-section-total {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-align: center;
+  margin: 0.45rem 0 0.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.explain-section-total-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.explain-section-total-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.28rem;
+  line-height: 1.35;
+}
+
+.explain-section-total-row .person-avatar-inline {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.explain-section-total-verb {
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.explain-scroll-hint + .explain-section-total,
+.explain-section-total + .explain-scroll-hint {
+  margin-top: 0.15rem;
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
@@ -4815,10 +4857,49 @@ button.currency-label.badge-all.active {
 }
 
 .person-spend-total {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.35rem;
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-dark);
+}
+
+.person-spend-cash-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.65rem;
+  margin: 0 0 0.75rem;
+}
+
+.person-spend-cash-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.person-spend-cash-stat .category-icon-inline {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
+.person-spend-cash-value {
+  font-weight: 700;
+}
+
+.person-spend-cash-value.jpy {
+  color: var(--jpy-color);
+}
+
+.person-spend-cash-value.hkd {
+  color: var(--hkd-color);
+}
+
+.modal-content-person-spend-chart .person-spend-cash-stats {
+  justify-content: center;
+  margin-top: -0.15rem;
 }
 
 .person-spend-filters {

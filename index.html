@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731chartdrill">
+  <link rel="stylesheet" href="styles.css?v=20260731bugfix">
 </head>
 <body>
   <header class="app-header">
@@ -720,6 +720,7 @@
         </div>
       </div>
       <p id="person-spend-total" class="person-spend-total">—</p>
+      <div id="person-spend-cash-stats" class="person-spend-cash-stats" aria-label="還錢同借錢統計"></div>
       <div class="person-spend-filters">
         <div class="filter-item filter-item-icon-field">
           <label for="person-spend-category" class="sr-only">分類</label>
@@ -763,6 +764,7 @@
         <button type="button" class="modal-close" data-close-person-spend-chart aria-label="關閉">&times;</button>
       </div>
       <p id="person-spend-chart-subtitle" class="person-spend-chart-subtitle">—</p>
+      <div id="person-spend-chart-cash-stats" class="person-spend-cash-stats" aria-label="還錢同借錢統計"></div>
       <div id="person-spend-chart-wrap" class="person-spend-chart-wrap" aria-hidden="false">
         <svg id="person-spend-chart-svg" class="person-spend-chart-svg" viewBox="0 0 220 220" role="img" aria-labelledby="person-spend-chart-title"></svg>
       </div>
@@ -880,6 +882,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731chartdrill"></script>
+  <script src="app.js?v=20260731bugfix"></script>
 </body>
 </html>

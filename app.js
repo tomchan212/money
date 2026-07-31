@@ -1773,8 +1773,8 @@ function computeShares(amount, payer, splitMode) {
     default:
       return {
         a_share: amt / 2,
-        b_share: amt / 2,
-        net_b_owes_a: payer === 'A' ? amt / 2 : -amt / 2,
+        b_share: amt - amt / 2,
+        net_b_owes_a: payer === 'A' ? amt / 2 : -(amt / 2),
       };
   }
 }
@@ -1937,6 +1937,10 @@ function updateSyncStatusFromQueue(mode) {
   }
   if (mode === 'retry') {
     updateSyncStatus('retry');
+    return;
+  }
+  if (mode === 'error') {
+    updateSyncStatus('error');
     return;
   }
   if (mode === 'syncing' && pending > 0) {
@@ -3059,7 +3063,9 @@ function showDetailContent(key) {
   if (closeBtn) {
     closeBtn.setAttribute('aria-label', detailModalStack.length ? '返回上一層詳情' : '關閉');
   }
-  openModal(els.detailModal);
+  if (els.detailModal.classList.contains('hidden')) {
+    openModal(els.detailModal);
+  }
 }
 
 function openDetailModal(key) {
@@ -3112,6 +3118,51 @@ function buildExplainScrollHint(count) {
   return `<div class="explain-scroll-hint">共 ${count} 筆 · 向下滑查看更多 ↓</div>`;
 }
 
+function buildExplainSectionTotal(txs, currency, section) {
+  if (!txs.length) return '';
+  let label = '';
+  let verb = '';
+  if (section === 'loan') {
+    label = '借咗幾多';
+    verb = '借咗';
+  }
+  if (section === 'repay') {
+    label = '總共還咗幾多';
+    verb = '還咗';
+  }
+  if (!label) return '';
+
+  const totals = { 'A-B': 0, 'B-A': 0 };
+  for (const tx of txs) {
+    const amount = Number(tx.amount) || 0;
+    const from = tx.payer;
+    const to = section === 'loan' ? getLoanBorrower(tx) : from === 'A' ? 'B' : 'A';
+    const key = `${from}-${to}`;
+    totals[key] = (totals[key] || 0) + amount;
+  }
+
+  const flows = [];
+  if (totals['A-B'] > 0 && !isNegligibleMoney(totals['A-B'], currency)) {
+    flows.push({ from: 'A', to: 'B', amount: totals['A-B'] });
+  }
+  if (totals['B-A'] > 0 && !isNegligibleMoney(totals['B-A'], currency)) {
+    flows.push({ from: 'B', to: 'A', amount: totals['B-A'] });
+  }
+  if (!flows.length) return '';
+
+  const rows = flows
+    .map(
+      (flow) =>
+        `<div class="explain-section-total-row">${personImg(flow.from, 'inline')}<span class="explain-section-total-verb">${verb} ${escapeHtml(formatMoney(flow.amount, currency))} 俾</span>${personImg(flow.to, 'inline')}</div>`
+    )
+    .join('');
+
+  return `<div class="explain-section-total">
+    <div class="explain-section-total-label">${escapeHtml(label)}</div>
+    ${rows}
+  </div>`;
+}
+
 function renderExplainStepList(txs, cur, section) {
   let itemsHtml = '';
   txs.forEach((tx) => {
@@ -3120,7 +3171,7 @@ function renderExplainStepList(txs, cur, section) {
 
   return `<div class="explain-scroll-wrap" style="max-height:${EXPLAIN_SCROLL_MAX}px">
     <ol class="explain-steps" aria-label="${cur} ${section} 明細">${itemsHtml}</ol>
-  </div>${buildExplainScrollHint(txs.length)}`;
+  </div>${buildExplainSectionTotal(txs, cur, section)}${buildExplainScrollHint(txs.length)}`;
 }
 
 function renderExplainStepItem(tx) {
@@ -3276,6 +3327,11 @@ function renderSettlementExplain() {
         <div class="explain-sum-formula-row">
           <strong>而家仲要還</strong>${remainFormula ? `<span class="explain-sum-formula">${escapeHtml(remainFormula)}</span>` : ''}
         </div>
+        <div class="explain-sum-result">${formatNetDirectionHtml(cycleNet, cur)}</div>
+      </div>`;
+    } else if (loanContrib.length || netDiffersFromHelp) {
+      html += `<div class="explain-sum-line explain-sum-final">
+        <div class="explain-sum-formula-row"><strong>而家仲要還</strong></div>
         <div class="explain-sum-result">${formatNetDirectionHtml(cycleNet, cur)}</div>
       </div>`;
     }
@@ -3604,6 +3660,37 @@ function getPersonShare(tx, person) {
   return person === 'B' ? Number(tx.b_share) || 0 : Number(tx.a_share) || 0;
 }
 
+function calcPersonRepaidTotal(person, currency) {
+  return transactions
+    .filter((tx) => tx.currency === currency && isRepayTransaction(tx) && tx.payer === person)
+    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+}
+
+function calcPersonBorrowedTotal(person, currency) {
+  return transactions
+    .filter((tx) => tx.currency === currency && isLoanTransaction(tx) && getLoanBorrower(tx) === person)
+    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+}
+
+function personSpendCashStatsHtml(person, currency) {
+  const repaid = calcPersonRepaidTotal(person, currency);
+  const borrowed = calcPersonBorrowedTotal(person, currency);
+  const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
+  const repayIcon = categoryIconHtml('還錢', 'inline', '還錢');
+  const loanIcon = categoryIconHtml('借錢', 'inline', '借錢');
+  return `<span class="person-spend-cash-stat">
+      ${repayIcon}<span>總共還咗 <strong class="person-spend-cash-value ${curClass}">${escapeHtml(formatMoney(repaid, currency))}</strong></span>
+    </span>
+    <span class="person-spend-cash-stat">
+      ${loanIcon}<span>借咗 <strong class="person-spend-cash-value ${curClass}">${escapeHtml(formatMoney(borrowed, currency))}</strong></span>
+    </span>`;
+}
+
+function renderPersonSpendCashStats(container, person, currency) {
+  if (!container || !person || !currency) return;
+  container.innerHTML = personSpendCashStatsHtml(person, currency);
+}
+
 function getPersonSpendRows() {
   const { person, currency, category, sort } = personSpendView;
   if (!person || !currency) return [];
@@ -3633,7 +3720,7 @@ function getPersonSpendRows() {
 }
 
 function getPersonSpendChartRows() {
-  const { person, currency } = personSpendView;
+  const { person, currency, category } = personSpendView;
   if (!person || !currency) return [];
 
   return transactions.filter((tx) => {
@@ -3642,6 +3729,7 @@ function getPersonSpendChartRows() {
     if (isLoanTransaction(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
+    if (!matchesCategoryFilter(tx.category, category)) return false;
     return true;
   });
 }
@@ -3818,6 +3906,7 @@ function renderPersonSpendChart() {
   const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
 
   subtitleEl.innerHTML = `${personImg(person, 'inline')} ${escapeHtml(currency)} · 合共用咗 ${escapeHtml(formatMoney(total, currency))}`;
+  renderPersonSpendCashStats($('#person-spend-chart-cash-stats'), person, currency);
 
   if (!slices.length || isNegligibleMoney(total, currency)) {
     wrapEl.classList.add('hidden');
@@ -3831,20 +3920,29 @@ function renderPersonSpendChart() {
   const cx = 110;
   const cy = 110;
   const r = 96;
-  let angle = 0;
-  const slicePaths = slices
-    .map((slice) => {
-      const sweep = total > 0 ? (slice.amount / total) * 360 : 0;
-      if (sweep <= 0) return '';
-      const start = angle;
-      const end = angle + sweep;
-      angle = end;
-      const path = describePieSlice(cx, cy, r, start, end);
-      const title = `${slice.label} ${formatChartPct(slice.pct)} · ${formatMoney(slice.amount, currency)}`;
-      const categoryKey = encodeURIComponent(slice.key);
-      return `<path class="person-spend-chart-slice" d="${path}" fill="${escapeHtml(slice.color)}" data-chart-category-key="${categoryKey}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"><title>${escapeHtml(title)}</title></path>`;
-    })
-    .join('');
+  let slicePaths = '';
+  if (slices.length === 1) {
+    const slice = slices[0];
+    const title = `${slice.label} ${formatChartPct(slice.pct)} · ${formatMoney(slice.amount, currency)}`;
+    const categoryKey = encodeURIComponent(slice.key);
+    slicePaths = `<circle class="person-spend-chart-slice" cx="${cx}" cy="${cy}" r="${r}" fill="${escapeHtml(slice.color)}" data-chart-category-key="${categoryKey}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"><title>${escapeHtml(title)}</title></circle>`;
+  } else {
+    let angle = 0;
+    slicePaths = slices
+      .map((slice) => {
+        const sweep = total > 0 ? (slice.amount / total) * 360 : 0;
+        if (sweep <= 0) return '';
+        const start = angle;
+        let end = angle + sweep;
+        if (end - start >= 360) end = start + 359.999;
+        angle = end;
+        const path = describePieSlice(cx, cy, r, start, end);
+        const title = `${slice.label} ${formatChartPct(slice.pct)} · ${formatMoney(slice.amount, currency)}`;
+        const categoryKey = encodeURIComponent(slice.key);
+        return `<path class="person-spend-chart-slice" d="${path}" fill="${escapeHtml(slice.color)}" data-chart-category-key="${categoryKey}" tabindex="0" role="button" aria-label="${escapeHtml(title)}"><title>${escapeHtml(title)}</title></path>`;
+      })
+      .join('');
+  }
 
   svgEl.innerHTML = `${slicePaths}
     <circle cx="${cx}" cy="${cy}" r="34" fill="#fff"></circle>
@@ -3898,6 +3996,7 @@ function renderPersonSpendList() {
   if (totalEl) {
     totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆`;
   }
+  renderPersonSpendCashStats($('#person-spend-cash-stats'), person, currency);
 
   if (!rows.length) {
     list.innerHTML = `<li class="person-spend-empty">呢個篩選之下未有用咗紀錄</li>`;
@@ -4100,14 +4199,17 @@ const MODAL_SWIPE_DOWN_MAX_DX_RATIO = 0.9;
 
 function openModal(modal) {
   if (!modal) return;
-  openModalCount += 1;
+  const wasOpen = !modal.classList.contains('hidden');
+  if (!wasOpen) {
+    openModalCount += 1;
+    document.body.style.overflow = 'hidden';
+  }
   modal.style.zIndex = String(MODAL_BASE_Z + openModalCount * 10);
   modal.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
 }
 
 function closeModal(modal) {
-  if (!modal) return;
+  if (!modal || modal.classList.contains('hidden')) return;
   const content = modal.querySelector('.modal-content');
   if (content) {
     content.style.transition = '';
@@ -4120,10 +4222,24 @@ function closeModal(modal) {
   if (openModalCount === 0) document.body.style.overflow = '';
 }
 
+function getTopmostOpenModal() {
+  let top = null;
+  let topZ = -1;
+  document.querySelectorAll('.modal').forEach((modal) => {
+    if (modal.classList.contains('hidden')) return;
+    const z = Number.parseInt(modal.style.zIndex || '0', 10);
+    if (z >= topZ) {
+      topZ = z;
+      top = modal;
+    }
+  });
+  return top;
+}
+
 function dismissModalCard(modal) {
   if (!modal || modal.classList.contains('hidden')) return;
   if (modal.id === 'detail-modal') {
-    dismissDetailModal();
+    closeDetailModal();
     return;
   }
   if (modal.id === 'person-spend-modal') {
@@ -4606,16 +4722,15 @@ function setupEventListeners() {
 
   $$('[data-close-modal]').forEach((el) => {
     el.addEventListener('click', () => {
-      closeModal(els.budgetModal);
-      closeModal(els.editModal);
-      dismissDetailModal();
-      closePersonSpendModal();
-      closeModal(els.repayModal);
-      closeModal(els.loanModal);
-      closeModal(els.deleteConfirmModal);
-      closeModal(els.dayRangeModal);
-      closeModal($('#sheet-switcher-modal'));
+      const modal = el.closest('.modal');
+      if (modal) dismissModalCard(modal);
     });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    const topModal = getTopmostOpenModal();
+    if (topModal) dismissModalCard(topModal);
   });
 
   $$('[data-close-detail]').forEach((el) => {
@@ -5056,7 +5171,10 @@ async function init() {
     syncBudgets,
     syncClearAllTransactions,
     updateSyncStatusFromQueue,
-    isSyncBlocked: () => isMutating || isModalOpen(),
+    isSyncBlocked: () => isMutating,
+    onSyncPermanentFailure: () => {
+      showToast('同步失敗，2 分鐘後會再試', 'error');
+    },
   });
 
   try {

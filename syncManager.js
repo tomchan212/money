@@ -131,13 +131,17 @@ const SyncManager = (function () {
           op.retryCount = (op.retryCount || 0) + 1;
           if (op.retryCount <= RETRY_DELAYS_MS.length) {
             op.nextRetryAt = Date.now() + RETRY_DELAYS_MS[op.retryCount - 1];
+            op.syncFailed = false;
             OfflineQueue.updateHead(op);
             refreshStatus('retry');
             scheduleRetry(op.nextRetryAt - Date.now());
           } else {
-            op.nextRetryAt = 0;
+            op.syncFailed = true;
+            op.nextRetryAt = Date.now() + 120000;
             OfflineQueue.updateHead(op);
-            refreshStatus('retry');
+            refreshStatus('error');
+            if (hooks.onSyncPermanentFailure) hooks.onSyncPermanentFailure(op, err);
+            scheduleRetry(op.nextRetryAt - Date.now());
           }
           console.warn('SyncManager: op failed', op.type, err);
           break;

@@ -477,7 +477,7 @@ function computeShares_(amount, payer, splitMode) {
     default:
       return {
         a_share: amt / 2,
-        b_share: amt / 2,
+        b_share: amt - amt / 2,
         net_b_owes_a: payer === 'A' ? amt / 2 : -amt / 2,
       };
   }
