@@ -231,11 +231,11 @@
       "sortAmountAsc": "金額低→高"
     },
     "dayRange": {
-      "title": "揀日期範圍",
+      "title": "揀日期",
       "quickAll": "全部",
       "quickToday": "今日",
-      "statusDefault": "先撳開始日，再撳結束日",
-      "statusAnchor": "開始：{anchor}｜再撳結束日",
+      "statusDefault": "撳一日嚟篩選紀錄",
+      "statusSelected": "目前：{day}｜撳另一日可改",
       "navPrevMonth": "上個月",
       "navNextMonth": "下個月",
       "weekdays": ["日", "一", "二", "三", "四", "五", "六"]

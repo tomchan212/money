@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731deploy8">
+  <link rel="stylesheet" href="styles.css?v=20260731singleday">
 </head>
 <body>
   <header class="app-header">
@@ -407,7 +407,7 @@
               type="button"
               class="filter-day-range-bar hidden"
               id="filter-day-range-bar"
-              aria-label="自定日期範圍"
+              aria-label="自定日期"
             >
               <span class="filter-day-range-bar-icon" aria-hidden="true"><img class="ui-icon ui-icon-sm" src="icons/date.png" alt=""></span>
               <span class="filter-day-range-bar-text" id="filter-day-range-bar-text"></span>
@@ -870,19 +870,19 @@
     </div>
   </div>
 
-  <!-- Day Range Picker Modal -->
+  <!-- Day Picker Modal -->
   <div id="day-range-modal" class="modal hidden" role="dialog" aria-labelledby="day-range-modal-title" aria-modal="true">
     <div class="modal-backdrop" data-close-day-range></div>
     <div class="modal-content modal-content-day-range">
       <div class="modal-header">
-        <h3 id="day-range-modal-title"><img class="ui-icon ui-icon-title" src="icons/date.png" alt="" aria-hidden="true"> 揀日期範圍</h3>
+        <h3 id="day-range-modal-title"><img class="ui-icon ui-icon-title" src="icons/date.png" alt="" aria-hidden="true"> 揀日期</h3>
         <button type="button" class="modal-close" data-close-day-range aria-label="關閉">&times;</button>
       </div>
       <div class="day-range-quick" role="group" aria-label="快速篩選">
         <button type="button" class="day-range-quick-btn" data-day-quick="all">全部</button>
         <button type="button" class="day-range-quick-btn" data-day-quick="today">今日</button>
       </div>
-      <p class="day-range-status" id="day-range-status" aria-live="polite">先撳開始日，再撳結束日</p>
+      <p class="day-range-status" id="day-range-status" aria-live="polite">撳一日嚟篩選紀錄</p>
       <div class="day-range-cal-nav">
         <button type="button" class="day-range-nav-btn" id="day-range-prev-month" aria-label="上個月">‹</button>
         <div class="day-range-month-label" id="day-range-month-label"></div>
@@ -967,6 +967,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731deploy8"></script>
+  <script src="app.js?v=20260731singleday"></script>
 </body>
 </html>

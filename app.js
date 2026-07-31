@@ -1623,23 +1623,13 @@ function hasDayRangeFilter() {
 }
 
 function formatDayRangeLabel() {
-  const from = listFilters.dayFrom;
-  const to = listFilters.dayTo;
-  if (from && to) {
-    return from === to ? from : `${from} ～ ${to}`;
-  }
-  if (from) return `${from} 起`;
-  if (to) return `至 ${to}`;
-  return '';
+  return listFilters.dayFrom || listFilters.dayTo || '';
 }
 
 function formatDayRangeBarLabel(from, to) {
-  if (!from && !to) return '';
-  if (from && to && from === to) return `[${formatShortDayLabel(from)}]`;
-  if (from && to) return `[${formatShortDayLabel(from)}～${formatShortDayLabel(to)}]`;
-  if (from) return `[${formatShortDayLabel(from)}起]`;
-  if (to) return `[至${formatShortDayLabel(to)}]`;
-  return '';
+  const day = from || to || '';
+  if (!day) return '';
+  return `[${formatShortDayLabel(day)}]`;
 }
 
 function formatShortDayLabel(iso) {
@@ -1690,7 +1680,7 @@ function getQuickDayValueLabel() {
   const scope = getQuickDayScope();
   if (scope === 'all') return '全部';
   if (scope === 'today') return '今日';
-  return '自定範圍';
+  return formatShortDayLabel(listFilters.dayFrom || listFilters.dayTo) || '自定';
 }
 
 function openDayRangePicker() {
@@ -1709,7 +1699,9 @@ function closeDayRangePicker() {
 }
 
 function applyDayRangeSelection(from, to, { close = true } = {}) {
-  setDayRange(from, to);
+  // List day filter is single-day, like 記帳 date picking.
+  const day = from || to || '';
+  setDayFilter(day);
   syncQuickFilterChips();
   dayRangePickerState.onChange?.();
   if (close) closeDayRangePicker();
@@ -1719,33 +1711,22 @@ function applyDayRangeSelection(from, to, { close = true } = {}) {
 function updateDayRangeStatus() {
   const status = $('#day-range-status');
   if (!status) return;
-  const anchor = dayRangePickerState.anchor;
-  if (anchor) {
-    status.textContent = `開始：${anchor}｜再撳結束日`;
-    return;
-  }
   const label = formatDayRangeLabel();
-  status.textContent = label
-    ? `目前：${label}｜撳兩下揀新範圍`
-    : '先撳開始日，再撳結束日';
+  status.textContent = label ? `目前：${label}｜撳另一日可改` : '撳一日嚟篩選紀錄';
 }
 
 function renderDayRangePicker() {
-  const { viewYear: y, viewMonth: m, anchor } = dayRangePickerState;
+  const { viewYear: y, viewMonth: m } = dayRangePickerState;
   const monthLabel = $('#day-range-month-label');
   if (monthLabel) monthLabel.textContent = `${y}年${m}月`;
 
-  const from = anchor || listFilters.dayFrom || '';
-  const to = anchor ? '' : listFilters.dayTo || '';
-  const draftFrom = from && to ? (from <= to ? from : to) : from;
-  const draftTo = from && to ? (from <= to ? to : from) : '';
+  const selected = listFilters.dayFrom || listFilters.dayTo || '';
 
   $$('.day-range-quick-btn').forEach((btn) => {
     const quick = btn.dataset.dayQuick;
     const scope = getQuickDayScope();
     const active =
-      !anchor &&
-      ((quick === 'all' && scope === 'all') || (quick === 'today' && scope === 'today'));
+      (quick === 'all' && scope === 'all') || (quick === 'today' && scope === 'today');
     btn.classList.toggle('is-active', active);
   });
 
@@ -1764,13 +1745,9 @@ function renderDayRangePicker() {
     const iso = isoFromParts(y, m, d);
     const classes = ['day-range-day'];
     if (iso === today) classes.push('is-today');
-    if (anchor === iso) classes.push('is-anchor', 'is-selected');
-    if (draftFrom && draftTo && iso >= draftFrom && iso <= draftTo) classes.push('is-in-range');
-    if (draftFrom && iso === draftFrom) classes.push('is-selected', 'is-range-start');
-    if (draftTo && iso === draftTo) classes.push('is-selected', 'is-range-end');
-    if (draftFrom && !draftTo && iso === draftFrom) classes.push('is-selected');
+    if (selected && iso === selected) classes.push('is-selected');
     cells.push(
-      `<button type="button" class="${classes.join(' ')}" data-day="${iso}" aria-label="${iso}">${d}</button>`
+      `<button type="button" class="${classes.join(' ')}" data-day="${iso}" aria-label="${iso}" aria-pressed="${selected === iso ? 'true' : 'false'}">${d}</button>`
     );
   }
 
@@ -1780,14 +1757,7 @@ function renderDayRangePicker() {
 
 function handleDayRangeDayClick(iso) {
   if (!iso) return;
-  if (!dayRangePickerState.anchor) {
-    dayRangePickerState.anchor = iso;
-    renderDayRangePicker();
-    return;
-  }
-  const start = dayRangePickerState.anchor;
-  dayRangePickerState.anchor = null;
-  applyDayRangeSelection(start, iso, { close: true });
+  applyDayRangeSelection(iso, iso, { close: true });
 }
 
 function setupDayRangePicker(onChange) {
@@ -1876,7 +1846,7 @@ function syncQuickFilterChips() {
   dayChip?.setAttribute(
     'aria-label',
     dayScope === 'custom' && rangeBarLabel
-      ? `日子：自定範圍 ${rangeBarLabel}`
+      ? `日子：${rangeBarLabel}`
       : `日子：${getQuickDayValueLabel()}`
   );
 
@@ -1886,11 +1856,11 @@ function syncQuickFilterChips() {
     if (dayScope === 'custom' && rangeBarLabel) {
       rangeBarText.textContent = rangeBarLabel;
       rangeBar.classList.remove('hidden');
-      rangeBar.setAttribute('aria-label', `自定日期範圍 ${rangeBarLabel}`);
+      rangeBar.setAttribute('aria-label', `自定日期 ${rangeBarLabel}`);
     } else {
       rangeBarText.textContent = '';
       rangeBar.classList.add('hidden');
-      rangeBar.setAttribute('aria-label', '自定日期範圍');
+      rangeBar.setAttribute('aria-label', '自定日期');
     }
   }
 
