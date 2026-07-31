@@ -579,6 +579,7 @@ async function runAssetPreload({ force = false, silent = false } = {}) {
 
   const urls = collectAssetUrls();
   let done = 0;
+  const startedAt = Date.now();
   setAssetPreloadProgress(0, urls.length);
 
   try {
@@ -597,6 +598,10 @@ async function runAssetPreload({ force = false, silent = false } = {}) {
 
     await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, () => worker()));
     markAssetsPreloaded();
+    if (!silent) {
+      const remaining = Math.max(0, 1000 - (Date.now() - startedAt));
+      if (remaining > 0) await sleep(remaining);
+    }
     return true;
   } finally {
     isAssetPreloading = false;
