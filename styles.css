@@ -1824,11 +1824,15 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-btn {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "desc chevron"
+    "net chevron";
+  gap: 0.3rem 0.45rem;
   align-items: center;
-  gap: 0.35rem;
   width: 100%;
-  padding: 0.4rem 0.45rem;
+  padding: 0.5rem 0.55rem;
   border: none;
   border-radius: var(--radius-sm);
   background: #f8f9fb;
@@ -1843,14 +1847,14 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-btn .explain-step-desc {
-  flex: 1;
+  grid-area: desc;
   min-width: 0;
   font-weight: 600;
   color: var(--text-dark);
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.2rem;
+  gap: 0.25rem;
   line-height: 1.5;
 }
 
@@ -1862,11 +1866,26 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-btn .explain-step-net {
-  flex-shrink: 0;
+  grid-area: net;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
   margin-top: 0;
 }
 
+.explain-step-btn .explain-step-net .person-avatar-inline {
+  width: 1.45em;
+  height: 1.45em;
+  min-width: 1.45em;
+  min-height: 1.45em;
+}
+
 .explain-step-chevron {
+  grid-area: chevron;
+  align-self: center;
   flex-shrink: 0;
   color: var(--text-muted);
   font-size: 0.95rem;
@@ -2581,7 +2600,16 @@ button.currency-label.badge-all.active {
 
 .explain-scroll-wrap .explain-steps {
   margin: 0;
-  padding: 0;
+  padding: 0.35rem 0.4rem;
+}
+
+.explain-scroll-wrap .explain-step-item {
+  margin-left: 0;
+  margin-bottom: 0.35rem;
+}
+
+.explain-scroll-wrap .explain-step-item:last-child {
+  margin-bottom: 0;
 }
 
 .help-pay-matrix-footer {
