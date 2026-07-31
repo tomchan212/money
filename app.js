@@ -3939,7 +3939,7 @@ function updateLoanModalView() {
   const submitBtn = $('#loan-submit-btn');
 
   if (contextEl) {
-    contextEl.innerHTML = `${personImg(lender, 'inline')} 借現金畀 ${personImg(borrower, 'inline')}（借幾多欠幾多，唔會除二 · 唔計消費）· ${escapeHtml(currency)}`;
+    contextEl.innerHTML = `${personImg(lender, 'inline')} 借現金畀 ${personImg(borrower, 'inline')} · ${escapeHtml(currency)}`;
   }
   updateMoneyPrefix($('#loan-amount-prefix'), currency);
   if (submitBtn) submitBtn.disabled = isMutating;
