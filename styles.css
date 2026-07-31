@@ -4031,9 +4031,23 @@ button.currency-label.badge-all.active {
 }
 
 .pagination-bar-bottom {
+  grid-template-columns: 1fr;
   border-top: none;
   padding-top: 0;
   margin-bottom: 0.65rem;
+}
+
+.pagination-bar-bottom .pagination-nav {
+  width: 100%;
+  justify-content: stretch;
+  gap: 0.45rem;
+}
+
+.pagination-bar-bottom .page-select-item {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
 }
 
 .pagination-footer .pagination-info {

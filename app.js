@@ -3846,10 +3846,8 @@ function renderPaginationBar(meta, suffix = '') {
 
 function syncPageSizeSelects(value) {
   const next = String(value);
-  ['#filter-page-size', '#filter-page-size-bottom'].forEach((sel) => {
-    const el = $(sel);
-    if (el && el.value !== next) el.value = next;
-  });
+  const el = $('#filter-page-size');
+  if (el && el.value !== next) el.value = next;
 }
 
 function syncPageSelects(page) {
@@ -4990,7 +4988,6 @@ function setupListFilters() {
   };
 
   $('#filter-page-size')?.addEventListener('change', onPageSizeChange);
-  $('#filter-page-size-bottom')?.addEventListener('change', onPageSizeChange);
   syncPageSizeSelects(listFilters.pageSize);
 
   const onPageNumChange = (e) => {
