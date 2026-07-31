@@ -4407,26 +4407,35 @@ button.currency-label.badge-all.active {
 }
 
 .pagination-bar.pagination-bar-bottom {
-  grid-template-columns: 1fr;
+  display: block;
+  width: 100%;
+  grid-template-columns: none;
 }
 
 .pagination-bar-bottom .pagination-nav {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  justify-content: stretch;
   width: 100%;
   max-width: none;
-  justify-content: flex-start;
   gap: 0.45rem;
 }
 
 .pagination-bar-bottom .page-select-item {
-  flex: 1 1 auto;
+  display: block;
+  width: 100%;
   min-width: 0;
   max-width: none;
-  width: auto;
+  flex: none;
 }
 
 .pagination-bar-bottom .page-select-item select {
+  display: block;
   width: 100%;
   min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .page-size-item {
@@ -4523,7 +4532,9 @@ button.currency-label.badge-all.active {
   }
 
   .pagination-bar.pagination-bar-bottom {
-    grid-template-columns: 1fr;
+    display: block;
+    width: 100%;
+    grid-template-columns: none;
   }
 
   .pagination-nav {
@@ -4531,7 +4542,10 @@ button.currency-label.badge-all.active {
   }
 
   .pagination-bar-bottom .pagination-nav {
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    justify-content: stretch;
+    width: 100%;
   }
 
   .page-size-item select,
