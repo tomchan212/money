@@ -197,7 +197,10 @@
     },
     "budget": {
       "title": "修改初始預算",
-      "submit": "儲存預算"
+      "submit": "儲存預算",
+      "remainSectionTitle": "關閉剩餘顯示",
+      "remainToggleOn": "{currency} 剩餘：開",
+      "remainToggleOff": "{currency} 剩餘：關"
     },
     "edit": {
       "title": "✏️ 編輯消費明細",

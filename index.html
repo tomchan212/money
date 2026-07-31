@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731listhead">
+  <link rel="stylesheet" href="styles.css?v=20260731listbig">
 </head>
 <body>
   <header class="app-header">
@@ -57,28 +57,42 @@
               <button type="button" class="currency-label badge-all currency-icon-only" data-currency-view="all" aria-pressed="false" aria-label="全部幣別"><img class="ui-icon ui-icon-currency" src="icons/exchange.png?v=20260730dc" alt="" aria-hidden="true"></button>
             </div>
           </div>
-          <div class="home-spent-currency" data-currency-panel="jpy">
-            <div class="home-spent-row">
-              <button type="button" class="home-spent-item person-spend-btn" data-person="A" data-currency="JPY" aria-label="睇男孩 JPY 啲錢用咗去邊">
-                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
-                <span class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></span>
-              </button>
-              <button type="button" class="home-spent-item person-spend-btn" data-person="B" data-currency="JPY" aria-label="睇女生 JPY 啲錢用咗去邊">
-                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
-                <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></span>
-              </button>
+          <div class="currency-section" data-currency-panel="jpy">
+            <div class="currency-section-rail" aria-hidden="true">
+              <img class="currency-section-icon" src="icons/jpy.png?v=20260730dc" alt="">
+            </div>
+            <div class="currency-section-body">
+              <div class="home-spent-currency">
+                <div class="home-spent-row">
+                  <button type="button" class="home-spent-item person-spend-btn" data-person="A" data-currency="JPY" aria-label="睇男孩 JPY 啲錢用咗去邊">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                    <span class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></span>
+                  </button>
+                  <button type="button" class="home-spent-item person-spend-btn" data-person="B" data-currency="JPY" aria-label="睇女生 JPY 啲錢用咗去邊">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                    <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="home-spent-currency hidden" data-currency-panel="hkd">
-            <div class="home-spent-row">
-              <button type="button" class="home-spent-item person-spend-btn" data-person="A" data-currency="HKD" aria-label="睇男孩 HKD 啲錢用咗去邊">
-                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
-                <span class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="hkd">0</strong></span>
-              </button>
-              <button type="button" class="home-spent-item person-spend-btn" data-person="B" data-currency="HKD" aria-label="睇女生 HKD 啲錢用咗去邊">
-                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
-                <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="hkd">0</strong></span>
-              </button>
+          <div class="currency-section" data-currency-panel="hkd">
+            <div class="currency-section-rail" aria-hidden="true">
+              <img class="currency-section-icon" src="icons/hkd.png?v=20260730dc" alt="">
+            </div>
+            <div class="currency-section-body">
+              <div class="home-spent-currency">
+                <div class="home-spent-row">
+                  <button type="button" class="home-spent-item person-spend-btn" data-person="A" data-currency="HKD" aria-label="睇男孩 HKD 啲錢用咗去邊">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                    <span class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="hkd">0</strong></span>
+                  </button>
+                  <button type="button" class="home-spent-item person-spend-btn" data-person="B" data-currency="HKD" aria-label="睇女生 HKD 啲錢用咗去邊">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                    <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="hkd">0</strong></span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -185,65 +199,107 @@
           <button type="button" class="currency-label badge-all currency-icon-only" data-currency-view="all" aria-pressed="false" aria-label="全部幣別"><img class="ui-icon ui-icon-currency" src="icons/exchange.png?v=20260730dc" alt="" aria-hidden="true"></button>
         </div>
 
-        <div class="summary-stats" data-currency-panel="jpy">
-          <button type="button" class="stat-chip person-spend-btn" data-person="A" data-currency="JPY" aria-label="睇男孩 JPY 啲錢用咗去邊">
-            <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
-            <div class="stat-chip-body">
-              <div class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></div>
-              <div class="stat-remain remain-value" data-person="a" data-currency="jpy">剩餘 0</div>
+        <div class="currency-section" data-currency-panel="jpy">
+          <div class="currency-section-rail" aria-hidden="true">
+            <img class="currency-section-icon" src="icons/jpy.png?v=20260730dc" alt="">
+          </div>
+          <div class="currency-section-body">
+            <div class="summary-stats">
+              <button type="button" class="stat-chip person-spend-btn" data-person="A" data-currency="JPY" aria-label="睇男孩 JPY 啲錢用咗去邊">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                <div class="stat-chip-body">
+                  <div class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></div>
+                  <div class="stat-remain remain-value" data-person="a" data-currency="jpy">剩餘 0</div>
+                </div>
+              </button>
+              <button type="button" class="stat-chip person-spend-btn" data-person="B" data-currency="JPY" aria-label="睇女生 JPY 啲錢用咗去邊">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                <div class="stat-chip-body">
+                  <div class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></div>
+                  <div class="stat-remain remain-value" data-person="b" data-currency="jpy">剩餘 0</div>
+                </div>
+              </button>
             </div>
-          </button>
-          <button type="button" class="stat-chip person-spend-btn" data-person="B" data-currency="JPY" aria-label="睇女生 JPY 啲錢用咗去邊">
-            <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
-            <div class="stat-chip-body">
-              <div class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></div>
-              <div class="stat-remain remain-value" data-person="b" data-currency="jpy">剩餘 0</div>
-            </div>
-          </button>
+          </div>
         </div>
 
-        <div class="summary-stats hidden" data-currency-panel="hkd">
-          <button type="button" class="stat-chip person-spend-btn" data-person="A" data-currency="HKD" aria-label="睇男孩 HKD 啲錢用咗去邊">
-            <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
-            <div class="stat-chip-body">
-              <div class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="hkd">0</strong></div>
-              <div class="stat-remain remain-value" data-person="a" data-currency="hkd">剩餘 0</div>
+        <div class="currency-section" data-currency-panel="hkd">
+          <div class="currency-section-rail" aria-hidden="true">
+            <img class="currency-section-icon" src="icons/hkd.png?v=20260730dc" alt="">
+          </div>
+          <div class="currency-section-body">
+            <div class="summary-stats">
+              <button type="button" class="stat-chip person-spend-btn" data-person="A" data-currency="HKD" aria-label="睇男孩 HKD 啲錢用咗去邊">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                <div class="stat-chip-body">
+                  <div class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="hkd">0</strong></div>
+                  <div class="stat-remain remain-value" data-person="a" data-currency="hkd">剩餘 0</div>
+                </div>
+              </button>
+              <button type="button" class="stat-chip person-spend-btn" data-person="B" data-currency="HKD" aria-label="睇女生 HKD 啲錢用咗去邊">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                <div class="stat-chip-body">
+                  <div class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="hkd">0</strong></div>
+                  <div class="stat-remain remain-value" data-person="b" data-currency="hkd">剩餘 0</div>
+                </div>
+              </button>
             </div>
-          </button>
-          <button type="button" class="stat-chip person-spend-btn" data-person="B" data-currency="HKD" aria-label="睇女生 HKD 啲錢用咗去邊">
-            <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
-            <div class="stat-chip-body">
-              <div class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="hkd">0</strong></div>
-              <div class="stat-remain remain-value" data-person="b" data-currency="hkd">剩餘 0</div>
-            </div>
-          </button>
+          </div>
         </div>
 
         <div class="settlement-card" id="settlement-card">
-          <div class="help-pay-block summary-icon-block" id="help-pay-block">
-            <div class="summary-icon-block-body">
-              <div class="summary-block-heading">
-                <span class="summary-block-title">邊個幫邊個俾</span>
-                <span class="summary-title-badge" id="help-pay-title-badge-jpy" data-currency-panel="jpy" aria-hidden="true"></span>
-                <span class="summary-title-badge hidden" id="help-pay-title-badge-hkd" data-currency-panel="hkd" aria-hidden="true"></span>
+          <div class="currency-section currency-section-settlement" data-currency-panel="jpy">
+            <div class="currency-section-body">
+              <div class="currency-section-help-row">
+                <div class="currency-section-rail" aria-hidden="true">
+                  <img class="currency-section-icon" src="icons/jpy.png?v=20260730dc" alt="">
+                </div>
+                <div class="help-pay-block summary-icon-block" id="help-pay-block-jpy">
+                  <div class="summary-icon-block-body">
+                    <div class="summary-block-heading">
+                      <span class="summary-block-title">邊個幫邊個俾</span>
+                    </div>
+                    <div id="help-pay-jpy" class="help-pay-line">—</div>
+                  </div>
+                </div>
               </div>
-              <div id="help-pay-jpy" class="help-pay-line" data-currency-panel="jpy">—</div>
-              <div id="help-pay-hkd" class="help-pay-line hidden" data-currency-panel="hkd">—</div>
+              <div class="summary-icon-block summary-icon-block-settlement">
+                <div class="summary-icon-block-body">
+                  <div class="summary-block-heading">
+                    <span class="summary-block-title">而家邊個欠邊個</span>
+                  </div>
+                  <div id="settlement-jpy" class="settlement-line">—</div>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="summary-icon-block summary-icon-block-settlement">
-            <div class="summary-icon-block-body">
-              <div class="summary-block-heading">
-                <span class="summary-block-title">而家邊個欠邊個</span>
-                <span class="summary-title-badge" id="settlement-title-badge-jpy" data-currency-panel="jpy" aria-hidden="true"></span>
-                <span class="summary-title-badge hidden" id="settlement-title-badge-hkd" data-currency-panel="hkd" aria-hidden="true"></span>
+          <div class="currency-section currency-section-settlement" data-currency-panel="hkd">
+            <div class="currency-section-body">
+              <div class="currency-section-help-row">
+                <div class="currency-section-rail" aria-hidden="true">
+                  <img class="currency-section-icon" src="icons/hkd.png?v=20260730dc" alt="">
+                </div>
+                <div class="help-pay-block summary-icon-block">
+                  <div class="summary-icon-block-body">
+                    <div class="summary-block-heading">
+                      <span class="summary-block-title">邊個幫邊個俾</span>
+                    </div>
+                    <div id="help-pay-hkd" class="help-pay-line">—</div>
+                  </div>
+                </div>
               </div>
-              <div id="settlement-jpy" class="settlement-line" data-currency-panel="jpy">—</div>
-              <div id="settlement-hkd" class="settlement-line hidden" data-currency-panel="hkd">—</div>
-              <div class="settlement-actions hidden" id="settlement-actions">
-                <button type="button" class="btn btn-primary btn-sm btn-block" id="btn-open-repay"><img class="category-icon category-icon-btn" src="icons/repayment.png" alt="" aria-hidden="true"> 記錄還錢</button>
+              <div class="summary-icon-block summary-icon-block-settlement">
+                <div class="summary-icon-block-body">
+                  <div class="summary-block-heading">
+                    <span class="summary-block-title">而家邊個欠邊個</span>
+                  </div>
+                  <div id="settlement-hkd" class="settlement-line">—</div>
+                </div>
               </div>
             </div>
+          </div>
+          <div class="settlement-actions hidden" id="settlement-actions">
+            <button type="button" class="btn btn-primary btn-sm btn-block" id="btn-open-repay"><img class="category-icon category-icon-btn" src="icons/repayment.png" alt="" aria-hidden="true"> 記錄還錢</button>
           </div>
         </div>
 
@@ -412,7 +468,10 @@
           </div>
           <div class="pagination-nav" id="pagination-nav">
             <button type="button" class="btn-page" id="btn-prev" disabled aria-label="上一頁">‹</button>
-            <div class="page-numbers" id="page-numbers"></div>
+            <div class="filter-item page-select-item">
+              <label for="filter-page-num">頁數</label>
+              <select id="filter-page-num" aria-label="選擇頁數" disabled></select>
+            </div>
             <button type="button" class="btn-page" id="btn-next" disabled aria-label="下一頁">›</button>
           </div>
         </div>
@@ -440,7 +499,10 @@
           </div>
           <div class="pagination-nav" id="pagination-nav-bottom">
             <button type="button" class="btn-page" id="btn-prev-bottom" disabled aria-label="上一頁">‹</button>
-            <div class="page-numbers" id="page-numbers-bottom"></div>
+            <div class="filter-item page-select-item">
+              <label for="filter-page-num-bottom">頁數</label>
+              <select id="filter-page-num-bottom" aria-label="選擇頁數" disabled></select>
+            </div>
             <button type="button" class="btn-page" id="btn-next-bottom" disabled aria-label="下一頁">›</button>
           </div>
         </div>
@@ -609,6 +671,19 @@
                 <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-hkd" required>
               </div>
             </div>
+          </div>
+        </div>
+        <div class="budget-remain-section" role="group" aria-label="關閉剩餘顯示">
+          <div class="budget-remain-section-title">關閉剩餘顯示</div>
+          <div class="budget-remain-toggles">
+            <button type="button" class="budget-remain-toggle active" data-remain-currency="JPY" aria-pressed="true">
+              <img class="ui-icon ui-icon-currency" src="icons/jpy.png?v=20260730dc" alt="" aria-hidden="true">
+              <span class="budget-remain-toggle-text">JPY 剩餘：開</span>
+            </button>
+            <button type="button" class="budget-remain-toggle" data-remain-currency="HKD" aria-pressed="false">
+              <img class="ui-icon ui-icon-currency" src="icons/hkd.png?v=20260730dc" alt="" aria-hidden="true">
+              <span class="budget-remain-toggle-text">HKD 剩餘：關</span>
+            </button>
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block">儲存預算 <img class="ui-icon ui-icon-btn" src="icons/save.png" alt="" aria-hidden="true"></button>
@@ -881,6 +956,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731pages2"></script>
+  <script src="app.js?v=20260731listbig"></script>
 </body>
 </html>

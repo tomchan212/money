@@ -23,6 +23,7 @@ const API_ENDPOINTS = {
 const API_STORAGE_KEY = 'money-api-endpoint';
 const THEME_STORAGE_KEY = 'money-theme';
 const LIST_DETAIL_STORAGE_KEY = 'money-list-detail-expanded';
+const REMAIN_DISPLAY_STORAGE_KEY = 'money-remain-display';
 const PARTICLE_COLORS_LIGHT = ['#ff758c', '#ff7eb3', '#ffc2d1', '#fff0f3', '#f7c948', '#ffffff'];
 const PARTICLE_COLORS_CYBER = ['#ff2bd6', '#00f6ff', '#7a3cff', '#39ff14', '#ffffff', '#ff9f1c'];
 let PARTICLE_COLORS = PARTICLE_COLORS_LIGHT;
@@ -238,6 +239,12 @@ let currencyView = 'jpy';
 let loadingProgressTimer = null;
 let loadingProgressValue = 0;
 let listViewExpanded = false;
+
+/** JPY / HKD 是否顯示「剩餘」 */
+let remainDisplayPrefs = {
+  JPY: true,
+  HKD: false,
+};
 
 const listFilters = {
   dayFrom: '',
@@ -564,23 +571,166 @@ function locationMapsUrl(location) {
   return `https://maps.apple.com/?q=${encodeURIComponent(s)}`;
 }
 
-/** Auto-capture GPS for new records. Never blocks save if denied/unavailable. */
-function captureCurrentLocation() {
+function isNumbersOnlyLocation(text) {
+  const s = String(text || '').trim();
+  if (!s) return true;
+  if (/^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(s)) return true;
+  return !/[\p{L}\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(s);
+}
+
+function pickNamedLocationLabel(...candidates) {
+  for (const candidate of candidates) {
+    const s = String(candidate || '').trim();
+    if (s && !isNumbersOnlyLocation(s)) return s;
+  }
+  return '';
+}
+
+async function fetchGeocodeJson(url, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function buildNominatimLabel(data) {
+  if (!data) return '';
+  const addr = data.address || {};
+  const name = String(data.name || '').trim();
+  if (name && !isNumbersOnlyLocation(name)) return name;
+
+  const road = pickNamedLocationLabel(
+    addr.road,
+    addr.pedestrian,
+    addr.footway,
+    addr.residential,
+    addr.neighbourhood,
+  );
+  const house = String(addr.house_number || '').trim();
+  if (road) return house ? `${road} ${house}` : road;
+
+  const area = pickNamedLocationLabel(
+    addr.quarter,
+    addr.suburb,
+    addr.city_district,
+    addr.borough,
+    addr.city,
+    addr.town,
+    addr.village,
+    addr.municipality,
+    addr.county,
+    addr.state,
+  );
+  if (area) return area;
+
+  const parts = String(data.display_name || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  for (const part of parts) {
+    if (!isNumbersOnlyLocation(part)) return part;
+  }
+  return '';
+}
+
+async function nominatimReverseLabel(lat, lng, zoom) {
+  const url = new URL('https://nominatim.openstreetmap.org/reverse');
+  url.searchParams.set('format', 'json');
+  url.searchParams.set('lat', String(lat));
+  url.searchParams.set('lon', String(lng));
+  url.searchParams.set('zoom', String(zoom));
+  url.searchParams.set('addressdetails', '1');
+  url.searchParams.set('namedetails', '1');
+  url.searchParams.set('accept-language', 'zh-Hant,ja,en');
+  const data = await fetchGeocodeJson(url.toString());
+  return buildNominatimLabel(data);
+}
+
+function buildBigDataCloudLabel(data) {
+  if (!data) return '';
+  const info = data.localityInfo || {};
+  for (const item of info.informative || []) {
+    const label = pickNamedLocationLabel(item.name);
+    if (label) return label;
+  }
+  for (const item of info.administrative || []) {
+    const label = pickNamedLocationLabel(item.name);
+    if (label) return label;
+  }
+  return pickNamedLocationLabel(data.locality, data.city, data.principalSubdivision);
+}
+
+async function bigDataCloudReverseLabel(lat, lng) {
+  const url = new URL('https://api.bigdatacloud.net/data/reverse-geocode-client');
+  url.searchParams.set('latitude', String(lat));
+  url.searchParams.set('longitude', String(lng));
+  url.searchParams.set('localityLanguage', 'zh');
+  const data = await fetchGeocodeJson(url.toString());
+  return buildBigDataCloudLabel(data);
+}
+
+async function findNearestNamedLocation(lat, lng) {
+  for (const zoom of [18, 17, 16, 15]) {
+    try {
+      const label = await nominatimReverseLabel(lat, lng, zoom);
+      if (label) return label;
+    } catch (_) {}
+  }
+
+  const offsets = [
+    [0.00025, 0],
+    [-0.00025, 0],
+    [0, 0.00025],
+    [0, -0.00025],
+    [0.00035, 0.00035],
+    [-0.00035, 0.00035],
+  ];
+  for (const [dLat, dLng] of offsets) {
+    try {
+      const label = await nominatimReverseLabel(lat + dLat, lng + dLng, 18);
+      if (label) return label;
+    } catch (_) {}
+  }
+
+  try {
+    const label = await bigDataCloudReverseLabel(lat, lng);
+    if (label) return label;
+  } catch (_) {}
+
+  return '';
+}
+
+function getCurrentCoordinates() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      resolve('');
+      resolve(null);
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude.toFixed(5);
-        const lng = pos.coords.longitude.toFixed(5);
-        resolve(`${lat}, ${lng}`);
-      },
-      () => resolve(''),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 },
     );
   });
+}
+
+/** Auto-capture GPS for new records. Saves a named address when possible; never blocks save. */
+async function captureCurrentLocation() {
+  const coords = await getCurrentCoordinates();
+  if (!coords) return '';
+  try {
+    return await findNearestNamedLocation(coords.lat, coords.lng);
+  } catch (_) {
+    return '';
+  }
 }
 
 function isPredefinedCategory(category) {
@@ -3266,15 +3416,13 @@ function renderSettlementExplain() {
     const el = $(`#settlement-explain-${cur.toLowerCase()}`);
     if (!el) return;
 
-    const badge = currencyUiIconHtml(cur, 'sm');
     const netTotal = calcSummary().net[cur];
     const settled = isNegligibleMoney(netTotal, cur);
     if (!settled) anyOpenDebt = true;
 
     // 還清：提示去明細睇舊帳，並提供一鍵跳轉
     if (settled) {
-      el.innerHTML = `<div class="explain-currency-label">${badge} ${cur}</div>
-        <p class="explain-empty">而家數清晒。想睇舊帳／還錢詳情，去「紀錄」撳嗰筆就得。</p>
+      el.innerHTML = `<p class="explain-empty">而家數清晒。想睇舊帳／還錢詳情，去「紀錄」撳嗰筆就得。</p>
         <button type="button" class="btn btn-ghost btn-block explain-go-list-btn" data-go-list>${uiIconHtml('list', 'btn')} 去紀錄</button>`;
       return;
     }
@@ -3296,8 +3444,7 @@ function renderSettlementExplain() {
     const netDiffersFromHelp = !isNegligibleMoney(netTotal - helpNet, cur);
     const showFinalSection = hasCashAdjust || netDiffersFromHelp;
 
-    let html = `<div class="explain-currency-label">${badge} ${cur}</div>`;
-    html += `<p class="explain-rules-compact">而家呢段未還清嘅數，點樣計出嚟</p>`;
+    let html = `<p class="explain-rules-compact">而家呢段未還清嘅數，點樣計出嚟</p>`;
 
     html += `<div class="explain-section">
       <div class="explain-section-title">① 邊個幫邊個俾</div>`;
@@ -3389,11 +3536,6 @@ function renderSummary() {
 
     const settled = isNegligibleMoney(net[cur], cur);
     const settlement = settlementText(net[cur], cur);
-    const badge = currencyUiIconHtml(cur, 'sm');
-    const titleBadgeEl = $(`#help-pay-title-badge-${lower}`);
-    if (titleBadgeEl) titleBadgeEl.innerHTML = badge;
-    const settlementTitleBadgeEl = $(`#settlement-title-badge-${lower}`);
-    if (settlementTitleBadgeEl) settlementTitleBadgeEl.innerHTML = badge;
 
     const el = $(`#settlement-${lower}`);
     el.innerHTML = summarySectionHtml('', settlementLedgerHtml(net[cur], cur));
@@ -3413,6 +3555,7 @@ function renderSummary() {
     }
   });
 
+  applyRemainDisplayVisibility();
   updateSettlementChromeVisibility(net);
   applyCurrencyView();
 }
@@ -3424,7 +3567,6 @@ function updateSettlementChromeVisibility(net = calcSummary().net) {
     currencyView === 'jpy' ? jpyDebt : currencyView === 'hkd' ? hkdDebt : jpyDebt || hkdDebt;
 
   // 即使未有互相幫俾，都顯示空狀態，唔好成個 block 收埋
-  $('#help-pay-block')?.classList.remove('hidden');
   $('#settlement-actions')?.classList.toggle('hidden', !showRepay);
 }
 
@@ -3486,26 +3628,51 @@ function paginateList(list, options = {}) {
   };
 }
 
-function getPageRange(current, total) {
-  const SLOT_COUNT = 7;
-  if (total <= 0) return Array(SLOT_COUNT).fill(null);
-  if (total <= SLOT_COUNT) {
-    return [
-      ...Array.from({ length: total }, (_, i) => i + 1),
-      ...Array(SLOT_COUNT - total).fill(null),
-    ];
+function renderPaginationBar(meta, suffix = '') {
+  const pageSelect = $(`#filter-page-num${suffix}`);
+  const btnPrev = $(`#btn-prev${suffix}`);
+  const btnNext = $(`#btn-next${suffix}`);
+
+  if (!pageSelect || !btnPrev || !btnNext) return;
+
+  if (meta.total === 0 || listFilters.pageSize === 'all') {
+    pageSelect.innerHTML = '';
+    pageSelect.disabled = true;
+    btnPrev.disabled = true;
+    btnNext.disabled = true;
+    return;
   }
-  if (current <= 4) {
-    return [1, 2, 3, 4, 5, '...', total];
+
+  if (meta.totalPages <= 1) {
+    pageSelect.innerHTML = '<option value="1">第 1 頁</option>';
+    pageSelect.value = '1';
+    pageSelect.disabled = true;
+    btnPrev.disabled = true;
+    btnNext.disabled = true;
+    return;
   }
-  if (current >= total - 3) {
-    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
-  }
-  return [1, '...', current - 1, current, current + 1, '...', total];
+
+  pageSelect.disabled = false;
+  btnPrev.disabled = meta.page <= 1;
+  btnNext.disabled = meta.page >= meta.totalPages;
+
+  pageSelect.innerHTML = Array.from({ length: meta.totalPages }, (_, i) => {
+    const p = i + 1;
+    return `<option value="${p}">第 ${p} 頁</option>`;
+  }).join('');
+  pageSelect.value = String(meta.page);
 }
 
 function syncPageSizeSelects(value) {
   ['#filter-page-size', '#filter-page-size-bottom'].forEach((sel) => {
+    const el = $(sel);
+    if (el && el.value !== value) el.value = value;
+  });
+}
+
+function syncPageSelects(page) {
+  const value = String(page);
+  ['#filter-page-num', '#filter-page-num-bottom'].forEach((sel) => {
     const el = $(sel);
     if (el && el.value !== value) el.value = value;
   });
@@ -3548,43 +3715,6 @@ function getPaginationInfoText(meta) {
   if (meta.total === 0) return '共 0 筆';
   if (listFilters.pageSize === 'all') return `共 ${meta.total} 筆（全部顯示）`;
   return `第 ${meta.page} / ${meta.totalPages} 頁，共 ${meta.total} 筆`;
-}
-
-function renderPaginationBar(meta, suffix = '') {
-  const pageNumbers = $(`#page-numbers${suffix}`);
-  const btnPrev = $(`#btn-prev${suffix}`);
-  const btnNext = $(`#btn-next${suffix}`);
-
-  if (!pageNumbers || !btnPrev || !btnNext) return;
-
-  if (meta.total === 0 || listFilters.pageSize === 'all') {
-    pageNumbers.innerHTML = '';
-    btnPrev.disabled = true;
-    btnNext.disabled = true;
-    return;
-  }
-
-  btnPrev.disabled = meta.page <= 1;
-  btnNext.disabled = meta.page >= meta.totalPages;
-
-  pageNumbers.innerHTML = getPageRange(meta.page, meta.totalPages)
-    .map((p) => {
-      if (p === null) {
-        return '<span class="page-num spacer" aria-hidden="true"></span>';
-      }
-      if (p === '...') {
-        return '<span class="page-num ellipsis">…</span>';
-      }
-      return `<button type="button" class="page-num ${p === meta.page ? 'active' : ''}" data-page="${p}">${p}</button>`;
-    })
-    .join('');
-
-  pageNumbers.querySelectorAll('.page-num[data-page]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      listFilters.currentPage = Number(btn.dataset.page);
-      renderTransactionList();
-    });
-  });
 }
 
 function renderPagination(meta) {
@@ -4389,7 +4519,61 @@ function setDeleteConfirmButtonLabel(mode) {
 
 function openBudgetModal() {
   populateBudgetForm();
+  syncRemainDisplayToggleButtons();
   openModal(els.budgetModal);
+}
+
+function loadRemainDisplayPrefs() {
+  try {
+    const raw = localStorage.getItem(REMAIN_DISPLAY_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.JPY === 'boolean') remainDisplayPrefs.JPY = parsed.JPY;
+    if (typeof parsed.HKD === 'boolean') remainDisplayPrefs.HKD = parsed.HKD;
+  } catch (_) {}
+}
+
+function saveRemainDisplayPrefs() {
+  try {
+    localStorage.setItem(REMAIN_DISPLAY_STORAGE_KEY, JSON.stringify(remainDisplayPrefs));
+  } catch (_) {}
+}
+
+function isRemainDisplayEnabled(currency) {
+  return remainDisplayPrefs[currency] !== false;
+}
+
+function applyRemainDisplayVisibility() {
+  ['JPY', 'HKD'].forEach((cur) => {
+    const lower = cur.toLowerCase();
+    const show = isRemainDisplayEnabled(cur);
+    document.querySelectorAll(`.remain-value[data-currency="${lower}"]`).forEach((el) => {
+      el.classList.toggle('hidden', !show);
+    });
+    document.querySelectorAll(`.summary-card .currency-section[data-currency-panel="${lower}"]`).forEach((el) => {
+      el.classList.toggle('summary-remain-off', !show);
+    });
+  });
+}
+
+function syncRemainDisplayToggleButtons() {
+  $$('.budget-remain-toggle').forEach((btn) => {
+    const cur = btn.dataset.remainCurrency;
+    if (!cur) return;
+    const show = isRemainDisplayEnabled(cur);
+    btn.classList.toggle('active', show);
+    btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+    const textEl = btn.querySelector('.budget-remain-toggle-text');
+    if (textEl) textEl.textContent = `${cur} 剩餘：${show ? '開' : '關'}`;
+  });
+}
+
+function toggleRemainDisplay(currency) {
+  if (currency !== 'JPY' && currency !== 'HKD') return;
+  remainDisplayPrefs[currency] = !isRemainDisplayEnabled(currency);
+  saveRemainDisplayPrefs();
+  syncRemainDisplayToggleButtons();
+  applyRemainDisplayVisibility();
 }
 
 function formatMoneyInputPreset(amount, currency) {
@@ -4621,6 +4805,17 @@ function setupListFilters() {
   $('#filter-page-size').addEventListener('change', onPageSizeChange);
   $('#filter-page-size-bottom').addEventListener('change', onPageSizeChange);
 
+  const onPageNumChange = (e) => {
+    const page = Number(e.target.value);
+    if (!page || page === listFilters.currentPage) return;
+    listFilters.currentPage = page;
+    syncPageSelects(page);
+    renderTransactionList();
+  };
+
+  $('#filter-page-num').addEventListener('change', onPageNumChange);
+  $('#filter-page-num-bottom').addEventListener('change', onPageNumChange);
+
   const goPrevPage = () => {
     if (listFilters.currentPage > 1) {
       listFilters.currentPage -= 1;
@@ -4709,6 +4904,12 @@ function setupEventListeners() {
   setupCategoryPicker('#edit-category', '#edit-custom-category-row', '#edit-custom-category');
 
   $('#btn-edit-budget').addEventListener('click', openBudgetModal);
+  $$('.budget-remain-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cur = btn.dataset.remainCurrency;
+      if (cur) toggleRemainDisplay(cur);
+    });
+  });
   $('#btn-refresh').addEventListener('click', async () => {
     if (isRefreshBlocked()) return;
     try {
@@ -5104,7 +5305,7 @@ function setupParticleEffects() {
     'pointerdown',
     (e) => {
       const target = e.target.closest(
-        '.btn, .toggle-btn, .tab-btn, .currency-label, .btn-page, .btn-edit, .sync-status, .sync-refresh-btn, .split-option'
+        '.btn, .toggle-btn, .tab-btn, .currency-label, .btn-page, .btn-edit, .sync-status, .sync-refresh-btn, .split-option, .budget-remain-toggle'
       );
       if (!target || target.disabled) return;
       spawnParticles(e.clientX, e.clientY, target.classList.contains('btn-primary') ? 18 : 12);
@@ -5147,6 +5348,8 @@ function setupIconTapFeedback() {
 }
 
 async function init() {
+  loadRemainDisplayPrefs();
+  applyRemainDisplayVisibility();
   els.expenseDate.value = todayISO();
   initListDayFilter();
   setupTabs();
