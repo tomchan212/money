@@ -3034,16 +3034,26 @@ function renderExplainStepList(txs, cur, section) {
 function renderExplainStepItem(tx) {
   const { netClass, netLabel } = explainTransactionNet(tx);
   const txKey = escapeHtml(getTxKey(tx));
-  const tag = isRepayTransaction(tx)
-    ? '<span class="explain-step-tag explain-step-tag-repay">還錢</span>'
-    : isLoanTransaction(tx)
-      ? '<span class="explain-step-tag explain-step-tag-loan">借錢</span>'
-      : '';
-  const desc = isRepayTransaction(tx)
-    ? `${personImg(tx.payer, 'inline')} 還咗 ${escapeHtml(formatMoney(tx.amount, tx.currency))} 俾 ${personImg(tx.payer === 'A' ? 'B' : 'A', 'inline')}`
-    : isLoanTransaction(tx)
-      ? `${personImg(tx.payer, 'inline')} 借咗 ${escapeHtml(formatMoney(tx.amount, tx.currency))} 畀 ${personImg(getLoanBorrower(tx), 'inline')}`
-      : escapeHtml(getTransactionTitle(tx));
+
+  if (isRepayTransaction(tx)) {
+    const payee = tx.payer === 'A' ? 'B' : 'A';
+    const repayIcon = categoryIconHtml('還錢', 'inline', '還錢') || '';
+    const amountHtml = moneyFigHtml(tx.amount, tx.currency, 'money-repay-amount');
+    const desc = `${repayIcon}${personImg(tx.payer, 'inline')}<span class="explain-step-repay-text">還咗 ${amountHtml} 俾</span>${personImg(payee, 'inline')}`;
+    return `<li class="explain-step-item explain-step-item-repay">
+    <button type="button" class="explain-step-btn explain-step-btn-repay" data-detail-key="${txKey}" aria-label="查看還錢詳情">
+      <span class="explain-step-desc explain-step-repay-line">${desc}</span>
+      <span class="explain-step-chevron" aria-hidden="true">›</span>
+    </button>
+  </li>`;
+  }
+
+  const tag = isLoanTransaction(tx)
+    ? '<span class="explain-step-tag explain-step-tag-loan">借錢</span>'
+    : '';
+  const desc = isLoanTransaction(tx)
+    ? `${personImg(tx.payer, 'inline')} 借咗 ${escapeHtml(formatMoney(tx.amount, tx.currency))} 畀 ${personImg(getLoanBorrower(tx), 'inline')}`
+    : escapeHtml(getTransactionTitle(tx));
   return `<li class="explain-step-item">
     <button type="button" class="explain-step-btn" data-detail-key="${txKey}" aria-label="查看詳情">
       <span class="explain-step-desc">${tag}${desc}</span>

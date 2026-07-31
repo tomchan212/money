@@ -1891,6 +1891,35 @@ button.currency-label.badge-all.active {
   font-size: 0.95rem;
 }
 
+.explain-step-btn-repay {
+  grid-template-areas: "desc chevron";
+  grid-template-rows: auto;
+}
+
+.explain-step-repay-line {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.explain-step-repay-line .category-icon-inline {
+  width: 1.45em;
+  height: 1.45em;
+  min-width: 1.45em;
+  min-height: 1.45em;
+}
+
+.explain-step-repay-text {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+}
+
+.money-fig.money-repay-amount {
+  color: var(--amount-spent);
+  font-weight: 700;
+}
+
 .explain-step-desc {
   font-weight: 600;
   color: var(--text-dark);
