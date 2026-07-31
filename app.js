@@ -3037,12 +3037,13 @@ function renderExplainStepItem(tx) {
 
   if (isRepayTransaction(tx)) {
     const payee = tx.payer === 'A' ? 'B' : 'A';
-    const repayIcon = categoryIconHtml('還錢', 'inline', '還錢') || '';
+    const repayIcon = categoryIconHtml('還錢', 'repay-lg', '還錢') || '';
     const amountHtml = moneyFigHtml(tx.amount, tx.currency, 'money-repay-amount');
-    const desc = `${repayIcon}${personImg(tx.payer, 'inline')}<span class="explain-step-repay-text">還咗 ${amountHtml} 俾</span>${personImg(payee, 'inline')}`;
+    const brand = `<span class="explain-step-repay-brand">${repayIcon}<span class="explain-step-tag explain-step-tag-repay">還錢</span></span>`;
+    const flow = `<span class="explain-step-repay-flow">${personImg(tx.payer, 'inline')}<span class="explain-step-repay-text">還咗 ${amountHtml} 俾</span>${personImg(payee, 'inline')}</span>`;
     return `<li class="explain-step-item explain-step-item-repay">
     <button type="button" class="explain-step-btn explain-step-btn-repay" data-detail-key="${txKey}" aria-label="查看還錢詳情">
-      <span class="explain-step-desc explain-step-repay-line">${desc}</span>
+      <span class="explain-step-desc explain-step-repay-line">${brand}${flow}</span>
       <span class="explain-step-chevron" aria-hidden="true">›</span>
     </button>
   </li>`;

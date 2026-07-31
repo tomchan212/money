@@ -1897,15 +1897,52 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-repay-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.explain-step-repay-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.explain-step-repay-brand .category-icon-repay-lg {
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  min-height: 3rem;
+}
+
+.explain-step-repay-brand .explain-step-tag-repay {
+  margin-right: 0;
+  padding: 0.12rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.explain-step-repay-flow {
+  display: inline-flex;
+  align-items: center;
   justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+  gap: 0.25rem;
+  flex-wrap: wrap;
   text-align: right;
 }
 
-.explain-step-repay-line .category-icon-inline {
-  width: 1.45em;
-  height: 1.45em;
-  min-width: 1.45em;
-  min-height: 1.45em;
+.explain-step-repay-flow .person-avatar-inline {
+  width: 1.55em;
+  height: 1.55em;
+  min-width: 1.55em;
+  min-height: 1.55em;
 }
 
 .explain-step-repay-text {
