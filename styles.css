@@ -4399,7 +4399,7 @@ button.currency-label.badge-all.active {
 
 .pagination-bar {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
   align-items: end;
   gap: 0.5rem 0.75rem;
   padding-top: 0.5rem;
@@ -4407,9 +4407,8 @@ button.currency-label.badge-all.active {
 }
 
 .page-size-item {
-  flex: 0 0 auto;
-  min-width: 5.5rem;
-  max-width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .page-size-label {
@@ -4528,9 +4527,9 @@ button.currency-label.badge-all.active {
 }
 
 .page-select-item {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 4.75rem;
-  max-width: 6.5rem;
+  max-width: none;
 }
 
 .page-select-item label {
@@ -4605,11 +4604,23 @@ button.currency-label.badge-all.active {
 
 @media (max-width: 480px) {
   .pagination-bar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 0.45rem 0.5rem;
   }
 
   .pagination-nav {
-    justify-content: center;
+    justify-content: flex-end;
+  }
+
+  .custom-select-trigger {
+    min-width: 0;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+  }
+
+  .page-select-item select {
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
   }
 }
 
