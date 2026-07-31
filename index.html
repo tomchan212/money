@@ -8,12 +8,13 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731deploy3">
+  <link rel="stylesheet" href="styles.css?v=20260731assets1">
 </head>
 <body>
   <header class="app-header">
     <h1><span class="header-plane-emoji" aria-hidden="true">✈️</span> 日本旅遊記帳 🇯🇵</h1>
     <div class="sync-bar">
+      <button type="button" class="sync-refresh-btn" id="btn-preload-assets" aria-label="加載貼圖 icon 同字體">📦 加載貼圖</button>
       <button type="button" class="sync-status syncing" id="sync-status" aria-label="切換試算表來源">☁️ 連線試算表中…</button>
       <button type="button" class="sync-refresh-btn" id="sync-refresh-btn" aria-label="同步試算表">🔄 同步</button>
     </div>
@@ -21,6 +22,38 @@
 
   <!-- Overlays must stay outside .app-container so cyberpunk stacking works -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <div id="asset-preload-overlay" class="asset-preload-overlay" role="status" aria-live="polite" aria-label="加載貼圖同字體中">
+    <div class="submit-loading-stage" aria-hidden="true">
+      <div class="flying-money-orbit">
+        <img class="flying-money-icon flying-money-icon-1" src="icons/jpy.png?v=20260730dc" alt="">
+        <img class="flying-money-icon flying-money-icon-2" src="icons/hkd.png?v=20260730dc" alt="">
+        <img class="flying-money-icon flying-money-icon-3" src="icons/savings.png" alt="">
+        <img class="flying-money-icon flying-money-icon-4" src="icons/expense.png" alt="">
+      </div>
+      <div class="flying-money-core">
+        <img src="icons/theme.png?v=20260730df" alt="">
+      </div>
+    </div>
+    <p class="submit-loading-text" id="asset-preload-text">加載貼圖同字體中…</p>
+    <div class="asset-preload-progress" aria-hidden="true">
+      <div class="loading-progress">
+        <div class="loading-progress-bar" id="asset-preload-bar"></div>
+      </div>
+      <span class="asset-preload-percent" id="asset-preload-percent">0%</span>
+    </div>
+  </div>
+  <script>
+    try {
+      if (localStorage.getItem('money-assets-preloaded') === '20260731a') {
+        document.documentElement.classList.add('assets-ready');
+        document.getElementById('asset-preload-overlay')?.classList.add('hidden');
+      } else {
+        document.documentElement.classList.add('assets-booting');
+      }
+    } catch (_) {
+      document.documentElement.classList.add('assets-booting');
+    }
+  </script>
   <div id="submit-loading-overlay" class="submit-loading-overlay hidden" role="status" aria-live="assertive" aria-label="記錄中">
     <div class="submit-loading-stage" aria-hidden="true">
       <div class="flying-money-orbit">
@@ -946,6 +979,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731deploy3"></script>
+  <script src="app.js?v=20260731assets1"></script>
 </body>
 </html>

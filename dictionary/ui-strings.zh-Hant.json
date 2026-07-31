@@ -16,15 +16,20 @@
     "title": "日本旅遊記帳 🇯🇵",
     "syncStatusInitial": "☁️ 連線試算表中…",
     "syncRefresh": "🔄 同步",
+    "preloadAssets": "📦 加載貼圖",
     "ariaSwitchSheetSource": "切換試算表來源",
-    "ariaSyncSheet": "同步試算表"
+    "ariaSyncSheet": "同步試算表",
+    "ariaPreloadAssets": "加載貼圖 icon 同字體"
   },
 
   "overlays": {
     "submitLoadingAria": "記錄中",
     "submitLoadingText": "記錄俾錢中…",
     "syncBannerAria": "同步進度",
-    "syncBannerText": "☁️ 同步中…"
+    "syncBannerText": "☁️ 同步中…",
+    "assetPreloadAria": "加載貼圖同字體中",
+    "assetPreloadText": "加載貼圖同字體中…",
+    "assetPreloadDone": "貼圖同字體已加載"
   },
 
   "tabs": {

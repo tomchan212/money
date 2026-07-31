@@ -256,6 +256,50 @@ html.theme-cyberpunk .app-container {
   cursor: default;
 }
 
+.asset-preload-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  background: rgba(255, 248, 250, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.asset-preload-overlay.hidden {
+  display: none;
+}
+
+.asset-preload-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.asset-preload-percent {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+html.assets-booting body {
+  overflow: hidden;
+}
+
+html.theme-cyberpunk .asset-preload-overlay {
+  background: rgba(8, 12, 24, 0.88);
+}
+
+html.theme-cyberpunk .asset-preload-percent {
+  color: #c9d4f0;
+}
+
 /* ===== Container ===== */
 .app-container {
   max-width: 500px;

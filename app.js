@@ -24,6 +24,10 @@ const API_STORAGE_KEY = 'money-api-endpoint';
 const THEME_STORAGE_KEY = 'money-theme';
 const LIST_DETAIL_STORAGE_KEY = 'money-list-detail-expanded';
 const REMAIN_DISPLAY_STORAGE_KEY = 'money-remain-display';
+const ASSETS_PRELOADED_STORAGE_KEY = 'money-assets-preloaded';
+const ASSETS_PRELOAD_VERSION = '20260731a';
+const APP_FONT_FAMILY = 'Canva Handwriting Style TC';
+const APP_FONT_URL = 'fonts/CanvaHandwritingStyleTC.ttf';
 const PARTICLE_COLORS_LIGHT = ['#ff758c', '#ff7eb3', '#ffc2d1', '#fff0f3', '#f7c948', '#ffffff'];
 const PARTICLE_COLORS_CYBER = ['#ff2bd6', '#00f6ff', '#7a3cff', '#39ff14', '#ffffff', '#ff9f1c'];
 let PARTICLE_COLORS = PARTICLE_COLORS_LIGHT;
@@ -190,6 +194,18 @@ const PERSON = {
   B: { src: 'girl.png', label: '女生' },
 };
 
+/** Extra sticker icons on disk that are not yet wired into CATEGORY/UI maps. */
+const EXTRA_STICKER_ICONS = [
+  'icons/coffee.png',
+  'icons/entertainment.png',
+  'icons/medical.png',
+  'icons/nightlife.png',
+  'icons/taxi.png',
+  'icons/travel.png',
+];
+
+let isAssetPreloading = false;
+
 function personName(person) {
   return (PERSON[person] || PERSON.A).label;
 }
@@ -294,6 +310,8 @@ const els = {
   toast: $('#toast'),
   syncBanner: $('#sync-banner'),
   syncRefreshBtn: $('#sync-refresh-btn'),
+  preloadAssetsBtn: $('#btn-preload-assets'),
+  assetPreloadOverlay: $('#asset-preload-overlay'),
   transactionList: $('#transaction-list'),
   expenseForm: $('#expense-form'),
   expenseDate: $('#expense-date'),
@@ -436,6 +454,164 @@ async function withSubmitLoading(task, mode = 'expense') {
     if (remaining > 0) await sleep(remaining);
     hideSubmitLoading();
   }
+}
+
+function hasAssetsPreloaded() {
+  try {
+    return localStorage.getItem(ASSETS_PRELOADED_STORAGE_KEY) === ASSETS_PRELOAD_VERSION;
+  } catch (_) {
+    return false;
+  }
+}
+
+function markAssetsPreloaded() {
+  try {
+    localStorage.setItem(ASSETS_PRELOADED_STORAGE_KEY, ASSETS_PRELOAD_VERSION);
+  } catch (_) {}
+  document.documentElement.classList.remove('assets-booting');
+  document.documentElement.classList.add('assets-ready');
+}
+
+function collectAssetUrls() {
+  const urls = new Set();
+  Object.values(CATEGORY_ICONS).forEach((src) => urls.add(src));
+  Object.values(UI_ICONS).forEach((src) => {
+    urls.add(src);
+    urls.add(`${src}?v=${UI_ICON_CACHE}`);
+  });
+  Object.values(SPLIT_ICONS).forEach((src) => {
+    urls.add(String(src));
+    urls.add(String(src).split('?')[0]);
+  });
+  EXTRA_STICKER_ICONS.forEach((src) => urls.add(src));
+  Object.values(PERSON).forEach((meta) => urls.add(meta.src));
+  urls.add('icon.png');
+  urls.add(APP_FONT_URL);
+  // Hardcoded cache-busted icons used in index.html chrome
+  [
+    'icons/jpy.png?v=20260730dc',
+    'icons/hkd.png?v=20260730dc',
+    'icons/exchange.png?v=20260730dc',
+    'icons/theme.png?v=20260730df',
+    'icons/add-record.png?v=20260730de',
+  ].forEach((src) => urls.add(src));
+  return [...urls];
+}
+
+function setAssetPreloadProgress(done, total) {
+  const percent = total <= 0 ? 100 : Math.round((done / total) * 100);
+  const bar = $('#asset-preload-bar');
+  const label = $('#asset-preload-percent');
+  if (bar) bar.style.width = `${percent}%`;
+  if (label) label.textContent = `${percent}%`;
+}
+
+function showAssetPreloadOverlay(message = '加載貼圖同字體中…') {
+  const overlay = els.assetPreloadOverlay || $('#asset-preload-overlay');
+  const textEl = $('#asset-preload-text');
+  if (textEl) textEl.textContent = message;
+  overlay?.setAttribute('aria-label', message);
+  overlay?.classList.remove('hidden');
+  document.documentElement.classList.add('assets-booting');
+  document.body.classList.add('submit-loading-open');
+  setAssetPreloadProgress(0, 1);
+}
+
+function hideAssetPreloadOverlay() {
+  const overlay = els.assetPreloadOverlay || $('#asset-preload-overlay');
+  overlay?.classList.add('hidden');
+  document.documentElement.classList.remove('assets-booting');
+  document.body.classList.remove('submit-loading-open');
+}
+
+function preloadImageAsset(url, force = false) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const finish = () => resolve(url);
+    img.onload = finish;
+    img.onerror = finish;
+    if (force) {
+      const joiner = url.includes('?') ? '&' : '?';
+      img.src = `${url}${joiner}preload=${Date.now()}`;
+    } else {
+      img.src = url;
+    }
+  });
+}
+
+async function preloadFontAsset(force = false) {
+  try {
+    if (document.fonts?.load) {
+      await document.fonts.load(`1em "${APP_FONT_FAMILY}"`);
+    }
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+  } catch (_) {}
+
+  try {
+    await fetch(APP_FONT_URL, {
+      cache: force ? 'reload' : 'force-cache',
+      mode: 'same-origin',
+    });
+  } catch (_) {}
+}
+
+async function preloadAssetUrl(url, force = false) {
+  if (url === APP_FONT_URL || /\.(ttf|otf|woff2?)$/i.test(url)) {
+    await preloadFontAsset(force);
+    return;
+  }
+  if (force) {
+    try {
+      await fetch(url, { cache: 'reload', mode: 'same-origin' });
+    } catch (_) {}
+  }
+  await preloadImageAsset(url, false);
+}
+
+async function runAssetPreload({ force = false, silent = false } = {}) {
+  if (isAssetPreloading) return false;
+  isAssetPreloading = true;
+  if (els.preloadAssetsBtn) els.preloadAssetsBtn.disabled = true;
+
+  if (!silent) showAssetPreloadOverlay('加載貼圖同字體中…');
+
+  const urls = collectAssetUrls();
+  let done = 0;
+  setAssetPreloadProgress(0, urls.length);
+
+  try {
+    const concurrency = 6;
+    let index = 0;
+
+    async function worker() {
+      while (index < urls.length) {
+        const current = urls[index];
+        index += 1;
+        await preloadAssetUrl(current, force);
+        done += 1;
+        setAssetPreloadProgress(done, urls.length);
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, () => worker()));
+    markAssetsPreloaded();
+    return true;
+  } finally {
+    isAssetPreloading = false;
+    if (els.preloadAssetsBtn) els.preloadAssetsBtn.disabled = false;
+    if (!silent) hideAssetPreloadOverlay();
+  }
+}
+
+async function ensureAssetsPreloaded() {
+  if (hasAssetsPreloaded()) {
+    hideAssetPreloadOverlay();
+    document.documentElement.classList.add('assets-ready');
+    return false;
+  }
+  return runAssetPreload({ force: false });
 }
 
 function beginServerApply() {
@@ -4990,6 +5166,17 @@ function setupEventListeners() {
     }
   });
 
+  els.preloadAssetsBtn?.addEventListener('click', async () => {
+    if (isAssetPreloading) return;
+    try {
+      await runAssetPreload({ force: true });
+      showToast('貼圖同字體已加載', 'success');
+    } catch (err) {
+      console.error('asset preload failed:', err);
+      showToast('加載貼圖失敗，請再試', 'error');
+    }
+  });
+
   $$('[data-close-modal]').forEach((el) => {
     el.addEventListener('click', () => {
       const modal = el.closest('.modal');
@@ -5419,6 +5606,8 @@ function setupIconTapFeedback() {
 }
 
 async function init() {
+  const assetsReadyPromise = ensureAssetsPreloaded();
+
   loadRemainDisplayPrefs();
   applyRemainDisplayVisibility();
   els.expenseDate.value = todayISO();
@@ -5450,10 +5639,13 @@ async function init() {
   });
 
   try {
-    await fetchAllData();
+    await Promise.all([assetsReadyPromise, fetchAllData()]);
     SyncManager.scheduleSync();
   } catch (err) {
     console.error('fetchAllData failed:', err);
+    try {
+      await assetsReadyPromise;
+    } catch (_) {}
     if (OfflineQueue.size() > 0) {
       reapplyPendingFromQueue();
       updateSyncStatusFromQueue();
