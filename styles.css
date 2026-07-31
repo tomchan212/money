@@ -2530,8 +2530,21 @@ button.currency-label.badge-all.active {
   margin-top: 0;
 }
 
-.form-icon-field > .money-input-wrap,
-.form-icon-field > .toggle-group,
+.form-icon-field-control.date-picker-wrap,
+.date-picker-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.date-picker-trigger {
+  width: 100%;
+}
+
+.day-range-quick-single .day-range-quick-btn[data-day-quick="all"].hidden {
+  display: none;
+}
+
 .form-icon-field-control.money-input-wrap,
 .form-icon-field-control.toggle-group {
   flex: 1 1 auto;

@@ -1623,13 +1623,23 @@ function hasDayRangeFilter() {
 }
 
 function formatDayRangeLabel() {
-  return listFilters.dayFrom || listFilters.dayTo || '';
+  const from = listFilters.dayFrom;
+  const to = listFilters.dayTo;
+  if (from && to) {
+    return from === to ? from : `${from} ～ ${to}`;
+  }
+  if (from) return `${from} 起`;
+  if (to) return `至 ${to}`;
+  return '';
 }
 
 function formatDayRangeBarLabel(from, to) {
-  const day = from || to || '';
-  if (!day) return '';
-  return `[${formatShortDayLabel(day)}]`;
+  if (!from && !to) return '';
+  if (from && to && from === to) return `[${formatShortDayLabel(from)}]`;
+  if (from && to) return `[${formatShortDayLabel(from)}～${formatShortDayLabel(to)}]`;
+  if (from) return `[${formatShortDayLabel(from)}起]`;
+  if (to) return `[至${formatShortDayLabel(to)}]`;
+  return '';
 }
 
 function formatShortDayLabel(iso) {
@@ -1652,11 +1662,28 @@ function daysInMonth(y, m) {
 }
 
 const dayRangePickerState = {
+  mode: 'range', // 'range' (紀錄) | 'single' (記帳/編輯)
   viewYear: 0,
   viewMonth: 0, // 1-12
   anchor: null,
+  singleValue: '',
+  singleTargetId: null,
   onChange: null,
 };
+
+function syncDatePickerDisplay(inputId) {
+  const input = inputId ? $(`#${inputId}`) : null;
+  const display = inputId ? $(`#${inputId}-display`) : null;
+  if (!display) return;
+  const value = input?.value || '';
+  display.textContent = value || '揀日期';
+}
+
+function setFormDateValue(inputId, iso) {
+  const input = $(`#${inputId}`);
+  if (input) input.value = iso || '';
+  syncDatePickerDisplay(inputId);
+}
 
 function initListDayFilter() {
   listFilters.dayFrom = '';
@@ -1680,30 +1707,72 @@ function getQuickDayValueLabel() {
   const scope = getQuickDayScope();
   if (scope === 'all') return '全部';
   if (scope === 'today') return '今日';
-  return formatShortDayLabel(listFilters.dayFrom || listFilters.dayTo) || '自定';
+  return '自定範圍';
+}
+
+function updateDayPickerChrome() {
+  const isSingle = dayRangePickerState.mode === 'single';
+  const title = $('#day-range-modal-title');
+  if (title) {
+    title.innerHTML = isSingle
+      ? `${uiIconHtml('date', 'title')} 揀日期`
+      : `${uiIconHtml('date', 'title')} 揀日期範圍`;
+  }
+  const allBtn = document.querySelector('.day-range-quick-btn[data-day-quick="all"]');
+  allBtn?.classList.toggle('hidden', isSingle);
+  const quick = $('.day-range-quick');
+  quick?.classList.toggle('day-range-quick-single', isSingle);
 }
 
 function openDayRangePicker() {
+  dayRangePickerState.mode = 'range';
+  dayRangePickerState.singleTargetId = null;
+  dayRangePickerState.singleValue = '';
   const seed = listFilters.dayFrom || listFilters.dayTo || todayISO();
   const parts = parseISODateParts(seed) || parseISODateParts(todayISO());
   dayRangePickerState.viewYear = parts.y;
   dayRangePickerState.viewMonth = parts.m;
   dayRangePickerState.anchor = null;
+  updateDayPickerChrome();
+  renderDayRangePicker();
+  openModal(els.dayRangeModal);
+}
+
+function openSingleDayPicker(inputId) {
+  const input = $(`#${inputId}`);
+  const seed = input?.value || todayISO();
+  const parts = parseISODateParts(seed) || parseISODateParts(todayISO());
+  dayRangePickerState.mode = 'single';
+  dayRangePickerState.singleTargetId = inputId;
+  dayRangePickerState.singleValue = input?.value || '';
+  dayRangePickerState.viewYear = parts.y;
+  dayRangePickerState.viewMonth = parts.m;
+  dayRangePickerState.anchor = null;
+  updateDayPickerChrome();
   renderDayRangePicker();
   openModal(els.dayRangeModal);
 }
 
 function closeDayRangePicker() {
   dayRangePickerState.anchor = null;
+  dayRangePickerState.mode = 'range';
+  dayRangePickerState.singleTargetId = null;
+  dayRangePickerState.singleValue = '';
   closeModal(els.dayRangeModal);
 }
 
 function applyDayRangeSelection(from, to, { close = true } = {}) {
-  // List day filter is single-day, like 記帳 date picking.
-  const day = from || to || '';
-  setDayFilter(day);
+  setDayRange(from, to);
   syncQuickFilterChips();
   dayRangePickerState.onChange?.();
+  if (close) closeDayRangePicker();
+  else renderDayRangePicker();
+}
+
+function applySingleDaySelection(iso, { close = true } = {}) {
+  const targetId = dayRangePickerState.singleTargetId;
+  dayRangePickerState.singleValue = iso || '';
+  if (targetId) setFormDateValue(targetId, iso);
   if (close) closeDayRangePicker();
   else renderDayRangePicker();
 }
@@ -1711,22 +1780,46 @@ function applyDayRangeSelection(from, to, { close = true } = {}) {
 function updateDayRangeStatus() {
   const status = $('#day-range-status');
   if (!status) return;
+
+  if (dayRangePickerState.mode === 'single') {
+    const selected = dayRangePickerState.singleValue;
+    status.textContent = selected ? `目前：${selected}｜撳一日確認` : '撳一日嚟揀日期';
+    return;
+  }
+
+  const anchor = dayRangePickerState.anchor;
+  if (anchor) {
+    status.textContent = `開始：${anchor}｜再撳結束日`;
+    return;
+  }
   const label = formatDayRangeLabel();
-  status.textContent = label ? `目前：${label}｜撳另一日可改` : '撳一日嚟篩選紀錄';
+  status.textContent = label
+    ? `目前：${label}｜撳兩下揀新範圍`
+    : '先撳開始日，再撳結束日';
 }
 
 function renderDayRangePicker() {
-  const { viewYear: y, viewMonth: m } = dayRangePickerState;
+  const { viewYear: y, viewMonth: m, anchor, mode } = dayRangePickerState;
   const monthLabel = $('#day-range-month-label');
   if (monthLabel) monthLabel.textContent = `${y}年${m}月`;
 
-  const selected = listFilters.dayFrom || listFilters.dayTo || '';
+  const isSingle = mode === 'single';
+  const selectedSingle = isSingle ? dayRangePickerState.singleValue || '' : '';
+  const from = isSingle ? '' : anchor || listFilters.dayFrom || '';
+  const to = isSingle ? '' : anchor ? '' : listFilters.dayTo || '';
+  const draftFrom = from && to ? (from <= to ? from : to) : from;
+  const draftTo = from && to ? (from <= to ? to : from) : '';
 
   $$('.day-range-quick-btn').forEach((btn) => {
     const quick = btn.dataset.dayQuick;
+    if (isSingle) {
+      btn.classList.toggle('is-active', quick === 'today' && selectedSingle === todayISO());
+      return;
+    }
     const scope = getQuickDayScope();
     const active =
-      (quick === 'all' && scope === 'all') || (quick === 'today' && scope === 'today');
+      !anchor &&
+      ((quick === 'all' && scope === 'all') || (quick === 'today' && scope === 'today'));
     btn.classList.toggle('is-active', active);
   });
 
@@ -1745,9 +1838,17 @@ function renderDayRangePicker() {
     const iso = isoFromParts(y, m, d);
     const classes = ['day-range-day'];
     if (iso === today) classes.push('is-today');
-    if (selected && iso === selected) classes.push('is-selected');
+    if (isSingle) {
+      if (selectedSingle && iso === selectedSingle) classes.push('is-selected');
+    } else {
+      if (anchor === iso) classes.push('is-anchor', 'is-selected');
+      if (draftFrom && draftTo && iso >= draftFrom && iso <= draftTo) classes.push('is-in-range');
+      if (draftFrom && iso === draftFrom) classes.push('is-selected', 'is-range-start');
+      if (draftTo && iso === draftTo) classes.push('is-selected', 'is-range-end');
+      if (draftFrom && !draftTo && iso === draftFrom) classes.push('is-selected');
+    }
     cells.push(
-      `<button type="button" class="${classes.join(' ')}" data-day="${iso}" aria-label="${iso}" aria-pressed="${selected === iso ? 'true' : 'false'}">${d}</button>`
+      `<button type="button" class="${classes.join(' ')}" data-day="${iso}" aria-label="${iso}">${d}</button>`
     );
   }
 
@@ -1757,7 +1858,18 @@ function renderDayRangePicker() {
 
 function handleDayRangeDayClick(iso) {
   if (!iso) return;
-  applyDayRangeSelection(iso, iso, { close: true });
+  if (dayRangePickerState.mode === 'single') {
+    applySingleDaySelection(iso, { close: true });
+    return;
+  }
+  if (!dayRangePickerState.anchor) {
+    dayRangePickerState.anchor = iso;
+    renderDayRangePicker();
+    return;
+  }
+  const start = dayRangePickerState.anchor;
+  dayRangePickerState.anchor = null;
+  applyDayRangeSelection(start, iso, { close: true });
 }
 
 function setupDayRangePicker(onChange) {
@@ -1790,6 +1902,10 @@ function setupDayRangePicker(onChange) {
   $$('.day-range-quick-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const quick = btn.dataset.dayQuick;
+      if (dayRangePickerState.mode === 'single') {
+        if (quick === 'today') applySingleDaySelection(todayISO(), { close: true });
+        return;
+      }
       if (quick === 'today') applyDayRangeSelection(todayISO(), todayISO(), { close: true });
       else applyDayRangeSelection('', '', { close: true });
     });
@@ -1799,6 +1915,11 @@ function setupDayRangePicker(onChange) {
     if (!btn || !els.dayRangeModal?.contains(btn)) return;
     handleDayRangeDayClick(btn.dataset.day);
   });
+
+  $('#expense-date-trigger')?.addEventListener('click', () => openSingleDayPicker('expense-date'));
+  $('#edit-date-trigger')?.addEventListener('click', () => openSingleDayPicker('edit-date'));
+  syncDatePickerDisplay('expense-date');
+  syncDatePickerDisplay('edit-date');
 }
 
 function cycleQuickCurrencyFilter(onChange) {
@@ -1846,7 +1967,7 @@ function syncQuickFilterChips() {
   dayChip?.setAttribute(
     'aria-label',
     dayScope === 'custom' && rangeBarLabel
-      ? `日子：${rangeBarLabel}`
+      ? `日子：自定範圍 ${rangeBarLabel}`
       : `日子：${getQuickDayValueLabel()}`
   );
 
@@ -1856,11 +1977,11 @@ function syncQuickFilterChips() {
     if (dayScope === 'custom' && rangeBarLabel) {
       rangeBarText.textContent = rangeBarLabel;
       rangeBar.classList.remove('hidden');
-      rangeBar.setAttribute('aria-label', `自定日期 ${rangeBarLabel}`);
+      rangeBar.setAttribute('aria-label', `自定日期範圍 ${rangeBarLabel}`);
     } else {
       rangeBarText.textContent = '';
       rangeBar.classList.add('hidden');
-      rangeBar.setAttribute('aria-label', '自定日期');
+      rangeBar.setAttribute('aria-label', '自定日期範圍');
     }
   }
 
@@ -4817,7 +4938,7 @@ function openEditModal(key) {
 
   $('#edit-transaction-id').value = tx.transaction_id || '';
   $('#edit-transaction-key').value = getTxKey(tx);
-  $('#edit-date').value = tx.date;
+  setFormDateValue('edit-date', tx.date);
   setCategoryFields(
     $('#edit-category'),
     $('#edit-custom-category'),
@@ -5271,7 +5392,7 @@ function setupEventListeners() {
     }
 
     const tx = {
-      date: form.get('date'),
+      date: form.get('date') || $('#expense-date')?.value || '',
       category,
       description: form.get('description').trim(),
       currency: $('#expense-currency').value,
@@ -5280,6 +5401,12 @@ function setupEventListeners() {
       split_mode: form.get('split_mode'),
       time: nowLocalTimeHM(),
     };
+
+    if (!tx.date) {
+      endMutation();
+      showToast('請揀日期', 'error');
+      return;
+    }
 
     if (tx.amount <= 0) {
       endMutation();
@@ -5296,7 +5423,7 @@ function setupEventListeners() {
       });
 
       els.expenseForm.reset();
-      els.expenseDate.value = todayISO();
+      setFormDateValue('expense-date', todayISO());
       $('#expense-category').value = '餐飲-午餐';
       syncCategoryPicker($('#expense-category-picker'), '餐飲-午餐');
       setCategoryPickerOpen(getCategoryPickerWrap('expense-category'), false);
@@ -5369,9 +5496,16 @@ function setupEventListeners() {
       return;
     }
 
+    const editDate = $('#edit-date')?.value || '';
+    if (!editDate) {
+      endMutation();
+      showToast('請揀日期', 'error');
+      return;
+    }
+
     const updated = {
       transaction_id: transactionId,
-      date: $('#edit-date').value,
+      date: editDate,
       category,
       description: $('#edit-description').value.trim(),
       location: getLocationText(existing),
@@ -5518,7 +5652,7 @@ async function init() {
 
   loadRemainDisplayPrefs();
   applyRemainDisplayVisibility();
-  els.expenseDate.value = todayISO();
+  setFormDateValue('expense-date', todayISO());
   initListDayFilter();
   setupTabs();
   setupCurrencyViewSelector();
