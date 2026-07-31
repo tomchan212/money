@@ -1,0 +1,353 @@
+{
+  "_meta": {
+    "locale": "zh-Hant",
+    "appName": "日本旅遊記帳",
+    "description": "Web App 全部使用者可見文字目錄（繁體中文／粵語）",
+    "sources": ["index.html", "app.js"],
+    "updated": "2026-07-31"
+  },
+
+  "document": {
+    "pageTitle": "日本旅遊記帳 🇯🇵",
+    "appleMobileWebAppTitle": "日本記帳"
+  },
+
+  "header": {
+    "title": "日本旅遊記帳 🇯🇵",
+    "syncStatusInitial": "☁️ 連線試算表中…",
+    "syncRefresh": "🔄 同步",
+    "ariaSwitchSheetSource": "切換試算表來源",
+    "ariaSyncSheet": "同步試算表"
+  },
+
+  "overlays": {
+    "submitLoadingAria": "記錄中",
+    "submitLoadingText": "記錄俾錢中…",
+    "syncBannerAria": "同步進度",
+    "syncBannerText": "☁️ 同步中…"
+  },
+
+  "tabs": {
+    "ariaMainMenu": "主選單",
+    "summary": "總覽",
+    "form": "記賬",
+    "list": "紀錄",
+    "ariaForm": "記一筆賬",
+    "ariaSummary": "預算與花費總覽",
+    "ariaList": "紀錄"
+  },
+
+  "persons": {
+    "A": "男孩",
+    "B": "女生",
+    "A_payment": "男孩付款",
+    "B_payment": "女生付款"
+  },
+
+  "currencies": {
+    "JPY": "JPY",
+    "HKD": "HKD",
+    "symbolJPY": "¥",
+    "symbolHKD": "$",
+    "all": "全部幣別"
+  },
+
+  "categories": {
+    "餐飲": "餐飲",
+    "餐飲-早餐": "早餐",
+    "餐飲-午餐": "午餐",
+    "餐飲-晚餐": "晚餐",
+    "交通": "交通",
+    "住宿": "住宿",
+    "購物": "購物",
+    "景點": "景點",
+    "便利店": "便利店",
+    "雜項": "雜項",
+    "還錢": "還錢",
+    "借錢": "借錢",
+    "custom": "自定",
+    "all": "全部",
+    "allCategories": "全部分類"
+  },
+
+  "splitModes": {
+    "SPLIT_5050": "一人一半",
+    "FOR_A": "男孩自己嘅",
+    "FOR_B": "女生自己嘅",
+    "self": "自己嘅",
+    "filterLabel": "樣嘢點計"
+  },
+
+  "form": {
+    "homeSpentTitle": "目前用左",
+    "statSpentPrefix": "用左",
+    "statRemainPrefix": "剩餘",
+    "labelDate": "日期",
+    "labelCategory": "分類",
+    "labelCustomCategory": "自定分類名稱",
+    "placeholderCustomCategory": "例：溫泉、門票",
+    "labelDescription": "項目描述（選填）",
+    "placeholderDescription": "例：叙叙苑燒肉、Suica 增值",
+    "essentialsGridAria": "幣別、邊個俾錢、樣嘢點計",
+    "chipPayerCaption": "邊個俾",
+    "chipSplitCaption": "樣嘢點計",
+    "labelAmount": "金額",
+    "placeholderAmount": "0",
+    "submitExpense": "記錄俾錢",
+    "defaultCategory": "午餐"
+  },
+
+  "summary": {
+    "sectionTitle": "預算與花費總覽",
+    "btnLoan": "借錢",
+    "btnLoanAria": "記錄借錢（現金）",
+    "btnEditBudget": "改預算",
+    "helpPayTitle": "邊個幫邊個俾",
+    "settlementTitle": "而家邊個欠邊個",
+    "btnRepay": "記錄還錢",
+    "explainPreviewOpen": "打開睇睇",
+    "explainPreviewClose": "收起",
+    "explainSummaryAria": "點計出嚟？",
+    "balanced": "🎉 而家大家唔欠，條數清晒！",
+    "everyoneClear": "大家唔欠",
+    "netAfterHelpPay": "對消後（未計還錢）",
+    "helpPayEmpty": "{A} 同 {B} 暫時未有互相幫俾",
+    "helpPayRowAHelpsB": "{A} 幫 {B} 俾咗 {amount}",
+    "helpPayRowBHelpsA": "{B} 幫 {A} 俾咗 {amount}",
+    "debtBOwesA": "{B} 要還俾 {A}：{amount}",
+    "debtAOwesB": "{A} 要還俾 {B}：{amount}"
+  },
+
+  "settlementExplain": {
+    "settledMessage": "而家數清晒。想睇舊帳／還錢詳情，去「紀錄」撳嗰筆就得。",
+    "goToList": "去紀錄",
+    "rulesIntro": "而家呢段未還清嘅數，點樣計出嚟",
+    "sectionHelpPay": "① 邊個幫邊個俾",
+    "sectionLoan": "② 借錢（現金）",
+    "sectionRepay2": "② 還錢紀錄",
+    "sectionRepay3": "③ 還錢紀錄",
+    "emptyNoMutualDebt": "未有要互相還嘅消費",
+    "finalStillOwe": "而家仲要還",
+    "matrixAria": "幫俾對照表",
+    "matrixColRecord": "記錄",
+    "matrixSubtotal": "小計",
+    "matrixNetBeforeRepay": "而家要還：",
+    "matrixNetAfterExpense": "消費對消：",
+    "scrollHint": "共 {count} 筆 · 向下滑查看更多 ↓",
+    "repayTag": "還錢",
+    "loanTag": "借錢",
+    "repayStep": "{payer} 還咗 {amount} 俾 {payee}",
+    "loanStep": "{payer} 借咗 {amount} 俾 {borrower}"
+  },
+
+  "list": {
+    "sectionTitle": "紀錄",
+    "btnRefresh": "🔄 刷新",
+    "filterDayAll": "全部",
+    "filterCurrency": "幣別",
+    "filterPayer": "邊個俾",
+    "filterSplit": "樣嘢點計",
+    "filterPanelTitle": "分類 · 排序",
+    "filterCategoryAll": "全部分類",
+    "filterSortDefault": "預設",
+    "filterSortAmountAsc": "低至高 ↑",
+    "filterSortAmountDesc": "高至低 ↓",
+    "filterSortDateDesc": "最新優先",
+    "filterSortDateAsc": "最舊優先",
+    "pageSizeLabel": "每頁顯示",
+    "pageSize5": "5 筆",
+    "pageSize10": "10 筆",
+    "pageSize20": "20 筆",
+    "pageSize50": "50 筆",
+    "pageSizeAll": "全部",
+    "paginationPrevAria": "上一頁",
+    "paginationNextAria": "下一頁",
+    "listToggleExpand": "展開 ▼",
+    "listToggleCollapse": "收起 ▲",
+    "btnEdit": "編輯",
+    "emptyLoading": "載入中…",
+    "emptyNoRecords": "尚無消費紀錄，快記第一筆吧",
+    "emptyNoRecordsInRange": "{rangeLabel} 沒有紀錄",
+    "emptyNoFilterMatch": "沒有符合篩選條件的紀錄",
+    "paginationZero": "共 0 筆",
+    "paginationAll": "共 {total} 筆（全部顯示）",
+    "paginationPaged": "第 {page} / {totalPages} 頁，共 {total} 筆"
+  },
+
+  "modals": {
+    "closeAria": "關閉",
+    "repay": {
+      "title": "記錄還錢",
+      "amountLabel": "還錢金額",
+      "notePlaceholder": "例：現金、PayMe",
+      "submit": "確認還錢",
+      "contextSettled": "呢個幣別已經還清，可以轉第二個幣別",
+      "contextDebt": "目前 {debtor} 欠 {creditor} {amount}"
+    },
+    "loan": {
+      "title": "記錄借錢",
+      "directionAria": "邊個借俾邊個",
+      "directionLabel": "借俾",
+      "amountLabel": "借錢金額",
+      "notePlaceholder": "例：現金、PayMe、應急",
+      "submit": "確認借錢",
+      "context": "{lender} 借現金俾 {borrower} · {currency}"
+    },
+    "budget": {
+      "title": "修改初始預算",
+      "submit": "儲存預算"
+    },
+    "edit": {
+      "title": "✏️ 編輯消費明細",
+      "labelDescription": "項目描述",
+      "optional": "（選填）",
+      "btnDelete": "刪除紀錄",
+      "btnSave": "儲存修改"
+    },
+    "personSpend": {
+      "title": "{person} 用左明細 · {currency}",
+      "total": "合共用左 {amount} · {count} 筆",
+      "empty": "呢個篩選之下未有用左紀錄",
+      "sortDateDesc": "最新優先",
+      "sortDateAsc": "最舊優先",
+      "sortAmountDesc": "金額高→低",
+      "sortAmountAsc": "金額低→高"
+    },
+    "dayRange": {
+      "title": "揀日期範圍",
+      "quickAll": "全部",
+      "quickToday": "今日",
+      "statusDefault": "先撳開始日，再撳結束日",
+      "statusAnchor": "開始：{anchor}｜再撳結束日",
+      "navPrevMonth": "上個月",
+      "navNextMonth": "下個月",
+      "weekdays": ["日", "一", "二", "三", "四", "五", "六"]
+    },
+    "detail": {
+      "title": "紀錄詳情",
+      "btnEdit": "✏️ 編輯此紀錄",
+      "labelDate": "日期",
+      "labelCategory": "分類",
+      "labelDescription": "描述",
+      "labelLocation": "📍 地點",
+      "labelPayer": "邊個俾錢",
+      "labelSplit": "樣嘢點計",
+      "labelNote": "📌 備註",
+      "labelShareA": "分攤",
+      "labelShareB": "分攤",
+      "formulaTitle": "點解咁計",
+      "whyHeading1": "① 呢筆做咗咩",
+      "whyHeading2": "② 呢筆還之前",
+      "whyHeading3": "③ 呢筆還之後"
+    },
+    "deleteConfirm": {
+      "titleDefault": "確認刪除",
+      "messageDefault": "確定要刪除此紀錄？刪除後無法復原。",
+      "messageOne": "確定要刪除「{title}」？刪除後無法復原。",
+      "messageClearAll": "確定清空「{label}」全部消費／還錢紀錄？預算會保留，刪除後無法復原。",
+      "titleClearAll": "清空全部紀錄",
+      "btnCancel": "取消",
+      "btnConfirmDelete": "確定刪除",
+      "btnConfirmClear": "確定清空"
+    },
+    "sheetSwitcher": {
+      "title": "📑 切換試算表",
+      "message": "目前使用「{current}」。要改用「{other}」嗎？",
+      "hintToTester": "將連線測試試算表（下方連結），用來驗證功能，唔會影響正式資料。",
+      "hintToProduction": "將切回正式試算表（下方連結）。",
+      "linkTester": "開啟測試試算表 ↗",
+      "linkProduction": "開啟正式試算表 ↗",
+      "themeTitle": "🌃 顯示模式",
+      "themeDescCyber": "目前：賽博龐克深色模式",
+      "themeDescLight": "目前：日間模式",
+      "themeBtnCyber": "切回日間模式",
+      "themeBtnLight": "啟用賽博龐克",
+      "dangerTitle": "危險操作",
+      "clearHint": "清空目前「{label}」試算表嘅全部消費／還錢紀錄（預算保留）。刪除後無法復原。",
+      "btnClearAll": "一鍵清空全部紀錄",
+      "btnKeepCurrent": "維持目前",
+      "btnConfirmSwitch": "改用{label}"
+    }
+  },
+
+  "endpoints": {
+    "production": "正式試算表",
+    "tester": "測試試算表",
+    "testerBadge": " · 測試"
+  },
+
+  "syncStatus": {
+    "offline": "📴 已離線（{pending} 筆待同步）",
+    "pending": "☁️ 同步中（{pending} 筆）",
+    "retry": "⚠️ 同步失敗，稍後自動重試",
+    "syncing": "☁️ 同步中…",
+    "error": "⚠️ 無法連線試算表",
+    "success": "✅ 已同步 {time}"
+  },
+
+  "toasts": {
+    "partialSyncPending": "部分變更尚未同步，稍後會自動重試",
+    "refreshed": "已刷新資料 🔄",
+    "switchedEndpoint": "已切換至{label}",
+    "themeCyberpunk": "已切換賽博龐克模式",
+    "themeLight": "已切回日間模式",
+    "deletedRecord": "紀錄已刪除",
+    "clearedAll": "已清空「{label}」全部紀錄",
+    "repayAlreadySettled": "呢個幣別已經還清啦",
+    "invalidAmount": "請填寫有效金額",
+    "repayExceedsDebt": "還錢金額唔可以超過欠款 {amount}",
+    "repayAdded": "還錢紀錄已加入",
+    "loanAdded": "借錢紀錄已加入",
+    "customCategoryRequired": "請輸入自定分類名稱",
+    "expenseAdded": "已新增",
+    "budgetUpdated": "預算已更新",
+    "recordUpdated": "已更新",
+    "syncFailedDefault": "同步失敗，請稍後再試"
+  },
+
+  "expenseSplitHints": {
+    "aHelpsB": "{A} 幫 {B} 俾 → {B} 要還全額",
+    "bHelpsA": "{B} 幫 {A} 俾 → {A} 要還全額",
+    "splitAPays": "{A} 俾，{B} 還一半",
+    "splitBPays": "{B} 俾，{A} 還一半",
+    "forASelf": "{A} 自己嘅，自己俾 → 唔使還",
+    "forBSelf": "{B} 自己嘅，自己俾 → 唔使還"
+  },
+
+  "transactionFormulas": {
+    "repay": "{payer} 還咗 {amount} 俾 {payee}（唔計入消費，淨係用嚟還數）",
+    "loan": "{payer} 借咗 {amount} 現金俾 {payee}（唔計消費，淨係增加欠數）",
+    "forASelf": "{A} 自己嘅嘢，自己俾 → 唔使互相還",
+    "forAHelp": "{payer} 幫 {A} 俾咗 {amount} → {A} 要還返 {payer}",
+    "forBSelf": "{B} 自己嘅嘢，自己俾 → 唔使互相還",
+    "forBHelp": "{payer} 幫 {B} 俾咗 {amount} → {B} 要還返 {payer}",
+    "split5050A": "{payer} 先俾 {amount}，一人一半 → {B} 要還一半 {half}",
+    "split5050B": "{payer} 先俾 {amount}，一人一半 → {A} 要還一半 {half}"
+  },
+
+  "errors": {
+    "timeoutSuffix": "（Google 試算表回應較慢，通常再試一次就得）",
+    "networkSuffix": "（請檢查網絡，或稍後再試）",
+    "connectionTimeout": "連線逾時（>{seconds}s）",
+    "cannotConnectApi": "無法連線 API（{message}）",
+    "apiReturnsHtml": "API 回傳網頁而非 JSON，請檢查 Apps Script 部署 URL",
+    "apiBadFormat": "API 回傳格式錯誤",
+    "apiError": "API 錯誤",
+    "apiFailed": "API 回傳失敗"
+  },
+
+  "ariaLabels": {
+    "chipCurrency": "幣別：{currency}",
+    "chipPayer": "邊個俾錢：{payerName}",
+    "chipSplit5050": "樣嘢點計：一人一半",
+    "chipSplitForA": "樣嘢點計：男孩自己嘅",
+    "chipSplitForB": "樣嘢點計：女生自己嘅",
+    "payerAll": "邊個俾：全部",
+    "payerA": "邊個俾：男孩",
+    "payerB": "邊個俾：女生",
+    "splitAll": "樣嘢點計：全部",
+    "viewDetail": "查看詳情",
+    "viewRepayDetail": "查看還錢詳情",
+    "viewRecordDetail": "查看 {title} 詳情"
+  }
+}
