@@ -3487,26 +3487,21 @@ function paginateList(list, options = {}) {
 }
 
 function getPageRange(current, total) {
-  if (total <= 5) {
-    return Array.from({ length: total }, (_, i) => i + 1);
+  const SLOT_COUNT = 7;
+  if (total <= 0) return Array(SLOT_COUNT).fill(null);
+  if (total <= SLOT_COUNT) {
+    return [
+      ...Array.from({ length: total }, (_, i) => i + 1),
+      ...Array(SLOT_COUNT - total).fill(null),
+    ];
   }
-
-  const pages = [];
-  const addPage = (p) => {
-    if (p >= 1 && p <= total && !pages.includes(p)) pages.push(p);
-  };
-
-  addPage(1);
-  for (let p = current - 1; p <= current + 1; p++) addPage(p);
-  addPage(total);
-
-  pages.sort((a, b) => a - b);
-  const result = [];
-  for (let i = 0; i < pages.length; i++) {
-    if (i > 0 && pages[i] - pages[i - 1] > 1) result.push('...');
-    result.push(pages[i]);
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
   }
-  return result;
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
 }
 
 function syncPageSizeSelects(value) {
@@ -3574,6 +3569,9 @@ function renderPaginationBar(meta, suffix = '') {
 
   pageNumbers.innerHTML = getPageRange(meta.page, meta.totalPages)
     .map((p) => {
+      if (p === null) {
+        return '<span class="page-num spacer" aria-hidden="true"></span>';
+      }
       if (p === '...') {
         return '<span class="page-num ellipsis">…</span>';
       }

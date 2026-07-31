@@ -4195,10 +4195,9 @@ button.currency-label.badge-all.active {
 }
 
 .pagination-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
   gap: 0.5rem 0.75rem;
   padding-top: 0.5rem;
   border-top: 1px solid #f0e8eb;
@@ -4207,6 +4206,7 @@ button.currency-label.badge-all.active {
 .page-size-item {
   flex: 0 0 auto;
   min-width: 5.5rem;
+  max-width: 100%;
 }
 
 .page-size-item select {
@@ -4229,16 +4229,27 @@ button.currency-label.badge-all.active {
 .pagination-nav {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.25rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.pagination-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .btn-page {
-  width: 2rem;
-  height: 2rem;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
   border: 1.5px solid #ece6e9;
   border-radius: var(--radius-sm);
   background: #fff;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
   color: var(--text-dark);
@@ -4257,14 +4268,23 @@ button.currency-label.badge-all.active {
 }
 
 .page-numbers {
+  --page-slot-size: 1.85rem;
+  --page-slot-gap: 0.18rem;
+  --page-slot-count: 7;
   display: flex;
-  gap: 0.2rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--page-slot-gap);
+  flex: 0 0 auto;
+  width: calc(var(--page-slot-count) * var(--page-slot-size) + (var(--page-slot-count) - 1) * var(--page-slot-gap));
 }
 
 .page-num {
-  min-width: 2rem;
-  height: 2rem;
-  padding: 0 0.35rem;
+  box-sizing: border-box;
+  width: var(--page-slot-size, 1.85rem);
+  min-width: var(--page-slot-size, 1.85rem);
+  height: 1.85rem;
+  padding: 0 0.15rem;
   border: 1.5px solid #ece6e9;
   border-radius: var(--radius-sm);
   background: #fff;
@@ -4290,7 +4310,24 @@ button.currency-label.badge-all.active {
   border: none;
   background: none;
   cursor: default;
-  min-width: 1.25rem;
+  pointer-events: none;
+}
+
+.page-num.spacer {
+  visibility: hidden;
+  border-color: transparent;
+  background: transparent;
+  pointer-events: none;
+}
+
+@media (max-width: 480px) {
+  .pagination-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination-nav {
+    justify-content: center;
+  }
 }
 
 .custom-category-row.hidden {
