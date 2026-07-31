@@ -2263,6 +2263,13 @@ button.currency-label.badge-all.active {
   margin-bottom: 1rem;
 }
 
+.list-card .list-header-bar h2 .ui-icon-title {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+}
+
 .list-card .section-header h2 .ui-icon-title {
   width: 2.5rem;
   height: 2.5rem;
@@ -3480,6 +3487,54 @@ button.currency-label.badge-all.active {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+.list-header-panel {
+  border: 1.5px solid var(--border-soft, #f0e8eb);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  padding: 0.65rem 0.7rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.list-header-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+}
+
+.list-header-bar h2 {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font-size: calc(var(--type-body-lg) + 0.05rem);
+  font-weight: 700;
+  text-align: center;
+}
+
+.list-header-refresh {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  flex-shrink: 0;
+}
+
+.list-header-panel .filter-quick-grid {
+  padding: 0.45rem 0.4rem 0.5rem;
+  background: var(--rose-light);
+  border: 1px solid rgba(255, 117, 140, 0.14);
+  border-radius: var(--radius-sm);
+}
+
+.list-header-panel .filter-day-range-bar {
+  margin-top: 0;
 }
 
 .filter-quick-bar {
@@ -5876,6 +5931,16 @@ html.theme-cyberpunk .empty-state {
   background-color: transparent;
   border-color: var(--border-soft);
   color: var(--text-dark);
+}
+
+html.theme-cyberpunk .list-header-panel {
+  background: #121226 !important;
+  border-color: var(--border-soft);
+}
+
+html.theme-cyberpunk .list-header-panel .filter-quick-grid {
+  background: rgba(0, 0, 0, 0.22) !important;
+  border-color: var(--border-soft);
 }
 
 html.theme-cyberpunk .filter-quick-bar {
