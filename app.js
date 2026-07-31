@@ -3785,9 +3785,9 @@ function setupSettlementExplainToggle() {
     updateExplainPreview();
     if (!details.open) return;
     const target = details.querySelector('.settlement-explain-inner') || details;
-    requestAnimationFrame(() => {
+    window.setTimeout(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-    });
+    }, 50);
   });
 }
 
