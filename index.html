@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731deploy5">
+  <link rel="stylesheet" href="styles.css?v=20260731nativeselect">
 </head>
 <body>
   <header class="app-header">
@@ -478,15 +478,14 @@
 
         <div class="pagination-bar">
           <div class="filter-item page-size-item">
-            <label class="page-size-label" id="filter-page-size-label-text">每頁顯示</label>
-            <div class="custom-select-wrap page-size-select">
-              <button type="button" class="custom-select-trigger" id="filter-page-size-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="filter-page-size-menu" aria-labelledby="filter-page-size-label-text filter-page-size-value">
-                <span class="custom-select-value" id="filter-page-size-value">10 筆</span>
-                <span class="custom-select-chevron" aria-hidden="true">▾</span>
-              </button>
-              <div class="custom-select-menu hidden" id="filter-page-size-menu" role="listbox" aria-label="每頁顯示筆數"></div>
-              <input type="hidden" id="filter-page-size" value="10">
-            </div>
+            <label for="filter-page-size">每頁顯示</label>
+            <select id="filter-page-size" aria-label="每頁顯示筆數">
+              <option value="5">5 筆</option>
+              <option value="10" selected>10 筆</option>
+              <option value="20">20 筆</option>
+              <option value="50">50 筆</option>
+              <option value="all">全部</option>
+            </select>
           </div>
           <div class="pagination-nav" id="pagination-nav">
             <button type="button" class="btn-page" id="btn-prev" disabled aria-label="上一頁">‹</button>
@@ -510,15 +509,14 @@
       <div class="pagination-footer">
         <div class="pagination-bar pagination-bar-bottom">
           <div class="filter-item page-size-item">
-            <label class="page-size-label" id="filter-page-size-bottom-label-text">每頁顯示</label>
-            <div class="custom-select-wrap page-size-select">
-              <button type="button" class="custom-select-trigger" id="filter-page-size-bottom-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="filter-page-size-bottom-menu" aria-labelledby="filter-page-size-bottom-label-text filter-page-size-bottom-value">
-                <span class="custom-select-value" id="filter-page-size-bottom-value">10 筆</span>
-                <span class="custom-select-chevron" aria-hidden="true">▾</span>
-              </button>
-              <div class="custom-select-menu hidden" id="filter-page-size-bottom-menu" role="listbox" aria-label="每頁顯示筆數"></div>
-              <input type="hidden" id="filter-page-size-bottom" value="10">
-            </div>
+            <label for="filter-page-size-bottom">每頁顯示</label>
+            <select id="filter-page-size-bottom" aria-label="每頁顯示筆數">
+              <option value="5">5 筆</option>
+              <option value="10" selected>10 筆</option>
+              <option value="20">20 筆</option>
+              <option value="50">50 筆</option>
+              <option value="all">全部</option>
+            </select>
           </div>
           <div class="pagination-nav" id="pagination-nav-bottom">
             <button type="button" class="btn-page" id="btn-prev-bottom" disabled aria-label="上一頁">‹</button>
@@ -979,6 +977,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731deploy5"></script>
+  <script src="app.js?v=20260731nativeselect"></script>
 </body>
 </html>

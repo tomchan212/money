@@ -150,14 +150,6 @@ const FILTER_SPLIT_ITEMS = [
 
 const QUICK_SPLIT_CYCLE = ['', 'FOR_A', 'FOR_B', 'SPLIT_5050'];
 
-const PAGE_SIZE_OPTIONS = [
-  { value: '5', label: '5 筆' },
-  { value: '10', label: '10 筆' },
-  { value: '20', label: '20 筆' },
-  { value: '50', label: '50 筆' },
-  { value: 'all', label: '全部' },
-];
-
 const SPLIT_ICONS = {
   SPLIT_5050: 'icons/split-half.png?v=20260729cx',
 };
@@ -3852,77 +3844,12 @@ function renderPaginationBar(meta, suffix = '') {
   pageSelect.value = String(meta.page);
 }
 
-function getPageSizeLabel(value) {
-  return PAGE_SIZE_OPTIONS.find((item) => item.value === value)?.label || '10 筆';
-}
-
-function buildPageSizeMenuHtml() {
-  return PAGE_SIZE_OPTIONS.map(
-    (item) =>
-      `<button type="button" class="custom-select-option" data-value="${item.value}" role="option" aria-selected="false">${item.label}</button>`,
-  ).join('');
-}
-
-function closeAllPageSizeMenus() {
-  document.querySelectorAll('.page-size-select').forEach((wrap) => {
-    wrap.querySelector('.custom-select-menu')?.classList.add('hidden');
-    wrap.classList.remove('is-open');
-    wrap.querySelector('.custom-select-trigger')?.setAttribute('aria-expanded', 'false');
-  });
-}
-
 function syncPageSizeSelects(value) {
-  document.querySelectorAll('.page-size-select').forEach((wrap) => {
-    const input = wrap.querySelector('input[type="hidden"]');
-    const label = wrap.querySelector('.custom-select-value');
-    if (input) input.value = value;
-    if (label) label.textContent = getPageSizeLabel(value);
-    wrap.querySelectorAll('.custom-select-option').forEach((option) => {
-      const selected = option.dataset.value === value;
-      option.classList.toggle('selected', selected);
-      option.setAttribute('aria-selected', selected ? 'true' : 'false');
-    });
+  const next = String(value);
+  ['#filter-page-size', '#filter-page-size-bottom'].forEach((sel) => {
+    const el = $(sel);
+    if (el && el.value !== next) el.value = next;
   });
-}
-
-function setupPageSizeSelects(onChange) {
-  document.querySelectorAll('.page-size-select').forEach((wrap) => {
-    const trigger = wrap.querySelector('.custom-select-trigger');
-    const menu = wrap.querySelector('.custom-select-menu');
-    const input = wrap.querySelector('input[type="hidden"]');
-    if (!trigger || !menu || !input) return;
-
-    menu.innerHTML = buildPageSizeMenuHtml();
-
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const willOpen = menu.classList.contains('hidden');
-      closeAllPageSizeMenus();
-      if (willOpen) {
-        menu.classList.remove('hidden');
-        wrap.classList.add('is-open');
-        trigger.setAttribute('aria-expanded', 'true');
-      }
-    });
-
-    menu.addEventListener('click', (e) => {
-      const option = e.target.closest('.custom-select-option');
-      if (!option) return;
-      const nextValue = option.dataset.value;
-      input.value = nextValue;
-      syncPageSizeSelects(nextValue);
-      closeAllPageSizeMenus();
-      onChange(nextValue);
-    });
-  });
-
-  if (!setupPageSizeSelects.boundClose) {
-    document.addEventListener('click', closeAllPageSizeMenus);
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAllPageSizeMenus();
-    });
-    setupPageSizeSelects.boundClose = true;
-  }
 }
 
 function syncPageSelects(page) {
@@ -5050,11 +4977,20 @@ function setupListFilters() {
 
   setupListFilterPickers(resetPage);
 
-  setupPageSizeSelects((value) => {
+  const onPageSizeChange = (e) => {
+    const value = e.target.value;
+    if (!value || value === listFilters.pageSize) {
+      syncPageSizeSelects(listFilters.pageSize);
+      return;
+    }
     listFilters.pageSize = value;
     listFilters.currentPage = 1;
+    syncPageSizeSelects(value);
     renderTransactionList();
-  });
+  };
+
+  $('#filter-page-size')?.addEventListener('change', onPageSizeChange);
+  $('#filter-page-size-bottom')?.addEventListener('change', onPageSizeChange);
   syncPageSizeSelects(listFilters.pageSize);
 
   const onPageNumChange = (e) => {
