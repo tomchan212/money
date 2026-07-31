@@ -170,7 +170,7 @@ html.theme-cyberpunk .app-container {
   font-size: 1em;
   line-height: 1;
   display: inline-block;
-  vertical-align: -0.05em;
+  vertical-align: middle;
 }
 
 .subtitle {
@@ -339,14 +339,14 @@ html.theme-cyberpunk .app-container {
 
 .category-icon {
   display: inline-block;
-  vertical-align: -0.15em;
+  vertical-align: middle;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .ui-icon {
   display: inline-block;
-  vertical-align: -0.22em;
+  vertical-align: middle;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -363,7 +363,6 @@ html.theme-cyberpunk .app-container {
   height: 1.85em;
   min-width: 1.85em;
   min-height: 1.85em;
-  vertical-align: -0.28em;
 }
 
 .ui-icon-btn {
@@ -371,7 +370,6 @@ html.theme-cyberpunk .app-container {
   height: 1.5em;
   min-width: 1.5em;
   min-height: 1.5em;
-  vertical-align: -0.25em;
 }
 
 .ui-icon-tab {
@@ -556,7 +554,6 @@ img.ui-icon[src*="hkd.png"]:not(:is(button *, .expense-cycle-chip *, .filter-qui
   height: 1.35em;
   min-width: 1.35em;
   min-height: 1.35em;
-  vertical-align: -0.2em;
 }
 
 .category-icon-split {
@@ -756,7 +753,6 @@ img.ui-icon[src*="hkd.png"]:not(:is(button *, .expense-cycle-chip *, .filter-qui
   height: 1.65em;
   min-width: 1.65em;
   min-height: 1.65em;
-  vertical-align: -0.2em;
 }
 
 .explain-sum-result {
@@ -772,14 +768,10 @@ img.ui-icon[src*="hkd.png"]:not(:is(button *, .expense-cycle-chip *, .filter-qui
   line-height: 1;
 }
 
-.tx-tag.split .category-icon-inline {
-  vertical-align: -0.25em;
-}
-
 /* ===== Person Avatars ===== */
 .person-avatar {
   display: inline-block;
-  vertical-align: -0.15em;
+  vertical-align: middle;
   object-fit: cover;
   border-radius: 50%;
   flex-shrink: 0;
@@ -791,6 +783,40 @@ img.ui-icon[src*="hkd.png"]:not(:is(button *, .expense-cycle-chip *, .filter-qui
   height: 1.65em;
   min-width: 1.65em;
   min-height: 1.65em;
+}
+
+/* Icon + text rows: vertically center text with icons (icon sizes unchanged) */
+.home-spent-title,
+.section-header h2,
+.form-card h2,
+.list-card h2,
+.modal-header h3,
+.card h2,
+.detail-grid dt,
+.detail-grid dd,
+.detail-formula-text,
+.detail-why-result,
+.detail-why-calc-note,
+.detail-why-calc-label,
+.detail-why-calc-value,
+.detail-why-net,
+.explain-sum-line,
+.explain-conclusion,
+.explain-kid-result,
+.explain-kid-math,
+.help-pay-matrix-net-row,
+.help-pay-matrix-total-row,
+.explain-step-net,
+.compact-cream-chip,
+.compact-inline-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
+}
+
+.detail-grid dt {
+  display: flex;
 }
 
 .person-avatar-lg {
@@ -828,7 +854,7 @@ img.ui-icon[src*="hkd.png"]:not(:is(button *, .expense-cycle-chip *, .filter-qui
 .person-pair-arrow {
   display: inline-block;
   margin: 0 0.15rem;
-  vertical-align: -0.05em;
+  vertical-align: middle;
   font-size: 0.85em;
   color: var(--text-muted, #7a6e74);
 }
@@ -1285,7 +1311,7 @@ button.currency-label.badge-all.active {
   height: 1.35em;
   border-radius: 999px;
   background: transparent;
-  vertical-align: -0.15em;
+  vertical-align: middle;
   margin-right: 0.15rem;
 }
 
@@ -1466,10 +1492,140 @@ button.currency-label.badge-all.active {
 }
 
 .summary-block-title {
-  font-size: 0.78rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-muted);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
+  text-align: center;
+}
+
+.summary-block-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  width: 100%;
+}
+
+.summary-block-heading .summary-block-title {
+  margin-bottom: 0;
+}
+
+.summary-title-badge {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.summary-icon-block-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.summary-section-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.summary-currency-badge {
+  display: flex;
+  justify-content: center;
+  line-height: 0;
+}
+
+.summary-ledger {
+  display: inline-grid;
+  grid-template-columns: max-content 1px max-content;
+  column-gap: 0.65rem;
+  row-gap: 0.4rem;
+  align-items: center;
+  max-width: 100%;
+}
+
+.summary-ledger-row {
+  display: contents;
+}
+
+.summary-ledger-desc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+  text-align: right;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.summary-ledger-message {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  text-align: center;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.summary-ledger-sep {
+  width: 1px;
+  min-height: 1.15em;
+  align-self: stretch;
+  background: rgba(255, 117, 140, 0.35);
+  justify-self: center;
+}
+
+.summary-ledger-amount {
+  justify-self: start;
+  text-align: left;
+  line-height: 1.5;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.summary-ledger-amount .money-fig {
+  font-weight: 700;
+}
+
+.summary-ledger-cell-total {
+  padding-top: 0.35rem;
+}
+
+.summary-ledger-desc .person-avatar-inline,
+.summary-ledger-message .person-avatar-inline {
+  width: 1.75em;
+  height: 1.75em;
+  min-width: 1.75em;
+  min-height: 1.75em;
+}
+
+.summary-ledger-empty .summary-ledger-message {
+  color: var(--text-muted);
+}
+
+.summary-icon-block .help-pay-line,
+.summary-icon-block .settlement-line {
+  text-align: center;
+  font-size: var(--type-body);
+  line-height: 1.5;
+}
+
+.settlement-line.balanced .summary-ledger-message {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.settlement-line.debt .summary-ledger-amount .money-fig {
+  color: var(--amount-debt);
 }
 
 .help-pay-empty-state .help-pay-row {
@@ -1499,6 +1655,12 @@ button.currency-label.badge-all.active {
 
 .settlement-actions {
   margin-top: 0.55rem;
+  width: 100%;
+  align-self: stretch;
+}
+
+.settlement-actions .btn {
+  width: 100%;
 }
 
 .repay-context,
@@ -1974,6 +2136,10 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-desc {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
   font-weight: 600;
   color: var(--text-dark);
 }
@@ -1985,7 +2151,10 @@ button.currency-label.badge-all.active {
 }
 
 .explain-step-net {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
   margin-top: 0.15rem;
   font-weight: 700;
   color: var(--text-dark);
@@ -2038,6 +2207,18 @@ button.currency-label.badge-all.active {
   background: linear-gradient(135deg, #fff7f9, #fff);
 }
 
+.explain-sum-formula-row {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.explain-sum-formula {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .explain-sum-result {
   margin-top: 0.25rem;
   font-weight: 700;
@@ -2087,7 +2268,6 @@ button.currency-label.badge-all.active {
   height: 2.5rem;
   min-width: 2.5rem;
   min-height: 2.5rem;
-  vertical-align: -0.35em;
 }
 
 .list-card .filter-quick-chip-icon {
@@ -2205,19 +2385,7 @@ button.currency-label.badge-all.active {
 }
 
 .summary-icon-block {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.summary-icon-block-body {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.summary-icon-block .form-field-icon {
-  flex-shrink: 0;
-  align-self: flex-start;
+  display: block;
 }
 
 .summary-icon-block-settlement {
@@ -2298,23 +2466,15 @@ button.currency-label.badge-all.active {
   font-size: var(--type-body);
 }
 
-.summary-icon-block .help-pay-line,
-.summary-icon-block .settlement-line,
-.summary-icon-block .help-pay-row {
-  font-size: var(--type-body);
-  line-height: 1.5;
-}
-
-.summary-icon-block .help-pay-net {
-  font-size: var(--type-label);
-}
-
 .form-row {
   margin-bottom: 0.875rem;
 }
 
 .form-row label {
-  display: block;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
   font-size: var(--type-caption);
   font-weight: 600;
   color: var(--text-muted);
@@ -2472,7 +2632,7 @@ button.currency-label.badge-all.active {
 
 .split-icon {
   display: inline-block;
-  vertical-align: -0.15em;
+  vertical-align: middle;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -2527,7 +2687,7 @@ button.currency-label.badge-all.active {
 }
 
 .tx-tag.split .split-icon-inline {
-  vertical-align: -0.25em;
+  vertical-align: middle;
 }
 
 .category-picker-icon .split-icon-picker {
@@ -2616,7 +2776,7 @@ button.currency-label.badge-all.active {
   padding: 0.45rem 0.5rem;
   border-bottom: 1px solid #ece6e9;
   text-align: right;
-  vertical-align: top;
+  vertical-align: middle;
 }
 
 .help-pay-matrix th:first-child,
@@ -3078,7 +3238,6 @@ button.currency-label.badge-all.active {
 .tx-title-badge .compact-inline-chip {
   display: inline-flex;
   align-items: center;
-  vertical-align: baseline;
 }
 
 .tx-meta {
@@ -3140,6 +3299,9 @@ button.currency-label.badge-all.active {
 .tx-tag.split {
   background: rgba(107, 101, 112, 0.1);
   color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.12em;
 }
 
 .tx-tag.split-combined {
@@ -3706,7 +3868,6 @@ button.currency-label.badge-all.active {
   height: 1.55em;
   min-width: 1.55em;
   min-height: 1.55em;
-  vertical-align: -0.25em;
 }
 
 .list-card.list-compact .tx-record-location,
@@ -3981,7 +4142,10 @@ button.currency-label.badge-all.active {
 }
 
 .filter-item label {
-  display: block;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
   font-size: var(--type-micro);
   font-weight: 600;
   color: var(--text-muted);
@@ -4459,7 +4623,6 @@ button.currency-label.badge-all.active {
 }
 
 .detail-grid dt .ui-icon-label {
-  vertical-align: -0.3em;
   margin-right: 0.1em;
 }
 
@@ -4604,7 +4767,7 @@ button.currency-label.badge-all.active {
 
 .detail-why-calc-line {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.28rem 0;
@@ -4666,7 +4829,10 @@ button.currency-label.badge-all.active {
 }
 
 .person-spend-filters .filter-item label {
-  display: block;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
   font-size: var(--type-micro);
   font-weight: 600;
   color: var(--text-muted);
@@ -4751,6 +4917,231 @@ button.currency-label.badge-all.active {
 
 .person-spend-row-amount.hkd {
   color: var(--hkd-color);
+}
+
+.modal-header-with-actions h3 {
+  flex: 1;
+  min-width: 0;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.person-spend-chart-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  min-height: 2.1rem;
+  padding: 0.2rem 0.55rem;
+  border: 1.5px solid rgba(255, 117, 140, 0.45);
+  border-radius: 999px;
+  background: #fff5f7;
+  color: #c45a72;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.person-spend-chart-btn:hover,
+.person-spend-chart-btn:focus-visible {
+  background: #ffe4eb;
+  border-color: rgba(255, 117, 140, 0.75);
+}
+
+.person-spend-chart-btn-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.modal-content-person-spend-chart {
+  max-width: 420px;
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.person-spend-chart-subtitle {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.person-spend-chart-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.person-spend-chart-wrap.hidden {
+  display: none;
+}
+
+.person-spend-chart-svg {
+  width: min(220px, 72vw);
+  height: auto;
+  display: block;
+}
+
+.person-spend-chart-slice {
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+}
+
+.person-spend-chart-slice:hover,
+.person-spend-chart-slice:focus {
+  opacity: 0.88;
+}
+
+.person-spend-chart-center-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  fill: var(--text-dark, #3a2a30);
+}
+
+.person-spend-chart-center-value {
+  font-size: 0.58rem;
+  font-weight: 600;
+  fill: var(--text-muted, #8a7078);
+}
+
+.person-spend-chart-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.person-spend-chart-legend-item {
+  list-style: none;
+}
+
+.person-spend-chart-legend-btn {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border-soft, #efe6ea);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.person-spend-chart-legend-btn:hover,
+.person-spend-chart-legend-btn:focus-visible {
+  border-color: rgba(255, 117, 140, 0.45);
+  background: #fff8fa;
+}
+
+.person-spend-chart-legend-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border-soft, #efe6ea);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.person-spend-chart-legend-swatch {
+  width: 0.72rem;
+  height: 0.72rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.person-spend-chart-legend-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.person-spend-chart-legend-label .category-icon-inline {
+  width: 1rem;
+  height: 1rem;
+}
+
+.person-spend-chart-legend-pct {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.person-spend-chart-legend-amount {
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.person-spend-chart-legend-amount.jpy {
+  color: var(--jpy-color);
+}
+
+.person-spend-chart-legend-amount.hkd {
+  color: var(--hkd-color);
+}
+
+.person-spend-chart-legend-chevron {
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.modal-content-person-spend-chart-detail {
+  max-width: 420px;
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-content-person-spend-chart-detail .modal-header h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.person-spend-chart-detail-total {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.person-spend-chart-empty {
+  padding: 1.25rem 0.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-style: italic;
 }
 
 .detail-why-row.is-current .detail-why-btn {
@@ -4904,6 +5295,10 @@ button.currency-label.badge-all.active {
   height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.14));
+}
+
+.submit-loading-overlay-repay .flying-money-core img {
+  filter: drop-shadow(0 6px 16px rgba(74, 144, 164, 0.38));
 }
 
 .submit-loading-text {
@@ -5623,6 +6018,10 @@ html.theme-cyberpunk .help-pay-block {
   background: #121226 !important;
   color: var(--text-dark);
   border-color: var(--border-soft);
+}
+
+html.theme-cyberpunk .summary-ledger-sep {
+  background: rgba(0, 246, 255, 0.35);
 }
 
 html.theme-cyberpunk .explain-open-btn {

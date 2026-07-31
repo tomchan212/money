@@ -79,8 +79,8 @@
   },
 
   "form": {
-    "homeSpentTitle": "目前用左",
-    "statSpentPrefix": "用左",
+    "homeSpentTitle": "目前用咗",
+    "statSpentPrefix": "用咗",
     "statRemainPrefix": "剩餘",
     "labelDate": "日期",
     "labelCategory": "分類",
@@ -205,9 +205,14 @@
       "btnSave": "儲存修改"
     },
     "personSpend": {
-      "title": "{person} 用左明細 · {currency}",
-      "total": "合共用左 {amount} · {count} 筆",
-      "empty": "呢個篩選之下未有用左紀錄",
+      "title": "{person} 啲錢用咗去邊 · {currency}",
+      "total": "合共用咗 {amount} · {count} 筆",
+      "empty": "呢個篩選之下未有用咗紀錄",
+      "chartBtn": "圖表",
+      "chartTitle": "圖表分析",
+      "chartEmpty": "未有消費紀錄，睇唔到圖表",
+      "chartDetailTitle": "分類明細",
+      "chartDetailEmpty": "呢個分類未有紀錄",
       "sortDateDesc": "最新優先",
       "sortDateAsc": "最舊優先",
       "sortAmountDesc": "金額高→低",
