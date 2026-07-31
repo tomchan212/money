@@ -4522,8 +4522,16 @@ button.currency-label.badge-all.active {
     gap: 0.45rem 0.5rem;
   }
 
+  .pagination-bar.pagination-bar-bottom {
+    grid-template-columns: 1fr;
+  }
+
   .pagination-nav {
     justify-content: flex-end;
+  }
+
+  .pagination-bar-bottom .pagination-nav {
+    justify-content: flex-start;
   }
 
   .page-size-item select,
