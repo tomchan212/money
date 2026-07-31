@@ -3778,6 +3778,19 @@ function updateExplainPreview() {
   el.textContent = details?.open ? '收起' : '打開睇睇';
 }
 
+function setupSettlementExplainToggle() {
+  const details = $('#settlement-explain-details');
+  if (!details) return;
+  details.addEventListener('toggle', () => {
+    updateExplainPreview();
+    if (!details.open) return;
+    const target = details.querySelector('.settlement-explain-inner') || details;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    });
+  });
+}
+
 /* ===== Render ===== */
 function renderSummary() {
   const { spent, net } = calcSummary();
@@ -5049,7 +5062,7 @@ function setupListFilters() {
   const toggleListDetail = () => applyListViewExpanded(!listViewExpanded);
   $('#btn-list-detail-toggle-top')?.addEventListener('click', toggleListDetail);
   $('#btn-list-detail-toggle-bottom')?.addEventListener('click', toggleListDetail);
-  $('#settlement-explain-details')?.addEventListener('toggle', updateExplainPreview);
+  setupSettlementExplainToggle();
 
   setupQuickFilterToggles(resetPage);
   setupDayRangePicker(resetPage);
