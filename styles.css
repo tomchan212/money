@@ -6681,7 +6681,7 @@ html.theme-cyberpunk .badge-suica {
 }
 
 html.theme-cyberpunk .suica-wallet-card {
-  background: linear-gradient(145deg, #102 intermediate 0%, #163528 55%, #1a2f24 100%) !important;
+  background: linear-gradient(145deg, #102418 0%, #163528 55%, #1a2f24 100%) !important;
   border-color: rgba(57, 255, 20, 0.28) !important;
   color: var(--text-dark) !important;
 }
