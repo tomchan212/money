@@ -1819,6 +1819,12 @@ button.currency-label.badge-suica.active {
   align-self: stretch;
 }
 
+.settlement-actions.hidden,
+#settlement-card.hidden,
+#settlement-explain-details.hidden {
+  display: none !important;
+}
+
 .settlement-actions .btn {
   width: 100%;
 }
@@ -1928,8 +1934,31 @@ button.currency-label.badge-suica.active {
   color: var(--text-dark);
 }
 
+button.suica-wallet-card {
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+button.suica-wallet-card:hover {
+  border-color: rgba(31, 122, 84, 0.5);
+  box-shadow: 0 3px 10px rgba(31, 122, 84, 0.12);
+}
+
+button.suica-wallet-card:focus-visible {
+  outline: 2px solid #1f7a54;
+  outline-offset: 2px;
+}
+
 .home-suica-wallet {
   padding: 0.65rem 0.75rem;
+}
+
+.suica-adjust-context {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+  font-size: var(--type-body);
 }
 
 .suica-wallet-body {

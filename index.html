@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260801deploy2">
+  <link rel="stylesheet" href="styles.css?v=20260801deploy3">
 </head>
 <body>
   <header class="app-header">
@@ -128,18 +128,18 @@
               <div class="suica-wallet-heading home-suica-heading"><span aria-hidden="true">🐧</span> Suica</div>
               <div class="home-spent-currency">
                 <div class="home-spent-row suica-wallet-row">
-                  <div class="suica-wallet-card home-suica-wallet" data-suica-person="A">
+                  <button type="button" class="suica-wallet-card home-suica-wallet suica-wallet-edit-btn" data-suica-person="A" aria-label="更改男孩 Suica 餘額">
                     <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
                     <div class="suica-wallet-body">
                       <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance-a">¥0</strong></div>
                     </div>
-                  </div>
-                  <div class="suica-wallet-card home-suica-wallet" data-suica-person="B">
+                  </button>
+                  <button type="button" class="suica-wallet-card home-suica-wallet suica-wallet-edit-btn" data-suica-person="B" aria-label="更改女生 Suica 餘額">
                     <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
                     <div class="suica-wallet-body">
                       <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance-b">¥0</strong></div>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -314,28 +314,19 @@
           <div class="currency-section-body">
             <div class="suica-wallet-heading"><span aria-hidden="true">🐧</span> Suica 錢包</div>
             <div class="summary-stats suica-wallet-row">
-              <div class="suica-wallet-card" data-suica-person="A">
+              <button type="button" class="suica-wallet-card suica-wallet-edit-btn" data-suica-person="A" aria-label="更改男孩 Suica 餘額">
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
                 <div class="suica-wallet-body">
                   <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-a">¥0</strong></div>
-                  <div class="suica-wallet-meta">
-                    <span>增值 <strong id="summary-suica-topup-a">¥0</strong></span>
-                    <span>已用 <strong id="summary-suica-spent-a">¥0</strong></span>
-                  </div>
                 </div>
-              </div>
-              <div class="suica-wallet-card" data-suica-person="B">
+              </button>
+              <button type="button" class="suica-wallet-card suica-wallet-edit-btn" data-suica-person="B" aria-label="更改女生 Suica 餘額">
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
                 <div class="suica-wallet-body">
                   <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-b">¥0</strong></div>
-                  <div class="suica-wallet-meta">
-                    <span>增值 <strong id="summary-suica-topup-b">¥0</strong></span>
-                    <span>已用 <strong id="summary-suica-spent-b">¥0</strong></span>
-                  </div>
                 </div>
-              </div>
+              </button>
             </div>
-            <p class="suica-wallet-hint">記帳揀「🐧Suica」就係增值到俾錢嗰位嘅錢包；其他分類撳「🐧 Suica」俾錢就會扣返嗰位嘅餘額。</p>
           </div>
         </div>
 
@@ -724,6 +715,41 @@
     </div>
   </div>
 
+  <!-- Suica Balance Adjust Modal -->
+  <div id="suica-adjust-modal" class="modal hidden" role="dialog" aria-labelledby="suica-adjust-modal-title" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="suica-adjust-modal-title"><span aria-hidden="true">🐧</span> 更改 Suica 餘額</h3>
+        <button type="button" class="modal-close" data-close-modal aria-label="關閉">&times;</button>
+      </div>
+      <form id="suica-adjust-form">
+        <input type="hidden" id="suica-adjust-person" value="A">
+        <p class="suica-adjust-context" id="suica-adjust-context">—</p>
+        <div class="form-row form-row-icon-field">
+          <label for="suica-adjust-amount" class="sr-only">新餘額</label>
+          <div class="form-icon-field">
+            <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt=""></span>
+            <div class="money-input-wrap form-icon-field-control">
+              <span class="money-prefix prefix-jpy" id="suica-adjust-amount-prefix">¥</span>
+              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="suica-adjust-amount" required>
+            </div>
+          </div>
+        </div>
+        <p class="form-hint" id="suica-adjust-diff-hint" aria-live="polite"></p>
+        <div class="form-row">
+          <span class="sr-only">差額記做邊個分類</span>
+          <div class="toggle-group" id="suica-adjust-category-toggle">
+            <button type="button" class="toggle-btn active" data-category="交通" aria-pressed="true">交通</button>
+            <button type="button" class="toggle-btn" data-category="雜項" aria-pressed="false">雜項</button>
+          </div>
+          <input type="hidden" id="suica-adjust-category" value="交通">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="suica-adjust-submit-btn">確認更改 <img class="ui-icon ui-icon-btn" src="icons/save.png" alt="" aria-hidden="true"></button>
+      </form>
+    </div>
+  </div>
+
   <!-- Budget Modal -->
   <div id="budget-modal" class="modal hidden" role="dialog" aria-labelledby="budget-modal-title" aria-modal="true">
     <div class="modal-backdrop" data-close-modal></div>
@@ -1071,6 +1097,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260801deploy2"></script>
+  <script src="app.js?v=20260801deploy3"></script>
 </body>
 </html>

@@ -50,10 +50,13 @@ let API_URL = getApiUrl();
 
 const SUICA_CATEGORY = '🐧Suica';
 const SUICA_PAY_PREFIX = '「Suica」';
+const SUICA_CREDIT_PREFIX = '「Suica+」';
 const PAYMENT_CASH = '';
 const PAYMENT_SUICA = 'SUICA';
 const REPAY_NOTE_CUSTOM = '__custom__';
 const REPAY_NOTE_OPTIONS = ['PayMe', 'Alipay', 'ZA Bank', '現金'];
+const SUICA_ADJUST_CATEGORIES = ['交通', '雜項'];
+const SUICA_SPLIT_CYCLE = ['FOR_A', 'FOR_B'];
 
 const CATEGORY_EMOJI = {
   餐飲: '🍱',
@@ -328,6 +331,7 @@ const els = {
   personSpendChartDetailModal: $('#person-spend-chart-detail-modal'),
   repayModal: $('#repay-modal'),
   loanModal: $('#loan-modal'),
+  suicaAdjustModal: $('#suica-adjust-modal'),
   deleteConfirmModal: $('#delete-confirm-modal'),
   dayRangeModal: $('#day-range-modal'),
 };
@@ -1162,9 +1166,11 @@ function buildTransactionItemHtml(tx) {
   const splitBadgeHtml = listRecordSplitIconHtml(tx);
   const suicaBadge = isSuicaPayment(tx)
     ? '<span class="tx-suica-badge" title="Suica 俾錢">🐧</span>'
-    : isSuicaTopUp(tx)
-      ? '<span class="tx-suica-badge" title="Suica 增值">🐧+</span>'
-      : '';
+    : isSuicaCredit(tx)
+      ? '<span class="tx-suica-badge" title="Suica 餘額調整">🐧±</span>'
+      : isSuicaTopUp(tx)
+        ? '<span class="tx-suica-badge" title="Suica 增值">🐧+</span>'
+        : '';
 
   return `
     <li class="transaction-item${specialClass}" data-key="${escapeHtml(txKey)}" data-detail-key="${escapeHtml(txKey)}" tabindex="0" role="button" aria-label="查看 ${escapeHtml(title)} 詳情">
@@ -1230,24 +1236,36 @@ function getCategoryLabel(category) {
   return category;
 }
 
-function stripSuicaPayPrefix(description) {
-  const text = String(description || '');
+function stripSuicaMarkers(description) {
+  let text = String(description || '').trim();
   if (text.startsWith(SUICA_PAY_PREFIX)) {
-    return text.slice(SUICA_PAY_PREFIX.length).trim();
+    text = text.slice(SUICA_PAY_PREFIX.length).trim();
   }
-  return text.trim();
+  if (text.startsWith(SUICA_CREDIT_PREFIX)) {
+    text = text.slice(SUICA_CREDIT_PREFIX.length).trim();
+  }
+  return text;
+}
+
+function stripSuicaPayPrefix(description) {
+  return stripSuicaMarkers(description);
 }
 
 function encodeSuicaPayDescription(description) {
-  const clean = stripSuicaPayPrefix(description);
+  const clean = stripSuicaMarkers(description);
   return clean ? `${SUICA_PAY_PREFIX}${clean}` : SUICA_PAY_PREFIX;
+}
+
+function encodeSuicaCreditDescription(description) {
+  const clean = stripSuicaMarkers(description);
+  return clean ? `${SUICA_CREDIT_PREFIX}${clean}` : SUICA_CREDIT_PREFIX;
 }
 
 function getDisplayDescription(txOrDescription) {
   if (txOrDescription && typeof txOrDescription === 'object') {
-    return stripSuicaPayPrefix(txOrDescription.description);
+    return stripSuicaMarkers(txOrDescription.description);
   }
-  return stripSuicaPayPrefix(txOrDescription);
+  return stripSuicaMarkers(txOrDescription);
 }
 
 function isSuicaTopUp(tx) {
@@ -1260,8 +1278,20 @@ function isSuicaPayment(tx) {
   return String(tx.description || '').startsWith(SUICA_PAY_PREFIX);
 }
 
+function isSuicaCredit(tx) {
+  return Boolean(tx) && String(tx.description || '').startsWith(SUICA_CREDIT_PREFIX);
+}
+
+function isSuicaWalletTx(tx) {
+  return isSuicaTopUp(tx) || isSuicaPayment(tx) || isSuicaCredit(tx);
+}
+
 function getPaymentMethod(tx) {
   return isSuicaPayment(tx) ? PAYMENT_SUICA : PAYMENT_CASH;
+}
+
+function selfSplitForPayer(payer) {
+  return payer === 'B' ? 'FOR_B' : 'FOR_A';
 }
 
 function getTransactionTitle(tx) {
@@ -1623,6 +1653,8 @@ function applyExpenseCategoryConstraints(prefix = 'expense', { onCurrencyChange 
   const category = getExpenseCategoryValue(prefix);
   const paymentInput = $(`#${prefix}-payment-method`);
   const currencyInput = $(`#${prefix}-currency`);
+  const payerInput = $(`#${prefix}-payer`);
+  const splitInput = $(`#${prefix}-split-mode`);
   if (!currencyInput) return;
 
   if (category === SUICA_CATEGORY) {
@@ -1631,6 +1663,8 @@ function applyExpenseCategoryConstraints(prefix = 'expense', { onCurrencyChange 
       currencyInput.value = 'JPY';
       if (onCurrencyChange) onCurrencyChange('JPY');
     }
+    const payer = payerInput?.value === 'B' ? 'B' : 'A';
+    if (splitInput) splitInput.value = selfSplitForPayer(payer);
   } else if (getExpensePaymentMethodValue(prefix) === PAYMENT_SUICA && currencyInput.value !== 'JPY') {
     currencyInput.value = 'JPY';
     if (onCurrencyChange) onCurrencyChange('JPY');
@@ -1719,13 +1753,19 @@ function setupExpenseEssentials(prefix, { onCurrencyChange } = {}) {
     const input = $(`#${prefix}-payer`);
     if (!input) return;
     input.value = cycleExpenseValue(EXPENSE_PAYER_CYCLE, input.value);
+    if (getExpenseCategoryValue(prefix) === SUICA_CATEGORY) {
+      const splitInput = $(`#${prefix}-split-mode`);
+      if (splitInput) splitInput.value = selfSplitForPayer(input.value);
+    }
     syncExpenseEssentialsUi(prefix);
   });
 
   $(`#${prefix}-split-chip`)?.addEventListener('click', () => {
     const input = $(`#${prefix}-split-mode`);
     if (!input) return;
-    input.value = cycleExpenseValue(EXPENSE_SPLIT_CYCLE, input.value);
+    const cycle =
+      getExpenseCategoryValue(prefix) === SUICA_CATEGORY ? SUICA_SPLIT_CYCLE : EXPENSE_SPLIT_CYCLE;
+    input.value = cycleExpenseValue(cycle, input.value);
     syncExpenseEssentialsUi(prefix);
   });
 
@@ -2679,6 +2719,7 @@ function isModalOpen() {
     (els.personSpendChartDetailModal && !els.personSpendChartDetailModal.classList.contains('hidden')) ||
     !els.repayModal.classList.contains('hidden') ||
     (els.loanModal && !els.loanModal.classList.contains('hidden')) ||
+    (els.suicaAdjustModal && !els.suicaAdjustModal.classList.contains('hidden')) ||
     !els.deleteConfirmModal.classList.contains('hidden') ||
     (els.dayRangeModal && !els.dayRangeModal.classList.contains('hidden')) ||
     !$('#sheet-switcher-modal').classList.contains('hidden');
@@ -3095,8 +3136,8 @@ function calcSummary() {
     const cur = tx.currency;
     if (cur !== 'JPY' && cur !== 'HKD') continue;
     net[cur] += tx.net_b_owes_a;
-    // Suica 消費已喺增值時扣咗現金預算，唔好雙重計算
-    if (isSuicaPayment(tx)) continue;
+    // Suica 消費／餘額調整已喺錢包處理，唔好雙重扣現金預算
+    if (isSuicaPayment(tx) || isSuicaCredit(tx)) continue;
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
   }
@@ -3108,6 +3149,15 @@ function emptySuicaWallet() {
   return { toppedUp: 0, spent: 0, balance: 0 };
 }
 
+/** 增值跟「樣嘢點計」入邊個錢包；用 Suica 俾錢就扣俾錢嗰位。 */
+function getSuicaWalletOwner(tx) {
+  if (isSuicaTopUp(tx) || isSuicaCredit(tx)) {
+    if (tx.split_mode === 'FOR_B') return 'B';
+    if (tx.split_mode === 'FOR_A') return 'A';
+  }
+  return tx.payer === 'B' ? 'B' : 'A';
+}
+
 function calcSuicaWallet(person) {
   const wallets = {
     A: emptySuicaWallet(),
@@ -3116,9 +3166,9 @@ function calcSuicaWallet(person) {
 
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
-    const owner = tx.payer === 'B' ? 'B' : 'A';
+    const owner = getSuicaWalletOwner(tx);
     const amount = Number(tx.amount) || 0;
-    if (isSuicaTopUp(tx)) {
+    if (isSuicaTopUp(tx) || isSuicaCredit(tx)) {
       wallets[owner].toppedUp += amount;
     } else if (isSuicaPayment(tx)) {
       wallets[owner].spent += amount;
@@ -3591,9 +3641,11 @@ function buildTransactionDetailHtml(tx) {
   if (!isCashTransferTransaction(tx)) {
     const payLabel = isSuicaPayment(tx)
       ? '🐧 Suica'
-      : isSuicaTopUp(tx)
-        ? '現金增值 Suica'
-        : '現金／其他';
+      : isSuicaCredit(tx)
+        ? '🐧 Suica 餘額調整'
+        : isSuicaTopUp(tx)
+          ? '現金增值 Suica'
+          : '現金／其他';
     html += `
       <dt>💳 點樣俾</dt>
       <dd>${payLabel}</dd>`;
@@ -4019,8 +4071,6 @@ function renderSuicaWallet() {
     const key = person.toLowerCase();
     const wallet = wallets[person];
     const balanceText = formatMoney(wallet.balance, 'JPY');
-    const topupText = formatMoney(wallet.toppedUp, 'JPY');
-    const spentText = formatMoney(wallet.spent, 'JPY');
 
     const homeBalance = $(`#home-suica-balance-${key}`);
     if (homeBalance) {
@@ -4033,19 +4083,15 @@ function renderSuicaWallet() {
       summaryBalance.textContent = balanceText;
       summaryBalance.classList.toggle('over-budget', wallet.balance < 0);
     }
-
-    const summaryTopup = $(`#summary-suica-topup-${key}`);
-    const summarySpent = $(`#summary-suica-spent-${key}`);
-    if (summaryTopup) summaryTopup.textContent = topupText;
-    if (summarySpent) summarySpent.textContent = spentText;
   });
 }
 
 function updateSettlementChromeVisibility(net = calcSummary().net) {
+  const isSuicaView = currencyView === 'suica';
   const jpyDebt = !isNegligibleMoney(net.JPY, 'JPY');
   const hkdDebt = !isNegligibleMoney(net.HKD, 'HKD');
   const showRepay =
-    currencyView === 'suica'
+    isSuicaView
       ? false
       : currencyView === 'jpy'
         ? jpyDebt
@@ -4055,6 +4101,45 @@ function updateSettlementChromeVisibility(net = calcSummary().net) {
 
   // 即使未有互相幫俾，都顯示空狀態，唔好成個 block 收埋
   $('#settlement-actions')?.classList.toggle('hidden', !showRepay);
+  $('#settlement-card')?.classList.toggle('hidden', isSuicaView);
+  $('#settlement-explain-details')?.classList.toggle('hidden', isSuicaView);
+}
+
+function updateSuicaAdjustDiffHint() {
+  const hint = $('#suica-adjust-diff-hint');
+  const person = $('#suica-adjust-person')?.value === 'B' ? 'B' : 'A';
+  const current = calcSuicaWallet(person).balance;
+  const next = Number($('#suica-adjust-amount')?.value);
+  if (!hint) return;
+  if (!Number.isFinite(next)) {
+    hint.textContent = `而家餘額 ${formatMoney(current, 'JPY')}`;
+    return;
+  }
+  const diff = next - current;
+  if (Math.abs(diff) <= moneyEpsilon('JPY')) {
+    hint.textContent = '餘額無變動';
+    return;
+  }
+  const category = $('#suica-adjust-category')?.value || '交通';
+  if (diff > 0) {
+    hint.textContent = `會增加 ${formatMoney(diff, 'JPY')}，記做「${category}」調整`;
+  } else {
+    hint.textContent = `會減少 ${formatMoney(Math.abs(diff), 'JPY')}，記做「${category}」`;
+  }
+}
+
+function openSuicaAdjustModal(person) {
+  const owner = person === 'B' ? 'B' : 'A';
+  const wallet = calcSuicaWallet(owner);
+  $('#suica-adjust-person').value = owner;
+  $('#suica-adjust-amount').value = String(Math.round(wallet.balance));
+  setToggleValue('#suica-adjust-category-toggle', '#suica-adjust-category', 'category', '交通');
+  const context = $('#suica-adjust-context');
+  if (context) {
+    context.innerHTML = `${personImg(owner, 'inline')} 而家餘額 ${escapeHtml(formatMoney(wallet.balance, 'JPY'))}`;
+  }
+  updateSuicaAdjustDiffHint();
+  openModal(els.suicaAdjustModal);
 }
 
 function getFilteredTransactions() {
@@ -4313,7 +4398,7 @@ function getPersonSpendRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
-    if (isSuicaPayment(tx)) return false;
+    if (isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4342,7 +4427,7 @@ function getPersonSpendChartRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
-    if (isSuicaPayment(tx)) return false;
+    if (isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4809,7 +4894,12 @@ function updateExpenseSplitHint() {
   }
 
   if (category === SUICA_CATEGORY) {
-    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 Suica 增值：強制 JPY，用現金入錢包`;
+    const owner = split === 'FOR_B' ? 'B' : 'A';
+    const isHelp = payer !== owner;
+    const topUpHint = isHelp
+      ? `${personImg(payer, 'inline')} 幫 ${personImg(owner, 'inline')} 增值 Suica（現金）`
+      : `${personImg(owner, 'inline')} 自己增值 Suica（現金）`;
+    hint.innerHTML = `${base ? `${base}<br>` : ''}${topUpHint} · 強制 JPY · 唔會一人一半`;
     return;
   }
   if (payment === PAYMENT_SUICA) {
@@ -5425,7 +5515,9 @@ function applyCurrencyView() {
   });
 
   updateSettlementChromeVisibility();
-  renderSettlementExplain();
+  if (currencyView !== 'suica') {
+    renderSettlementExplain();
+  }
 }
 
 function setupCurrencyViewSelector() {
@@ -5461,6 +5553,74 @@ function setupEventListeners() {
       }),
   });
   setupRepayNoteSelect();
+
+  setupToggle('#suica-adjust-category-toggle', '#suica-adjust-category', 'category', '交通');
+  $('#suica-adjust-category-toggle')?.querySelectorAll('.toggle-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      $('#suica-adjust-category-toggle')?.querySelectorAll('.toggle-btn').forEach((b) => {
+        b.setAttribute('aria-pressed', b.classList.contains('active') ? 'true' : 'false');
+      });
+      updateSuicaAdjustDiffHint();
+    });
+  });
+  $('#suica-adjust-amount')?.addEventListener('input', updateSuicaAdjustDiffHint);
+  document.querySelectorAll('.suica-wallet-edit-btn').forEach((btn) => {
+    btn.addEventListener('click', () => openSuicaAdjustModal(btn.dataset.suicaPerson));
+  });
+  $('#suica-adjust-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!beginMutation()) return;
+
+    const person = $('#suica-adjust-person')?.value === 'B' ? 'B' : 'A';
+    const current = calcSuicaWallet(person).balance;
+    const next = Number($('#suica-adjust-amount')?.value);
+    const category = SUICA_ADJUST_CATEGORIES.includes($('#suica-adjust-category')?.value)
+      ? $('#suica-adjust-category').value
+      : '交通';
+
+    if (!Number.isFinite(next) || next < 0) {
+      endMutation();
+      showToast('請填寫有效餘額', 'error');
+      return;
+    }
+
+    const diff = next - current;
+    if (Math.abs(diff) <= moneyEpsilon('JPY')) {
+      endMutation();
+      closeModal(els.suicaAdjustModal);
+      showToast('餘額無變動', 'info');
+      return;
+    }
+
+    const amount = Math.abs(diff);
+    const isCredit = diff > 0;
+    const tx = {
+      date: todayISO(),
+      category,
+      description: isCredit
+        ? encodeSuicaCreditDescription('Suica 餘額調整')
+        : encodeSuicaPayDescription('Suica 餘額調整'),
+      currency: 'JPY',
+      amount,
+      payer: person,
+      split_mode: selfSplitForPayer(person),
+      payment_method: isCredit ? PAYMENT_CASH : PAYMENT_SUICA,
+      time: nowLocalTimeHM(),
+    };
+
+    closeModal(els.suicaAdjustModal);
+    try {
+      tx.location = await captureCurrentLocation();
+    } catch (_) {}
+    enqueueCreate(tx);
+    endMutation();
+    SyncManager.scheduleSync();
+    showToast(
+      `${personImg(person, 'inline')} Suica 餘額已改為 ${formatMoney(next, 'JPY')}`,
+      'success'
+    );
+    onRecordSyncComplete();
+  });
 
   $('#btn-edit-budget').addEventListener('click', openBudgetModal);
   $$('.budget-remain-toggle').forEach((btn) => {
@@ -5677,14 +5837,19 @@ function setupEventListeners() {
     const paymentMethod =
       category === SUICA_CATEGORY ? PAYMENT_CASH : getExpensePaymentMethodValue('expense');
     let currency = $('#expense-currency').value;
+    const payer = $('#expense-payer').value === 'B' ? 'B' : 'A';
+    let splitMode = getExpenseSplitModeValue('expense');
     if (category === SUICA_CATEGORY || paymentMethod === PAYMENT_SUICA) {
       currency = 'JPY';
+    }
+    if (category === SUICA_CATEGORY) {
+      if (splitMode === 'SPLIT_5050') splitMode = selfSplitForPayer(payer);
     }
     const rawDescription = String(form.get('description') || '').trim();
     const description =
       paymentMethod === PAYMENT_SUICA
         ? encodeSuicaPayDescription(rawDescription)
-        : stripSuicaPayPrefix(rawDescription);
+        : stripSuicaMarkers(rawDescription);
 
     const tx = {
       date: form.get('date') || $('#expense-date')?.value || '',
@@ -5692,8 +5857,8 @@ function setupEventListeners() {
       description,
       currency,
       amount: Number(form.get('amount')),
-      payer: $('#expense-payer').value,
-      split_mode: form.get('split_mode'),
+      payer,
+      split_mode: splitMode,
       payment_method: paymentMethod,
       time: nowLocalTimeHM(),
     };
@@ -5819,17 +5984,23 @@ function setupEventListeners() {
         ? PAYMENT_CASH
         : getExpensePaymentMethodValue('edit');
     let currency = $('#edit-currency').value;
+    const payer = $('#edit-payer').value === 'B' ? 'B' : 'A';
+    let splitMode = resolveEditSplitMode(existing);
     if (category === SUICA_CATEGORY || paymentMethod === PAYMENT_SUICA) {
       currency = 'JPY';
     }
+    if (category === SUICA_CATEGORY) {
+      if (splitMode === 'SPLIT_5050') splitMode = selfSplitForPayer(payer);
+    }
     const rawDescription = $('#edit-description').value.trim();
-    const description =
-      paymentMethod === PAYMENT_SUICA
-        ? encodeSuicaPayDescription(rawDescription)
-        : stripSuicaPayPrefix(rawDescription);
+    let description = stripSuicaMarkers(rawDescription);
+    if (paymentMethod === PAYMENT_SUICA) {
+      description = encodeSuicaPayDescription(description);
+    } else if (isSuicaCredit(existing) && category !== SUICA_CATEGORY) {
+      description = encodeSuicaCreditDescription(description || 'Suica 餘額調整');
+    }
 
     if (paymentMethod === PAYMENT_SUICA) {
-      const payer = ($('#edit-payer').value === 'B' ? 'B' : 'A');
       const wallet = calcSuicaWallet(payer);
       const previousSuicaAmount =
         isSuicaPayment(existing) &&
@@ -5856,8 +6027,8 @@ function setupEventListeners() {
       location: getLocationText(existing),
       currency,
       amount,
-      payer: $('#edit-payer').value,
-      split_mode: resolveEditSplitMode(existing),
+      payer,
+      split_mode: splitMode,
       payment_method: paymentMethod,
     };
 
