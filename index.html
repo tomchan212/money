@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260801deploy3">
+  <link rel="stylesheet" href="styles.css?v=20260801deploy4">
 </head>
 <body>
   <header class="app-header">
@@ -317,16 +317,19 @@
               <button type="button" class="suica-wallet-card suica-wallet-edit-btn" data-suica-person="A" aria-label="更改男孩 Suica 餘額">
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
                 <div class="suica-wallet-body">
-                  <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-a">¥0</strong></div>
+                  <div class="stat-spent">用咗 <strong id="summary-suica-spent-a">¥0</strong></div>
+                  <div class="stat-remain" id="summary-suica-remain-a">剩餘 ¥0</div>
                 </div>
               </button>
               <button type="button" class="suica-wallet-card suica-wallet-edit-btn" data-suica-person="B" aria-label="更改女生 Suica 餘額">
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
                 <div class="suica-wallet-body">
-                  <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-b">¥0</strong></div>
+                  <div class="stat-spent">用咗 <strong id="summary-suica-spent-b">¥0</strong></div>
+                  <div class="stat-remain" id="summary-suica-remain-b">剩餘 ¥0</div>
                 </div>
               </button>
             </div>
+            <p class="suica-wallet-hint">增值＝現金轉入錢包（唔算「用咗」）；用 Suica 俾錢先計消費。舊紀錄若分類唔係 🐧Suica，撳卡片改餘額即可對齊卡上實數。</p>
           </div>
         </div>
 
@@ -776,6 +779,13 @@
                 <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-hkd" required>
               </div>
             </div>
+            <div class="form-row">
+              <label for="budget-a-suica">🐧 Suica</label>
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-suica" required>
+              </div>
+            </div>
           </div>
           <div class="budget-person">
             <h4><img class="person-avatar person-avatar-inline" src="girl.png" alt="" aria-hidden="true"></h4>
@@ -793,8 +803,16 @@
                 <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-hkd" required>
               </div>
             </div>
+            <div class="form-row">
+              <label for="budget-b-suica">🐧 Suica</label>
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-suica" required>
+              </div>
+            </div>
           </div>
         </div>
+        <p class="form-hint budget-suica-hint">Suica 初始＝出發前卡上原本有嘅錢。之後現金增值唔會當「用咗」JPY，只係轉入錢包。</p>
         <div class="budget-remain-section" role="group" aria-label="關閉剩餘顯示">
           <div class="budget-remain-section-title">關閉剩餘顯示</div>
           <div class="budget-remain-toggles">
@@ -1097,6 +1115,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260801deploy3"></script>
+  <script src="app.js?v=20260801deploy4"></script>
 </body>
 </html>

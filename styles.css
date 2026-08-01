@@ -1980,6 +1980,18 @@ button.suica-wallet-card:focus-visible {
   color: var(--amount-debt);
 }
 
+.suica-wallet-card .stat-spent strong {
+  color: #1f7a54;
+}
+
+.suica-wallet-card .stat-remain.over-budget {
+  color: var(--amount-debt);
+}
+
+.budget-suica-hint {
+  margin: 0.35rem 0 0.85rem;
+}
+
 .suica-wallet-meta {
   display: flex;
   flex-wrap: wrap;

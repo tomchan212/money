@@ -237,8 +237,8 @@ const REPAY_CATEGORY = '還錢';
 const LOAN_CATEGORY = '借錢';
 
 const DEFAULT_BUDGETS = {
-  A: { JPY: 150000, HKD: 5000 },
-  B: { JPY: 150000, HKD: 5000 },
+  A: { JPY: 150000, HKD: 5000, Suica: 0 },
+  B: { JPY: 150000, HKD: 5000, Suica: 0 },
 };
 
 const API_TIMEOUT_MS = 55000;
@@ -247,7 +247,16 @@ const API_MAX_RETRIES = 1;
 const CURRENCY_SYMBOL = {
   JPY: '¥',
   HKD: '$',
+  Suica: '¥',
 };
+
+function normalizeBudgetCurrency(currency) {
+  const value = String(currency || '').trim();
+  if (!value) return '';
+  if (/^suica$/i.test(value) || value === SUICA_CATEGORY || value === '🐧') return 'Suica';
+  if (value === 'JPY' || value === 'HKD') return value;
+  return value;
+}
 
 let detailModalKey = null;
 /** 詳情層級：由還錢「對應消費」再入另一筆時，關閉可返回上一層 */
@@ -2404,7 +2413,7 @@ function budgetsFromApi(apiBudgets) {
   if (!Array.isArray(apiBudgets)) return result;
   for (const b of apiBudgets) {
     const person = String(b.person || '').trim();
-    const currency = String(b.currency || '').trim();
+    const currency = normalizeBudgetCurrency(b.currency);
     if (result[person] && result[person][currency] !== undefined) {
       result[person][currency] = Number(b.initial_budget) || 0;
     }
@@ -2418,6 +2427,8 @@ function budgetsToApi(b) {
     { person: 'B', currency: 'JPY', initial_budget: b.B.JPY },
     { person: 'A', currency: 'HKD', initial_budget: b.A.HKD },
     { person: 'B', currency: 'HKD', initial_budget: b.B.HKD },
+    { person: 'A', currency: 'Suica', initial_budget: b.A.Suica || 0 },
+    { person: 'B', currency: 'Suica', initial_budget: b.B.Suica || 0 },
   ];
 }
 
@@ -2427,7 +2438,7 @@ function summaryFromApi(apiSummary) {
   const result = { A: {}, B: {} };
   for (const row of apiSummary) {
     const person = String(row.person || '').trim();
-    const currency = String(row.currency || '').trim();
+    const currency = normalizeBudgetCurrency(row.currency);
     if (!result[person] || !currency) continue;
     result[person][currency] = {
       initial_budget: Number(row.initial_budget) || 0,
@@ -2444,20 +2455,31 @@ function getSummaryRow(person, currency) {
 }
 
 function buildLocalSummary() {
-  const { spent, net } = calcSummary();
+  const { spent, net, transferredToSuica } = calcSummary();
+  const wallets = calcSuicaWallet();
   const result = { A: {}, B: {} };
 
   ['A', 'B'].forEach((person) => {
     ['JPY', 'HKD'].forEach((currency) => {
       const initial = budgets[person][currency];
       const totalSpent = spent[person][currency];
+      const transferred = currency === 'JPY' ? transferredToSuica[person] : 0;
       result[person][currency] = {
         initial_budget: initial,
         total_spent: totalSpent,
-        remaining_budget: initial - totalSpent,
+        remaining_budget: initial - totalSpent - transferred,
         net_balance: net[currency],
       };
     });
+
+    const initialSuica = Number(budgets[person].Suica) || 0;
+    const wallet = wallets[person];
+    result[person].Suica = {
+      initial_budget: initialSuica,
+      total_spent: wallet.spent,
+      remaining_budget: wallet.balance,
+      net_balance: 0,
+    };
   });
 
   return result;
@@ -2860,7 +2882,7 @@ function applyServerData(data, applySeq) {
   const apiSummary = summaryFromApi(data.summary);
   if (apiSummary) {
     ['A', 'B'].forEach((person) => {
-      ['JPY', 'HKD'].forEach((currency) => {
+      ['JPY', 'HKD', 'Suica'].forEach((currency) => {
         const row = apiSummary[person]?.[currency];
         if (row && row.initial_budget >= 0) {
           budgets[person][currency] = row.initial_budget;
@@ -3115,6 +3137,8 @@ async function syncBudgets(b) {
     B_JPY: b.B.JPY,
     A_HKD: b.A.HKD,
     B_HKD: b.B.HKD,
+    A_Suica: b.A.Suica || 0,
+    B_Suica: b.B.Suica || 0,
   });
 }
 
@@ -3130,23 +3154,33 @@ function calcSummary() {
     A: { JPY: 0, HKD: 0 },
     B: { JPY: 0, HKD: 0 },
   };
+  const transferredToSuica = { A: 0, B: 0 };
   const net = { JPY: 0, HKD: 0 };
 
   for (const tx of transactions) {
     const cur = tx.currency;
     if (cur !== 'JPY' && cur !== 'HKD') continue;
     net[cur] += tx.net_b_owes_a;
-    // Suica 消費／餘額調整已喺錢包處理，唔好雙重扣現金預算
+
+    // 增值＝現金轉去 Suica；Suica 俾錢／餘額調整＝錢包帳，都唔算 JPY 現金消費
+    if (isSuicaTopUp(tx)) {
+      if (cur === 'JPY') {
+        const payer = tx.payer === 'B' ? 'B' : 'A';
+        transferredToSuica[payer] += Number(tx.amount) || 0;
+      }
+      continue;
+    }
     if (isSuicaPayment(tx) || isSuicaCredit(tx)) continue;
+
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
   }
 
-  return { spent, net };
+  return { spent, net, transferredToSuica };
 }
 
 function emptySuicaWallet() {
-  return { toppedUp: 0, spent: 0, balance: 0 };
+  return { initial: 0, toppedUp: 0, spent: 0, balance: 0 };
 }
 
 /** 增值跟「樣嘢點計」入邊個錢包；用 Suica 俾錢就扣俾錢嗰位。 */
@@ -3164,6 +3198,10 @@ function calcSuicaWallet(person) {
     B: emptySuicaWallet(),
   };
 
+  ['A', 'B'].forEach((key) => {
+    wallets[key].initial = Number(budgets?.[key]?.Suica) || 0;
+  });
+
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
     const owner = getSuicaWalletOwner(tx);
@@ -3176,7 +3214,7 @@ function calcSuicaWallet(person) {
   }
 
   ['A', 'B'].forEach((key) => {
-    wallets[key].balance = wallets[key].toppedUp - wallets[key].spent;
+    wallets[key].balance = wallets[key].initial + wallets[key].toppedUp - wallets[key].spent;
   });
 
   if (person === 'A' || person === 'B') return wallets[person];
@@ -4012,14 +4050,16 @@ function updateExplainPreview() {
 
 /* ===== Render ===== */
 function renderSummary() {
-  const { spent, net } = calcSummary();
+  const { spent, net, transferredToSuica } = calcSummary();
 
   ['JPY', 'HKD'].forEach((cur) => {
     const lower = cur.toLowerCase();
     ['A', 'B'].forEach((person) => {
       const p = person.toLowerCase();
       const used = spent[person][cur];
-      const remaining = budgets[person][cur] - used;
+      const transferred = cur === 'JPY' ? transferredToSuica[person] : 0;
+      // 剩餘要扣走轉入 Suica 嘅現金，避免同錢包重複當作仲喺袋
+      const remaining = budgets[person][cur] - used - transferred;
 
       const spentText = formatMoney(used, cur);
       const remainText = `剩餘 ${formatMoney(remaining, cur)}`;
@@ -4071,6 +4111,8 @@ function renderSuicaWallet() {
     const key = person.toLowerCase();
     const wallet = wallets[person];
     const balanceText = formatMoney(wallet.balance, 'JPY');
+    const spentText = formatMoney(wallet.spent, 'JPY');
+    const remainText = `剩餘 ${balanceText}`;
 
     const homeBalance = $(`#home-suica-balance-${key}`);
     if (homeBalance) {
@@ -4078,10 +4120,13 @@ function renderSuicaWallet() {
       homeBalance.classList.toggle('over-budget', wallet.balance < 0);
     }
 
-    const summaryBalance = $(`#summary-suica-balance-${key}`);
-    if (summaryBalance) {
-      summaryBalance.textContent = balanceText;
-      summaryBalance.classList.toggle('over-budget', wallet.balance < 0);
+    const summarySpent = $(`#summary-suica-spent-${key}`);
+    if (summarySpent) summarySpent.textContent = spentText;
+
+    const summaryRemain = $(`#summary-suica-remain-${key}`);
+    if (summaryRemain) {
+      summaryRemain.textContent = remainText;
+      summaryRemain.classList.toggle('over-budget', wallet.balance < 0);
     }
   });
 }
@@ -4398,7 +4443,8 @@ function getPersonSpendRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
-    if (isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
+    // 增值係轉帳；Suica 俾錢／調整喺錢包計，唔入現金「用咗邊」
+    if (isSuicaTopUp(tx) || isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4427,7 +4473,7 @@ function getPersonSpendChartRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
-    if (isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
+    if (isSuicaTopUp(tx) || isSuicaPayment(tx) || isSuicaCredit(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4811,6 +4857,8 @@ function populateBudgetForm() {
   $('#budget-b-jpy').value = budgets.B.JPY;
   $('#budget-a-hkd').value = budgets.A.HKD;
   $('#budget-b-hkd').value = budgets.B.HKD;
+  if ($('#budget-a-suica')) $('#budget-a-suica').value = budgets.A.Suica || 0;
+  if ($('#budget-b-suica')) $('#budget-b-suica').value = budgets.B.Suica || 0;
 }
 
 /* ===== Toggle Helpers ===== */
@@ -4897,13 +4945,13 @@ function updateExpenseSplitHint() {
     const owner = split === 'FOR_B' ? 'B' : 'A';
     const isHelp = payer !== owner;
     const topUpHint = isHelp
-      ? `${personImg(payer, 'inline')} 幫 ${personImg(owner, 'inline')} 增值 Suica（現金）`
-      : `${personImg(owner, 'inline')} 自己增值 Suica（現金）`;
-    hint.innerHTML = `${base ? `${base}<br>` : ''}${topUpHint} · 強制 JPY · 唔會一人一半`;
+      ? `${personImg(payer, 'inline')} 幫 ${personImg(owner, 'inline')} 增值 Suica`
+      : `${personImg(owner, 'inline')} 自己增值 Suica`;
+    hint.innerHTML = `${base ? `${base}<br>` : ''}${topUpHint} · 現金轉入錢包（唔算用咗）· 強制 JPY`;
     return;
   }
   if (payment === PAYMENT_SUICA) {
-    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 用 Suica 俾：扣錢包餘額，唔再扣現金預算`;
+    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 用 Suica 俾：扣錢包餘額，計入 Suica「用咗」`;
     return;
   }
   hint.innerHTML = base;
@@ -5927,10 +5975,12 @@ function setupEventListeners() {
       A: {
         JPY: Number($('#budget-a-jpy').value),
         HKD: Number($('#budget-a-hkd').value),
+        Suica: Number($('#budget-a-suica')?.value || 0),
       },
       B: {
         JPY: Number($('#budget-b-jpy').value),
         HKD: Number($('#budget-b-hkd').value),
+        Suica: Number($('#budget-b-suica')?.value || 0),
       },
     };
 

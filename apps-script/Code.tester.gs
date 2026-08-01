@@ -195,24 +195,84 @@ function txNum_(value) {
   return Number(value) || 0;
 }
 
+var SUICA_CATEGORY_ = '🐧Suica';
+var SUICA_PAY_PREFIX_ = '「Suica」';
+var SUICA_CREDIT_PREFIX_ = '「Suica+」';
+
+function normalizeBudgetCurrency_(currency) {
+  var value = String(currency || '').trim();
+  if (/^suica$/i.test(value) || value === SUICA_CATEGORY_ || value === '🐧') return 'Suica';
+  return value;
+}
+
+function isSuicaTopUp_(tx) {
+  return String(tx.category || '') === SUICA_CATEGORY_;
+}
+
+function isSuicaPayment_(tx) {
+  return String(tx.description || '').indexOf(SUICA_PAY_PREFIX_) === 0;
+}
+
+function isSuicaCredit_(tx) {
+  return String(tx.description || '').indexOf(SUICA_CREDIT_PREFIX_) === 0;
+}
+
+function getSuicaWalletOwner_(tx) {
+  if (isSuicaTopUp_(tx) || isSuicaCredit_(tx)) {
+    if (tx.split_mode === 'FOR_B') return 'B';
+    if (tx.split_mode === 'FOR_A') return 'A';
+  }
+  return tx.payer === 'B' ? 'B' : 'A';
+}
+
 function buildSummary_(transactions, budgets) {
   var budgetMap = {};
   budgets.forEach(function(b) {
-    budgetMap[b.person + '_' + b.currency] = Number(b.initial_budget) || 0;
+    var person = String(b.person || '').trim();
+    var currency = normalizeBudgetCurrency_(b.currency);
+    budgetMap[person + '_' + currency] = Number(b.initial_budget) || 0;
   });
 
   var spent = {
     A: { JPY: 0, HKD: 0 },
     B: { JPY: 0, HKD: 0 },
   };
+  var transferredToSuica = { A: 0, B: 0 };
+  var suica = {
+    A: { toppedUp: 0, spent: 0 },
+    B: { toppedUp: 0, spent: 0 },
+  };
   var net = { JPY: 0, HKD: 0 };
 
   transactions.forEach(function(tx) {
     var cur = tx.currency;
     if (cur !== 'JPY' && cur !== 'HKD') return;
+    net[cur] += tx.net_b_owes_a;
+
+    // 增值＝現金轉去 Suica；Suica 俾錢／餘額調整＝錢包帳，都唔算現金消費
+    if (isSuicaTopUp_(tx)) {
+      if (cur === 'JPY') {
+        var payer = tx.payer === 'B' ? 'B' : 'A';
+        transferredToSuica[payer] += Number(tx.amount) || 0;
+        suica[getSuicaWalletOwner_(tx)].toppedUp += Number(tx.amount) || 0;
+      }
+      return;
+    }
+    if (isSuicaCredit_(tx)) {
+      if (cur === 'JPY') {
+        suica[getSuicaWalletOwner_(tx)].toppedUp += Number(tx.amount) || 0;
+      }
+      return;
+    }
+    if (isSuicaPayment_(tx)) {
+      if (cur === 'JPY') {
+        suica[getSuicaWalletOwner_(tx)].spent += Number(tx.amount) || 0;
+      }
+      return;
+    }
+
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
-    net[cur] += tx.net_b_owes_a;
   });
 
   var rows = [];
@@ -220,14 +280,27 @@ function buildSummary_(transactions, budgets) {
     ['JPY', 'HKD'].forEach(function(currency) {
       var initial = budgetMap[person + '_' + currency] || 0;
       var totalSpent = spent[person][currency];
+      var transferred = currency === 'JPY' ? transferredToSuica[person] : 0;
       rows.push({
         person: person,
         currency: currency,
         initial_budget: initial,
         total_spent: totalSpent,
-        remaining_budget: initial - totalSpent,
+        remaining_budget: initial - totalSpent - transferred,
         net_balance: net[currency],
       });
+    });
+
+    var initialSuica = budgetMap[person + '_Suica'] || 0;
+    var walletSpent = suica[person].spent;
+    var walletBalance = initialSuica + suica[person].toppedUp - walletSpent;
+    rows.push({
+      person: person,
+      currency: 'Suica',
+      initial_budget: initialSuica,
+      total_spent: walletSpent,
+      remaining_budget: walletBalance,
+      net_balance: 0,
     });
   });
 
@@ -276,6 +349,8 @@ function defaultBudgets_() {
     { person: 'B', currency: 'JPY', initial_budget: 150000 },
     { person: 'A', currency: 'HKD', initial_budget: 5000 },
     { person: 'B', currency: 'HKD', initial_budget: 5000 },
+    { person: 'A', currency: 'Suica', initial_budget: 0 },
+    { person: 'B', currency: 'Suica', initial_budget: 0 },
   ];
 }
 
@@ -391,6 +466,8 @@ function updateBudget_(params) {
       { person: 'B', currency: 'JPY', initial_budget: Number(params.B_JPY) },
       { person: 'A', currency: 'HKD', initial_budget: Number(params.A_HKD) },
       { person: 'B', currency: 'HKD', initial_budget: Number(params.B_HKD) },
+      { person: 'A', currency: 'Suica', initial_budget: Number(params.A_Suica) || 0 },
+      { person: 'B', currency: 'Suica', initial_budget: Number(params.B_Suica) || 0 },
     ];
   }
 
@@ -398,12 +475,13 @@ function updateBudget_(params) {
   ensureHeaders_(budgetSheet, ['person', 'currency', 'initial_budget']);
 
   budgets.forEach((b) => {
-    const rowIndex = findBudgetRow_(budgetSheet, b.person, b.currency);
+    const currency = normalizeBudgetCurrency_(b.currency);
+    const rowIndex = findBudgetRow_(budgetSheet, b.person, currency);
     const amount = Number(b.initial_budget) || 0;
     if (rowIndex > 0) {
       budgetSheet.getRange(rowIndex, 3).setValue(amount);
     } else {
-      budgetSheet.appendRow([b.person, b.currency, amount]);
+      budgetSheet.appendRow([b.person, currency, amount]);
     }
   });
 
@@ -526,9 +604,13 @@ function findTransactionByClientId_(sheet, clientId) {
 function findBudgetRow_(sheet, person, currency) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return -1;
+  const wantCurrency = normalizeBudgetCurrency_(currency);
   const values = sheet.getRange('A2:B' + lastRow).getValues();
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0]) === person && String(values[i][1]) === currency) {
+    if (
+      String(values[i][0]).trim() === person &&
+      normalizeBudgetCurrency_(values[i][1]) === wantCurrency
+    ) {
       return i + 2;
     }
   }
