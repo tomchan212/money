@@ -1819,6 +1819,12 @@ button.currency-label.badge-suica.active {
   align-self: stretch;
 }
 
+.settlement-actions.hidden,
+#settlement-card.hidden,
+#settlement-explain-details.hidden {
+  display: none !important;
+}
+
 .settlement-actions .btn {
   width: 100%;
 }
