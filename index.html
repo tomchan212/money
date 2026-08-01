@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260731deploy10">
+  <link rel="stylesheet" href="styles.css?v=20260801deploy1">
 </head>
 <body>
   <header class="app-header">
@@ -88,6 +88,7 @@
               <button type="button" class="currency-label badge-jpy currency-icon-only active" data-currency-view="jpy" aria-pressed="true" aria-label="JPY"><img class="ui-icon ui-icon-currency" src="icons/jpy.png?v=20260730dc" alt="" aria-hidden="true"></button>
               <button type="button" class="currency-label badge-hkd currency-icon-only" data-currency-view="hkd" aria-pressed="false" aria-label="HKD"><img class="ui-icon ui-icon-currency" src="icons/hkd.png?v=20260730dc" alt="" aria-hidden="true"></button>
               <button type="button" class="currency-label badge-all currency-icon-only" data-currency-view="all" aria-pressed="false" aria-label="全部幣別"><img class="ui-icon ui-icon-currency" src="icons/exchange.png?v=20260730dc" alt="" aria-hidden="true"></button>
+              <button type="button" class="currency-label badge-suica currency-icon-only" data-currency-view="suica" aria-pressed="false" aria-label="Suica">🐧</button>
             </div>
           </div>
           <div class="currency-section" data-currency-panel="jpy">
@@ -119,6 +120,14 @@
                     <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="hkd">0</strong></span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+          <div class="currency-section" data-currency-panel="suica">
+            <div class="currency-section-body">
+              <div class="suica-wallet-card home-suica-wallet">
+                <div class="suica-wallet-brand"><span aria-hidden="true">🐧</span> Suica</div>
+                <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance">¥0</strong></div>
               </div>
             </div>
           </div>
@@ -186,12 +195,12 @@
           <label for="expense-description" class="sr-only">項目描述（選填）</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/notes.png?v=20260730dc" alt=""></span>
-            <input type="text" id="expense-description" name="description" placeholder="例：叙叙苑燒肉、Suica 增值">
+            <input type="text" id="expense-description" name="description" placeholder="例：叙叙苑燒肉、地鐵">
           </div>
         </div>
 
         <div class="form-row expense-essentials-row">
-          <div class="expense-essentials-grid" aria-label="幣別、邊個俾錢、樣嘢點計">
+          <div class="expense-essentials-grid expense-essentials-grid-4" aria-label="幣別、邊個俾錢、樣嘢點計、點樣俾">
             <button type="button" class="expense-cycle-chip expense-cycle-chip-icon-only" id="expense-currency-chip" aria-label="幣別：JPY">
               <span class="expense-cycle-chip-icon" id="expense-currency-chip-icon"></span>
             </button>
@@ -203,10 +212,15 @@
               <span class="expense-cycle-chip-icon" id="expense-split-chip-icon"></span>
               <span class="expense-cycle-chip-caption">樣嘢點計</span>
             </button>
+            <button type="button" class="expense-cycle-chip" id="expense-payment-chip" aria-label="點樣俾：現金">
+              <span class="expense-cycle-chip-icon" id="expense-payment-chip-icon"></span>
+              <span class="expense-cycle-chip-caption">點樣俾</span>
+            </button>
           </div>
           <input type="hidden" id="expense-currency" name="currency" value="JPY">
           <input type="hidden" id="expense-payer" name="payer" value="A">
           <input type="hidden" id="expense-split-mode" name="split_mode" value="SPLIT_5050">
+          <input type="hidden" id="expense-payment-method" name="payment_method" value="">
           <p class="form-hint" id="expense-split-hint" aria-live="polite"></p>
         </div>
 
@@ -238,6 +252,7 @@
           <button type="button" class="currency-label badge-jpy currency-icon-only active" data-currency-view="jpy" aria-pressed="true" aria-label="JPY"><img class="ui-icon ui-icon-currency" src="icons/jpy.png?v=20260730dc" alt="" aria-hidden="true"></button>
           <button type="button" class="currency-label badge-hkd currency-icon-only" data-currency-view="hkd" aria-pressed="false" aria-label="HKD"><img class="ui-icon ui-icon-currency" src="icons/hkd.png?v=20260730dc" alt="" aria-hidden="true"></button>
           <button type="button" class="currency-label badge-all currency-icon-only" data-currency-view="all" aria-pressed="false" aria-label="全部幣別"><img class="ui-icon ui-icon-currency" src="icons/exchange.png?v=20260730dc" alt="" aria-hidden="true"></button>
+          <button type="button" class="currency-label badge-suica currency-icon-only" data-currency-view="suica" aria-pressed="false" aria-label="Suica">🐧</button>
         </div>
 
         <div class="currency-section" data-currency-panel="jpy">
@@ -278,6 +293,20 @@
                   <div class="stat-remain remain-value" data-person="b" data-currency="hkd">剩餘 0</div>
                 </div>
               </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="currency-section" data-currency-panel="suica">
+          <div class="currency-section-body">
+            <div class="suica-wallet-card">
+              <div class="suica-wallet-brand"><span aria-hidden="true">🐧</span> Suica 錢包</div>
+              <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance">¥0</strong></div>
+              <div class="suica-wallet-meta">
+                <span>增值 <strong id="summary-suica-topup">¥0</strong></span>
+                <span>已用 <strong id="summary-suica-spent">¥0</strong></span>
+              </div>
+              <p class="suica-wallet-hint">記帳揀「🐧Suica」就係增值；其他分類撳「🐧 Suica」俾錢就會扣呢個錢包。</p>
             </div>
           </div>
         </div>
@@ -588,16 +617,24 @@
           </div>
         </div>
         <div class="form-row form-row-icon-field">
-          <label for="repay-note" class="sr-only">備註（選填）</label>
+          <label for="repay-note-select" class="sr-only">備註（選填）</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/notes.png?v=20260730dc" alt=""></span>
-            <input type="text" id="repay-note" list="repay-note-options" placeholder="選擇或輸入：PayMe、現金…" autocomplete="off">
-            <datalist id="repay-note-options">
-              <option value="PayMe"></option>
-              <option value="Alipay"></option>
-              <option value="ZA Bank"></option>
-              <option value="現金"></option>
-            </datalist>
+            <select id="repay-note-select" aria-label="付款方式">
+              <option value="">選擇付款方式（選填）</option>
+              <option value="PayMe">PayMe</option>
+              <option value="Alipay">Alipay</option>
+              <option value="ZA Bank">ZA Bank</option>
+              <option value="現金">現金</option>
+              <option value="__custom__">其他（自行輸入）</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row form-row-icon-field hidden" id="repay-note-custom-row">
+          <label for="repay-note" class="sr-only">自行輸入付款方式</label>
+          <div class="form-icon-field">
+            <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/edit.png" alt=""></span>
+            <input type="text" id="repay-note" placeholder="輸入付款方式" autocomplete="off">
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="repay-submit-btn">確認還錢 <img class="ui-icon ui-icon-btn" src="icons/confirm.png" alt="" aria-hidden="true"></button>
@@ -788,7 +825,7 @@
           <input type="text" id="edit-description">
         </div>
         <div class="form-row expense-essentials-row" id="edit-essentials-row">
-          <div class="expense-essentials-grid" aria-label="幣別、邊個俾錢、樣嘢點計">
+          <div class="expense-essentials-grid expense-essentials-grid-4" aria-label="幣別、邊個俾錢、樣嘢點計、點樣俾">
             <button type="button" class="expense-cycle-chip expense-cycle-chip-icon-only" id="edit-currency-chip" aria-label="幣別：JPY">
               <span class="expense-cycle-chip-icon" id="edit-currency-chip-icon"></span>
             </button>
@@ -800,10 +837,15 @@
               <span class="expense-cycle-chip-icon" id="edit-split-chip-icon"></span>
               <span class="expense-cycle-chip-caption">樣嘢點計</span>
             </button>
+            <button type="button" class="expense-cycle-chip" id="edit-payment-chip" aria-label="點樣俾：現金">
+              <span class="expense-cycle-chip-icon" id="edit-payment-chip-icon"></span>
+              <span class="expense-cycle-chip-caption">點樣俾</span>
+            </button>
           </div>
           <input type="hidden" id="edit-currency" value="JPY">
           <input type="hidden" id="edit-payer" value="A">
           <input type="hidden" id="edit-split-mode" value="SPLIT_5050">
+          <input type="hidden" id="edit-payment-method" value="">
         </div>
         <div class="form-row">
           <label for="edit-amount"><img class="ui-icon ui-icon-label" src="icons/savings.png" alt="" aria-hidden="true"> 金額</label>
@@ -1001,6 +1043,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260731deploy10"></script>
+  <script src="app.js?v=20260801deploy1"></script>
 </body>
 </html>
