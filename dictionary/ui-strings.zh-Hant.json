@@ -186,7 +186,8 @@
     "repay": {
       "title": "記錄還錢",
       "amountLabel": "還錢金額",
-      "notePlaceholder": "例：現金、PayMe",
+      "notePlaceholder": "選擇或輸入：PayMe、現金…",
+      "noteOptions": ["PayMe", "Alipay", "ZA Bank", "現金"],
       "submit": "確認還錢",
       "contextSettled": "呢個幣別已經還清，可以轉第二個幣別",
       "contextDebt": "目前 {debtor} 欠 {creditor} {amount}"
