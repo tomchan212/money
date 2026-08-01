@@ -1145,9 +1145,21 @@ button.currency-label.badge-all.active {
   background: rgba(255, 117, 140, 0.18);
 }
 
+button.currency-label.badge-suica.active {
+  border-color: #1f7a54;
+  background: rgba(31, 122, 84, 0.18);
+}
+
 .badge-all {
   background: rgba(107, 101, 112, 0.1);
   color: var(--text-muted);
+}
+
+.badge-suica {
+  background: rgba(31, 122, 84, 0.1);
+  color: #1f7a54;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 [data-currency-panel].hidden {
@@ -1862,6 +1874,89 @@ button.currency-label.badge-all.active {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.4rem;
+}
+
+.expense-essentials-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.expense-cycle-chip.is-locked,
+.expense-cycle-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.expense-cycle-chip.is-suica-pay {
+  background: linear-gradient(160deg, #e8fff4 0%, #b8e8cf 100%);
+  border-color: #7cbc9a;
+}
+
+.payment-method-emoji {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.suica-wallet-card {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid rgba(31, 122, 84, 0.28);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(145deg, #f3fff8 0%, #dff5ea 55%, #cfeadb 100%);
+  color: var(--text-dark);
+}
+
+.home-suica-wallet {
+  padding: 0.75rem 0.9rem;
+}
+
+.suica-wallet-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 800;
+  font-size: var(--type-body-lg);
+  color: #1f7a54;
+  margin-bottom: 0.35rem;
+}
+
+.suica-wallet-balance {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.suica-wallet-balance strong {
+  color: #1f7a54;
+  font-size: 1.45rem;
+}
+
+.suica-wallet-balance strong.over-budget {
+  color: var(--amount-debt);
+}
+
+.suica-wallet-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  margin-top: 0.45rem;
+  color: var(--text-muted);
+  font-size: var(--type-caption);
+}
+
+.suica-wallet-hint {
+  margin-top: 0.55rem;
+  color: var(--text-muted);
+  font-size: var(--type-caption);
+  line-height: 1.45;
+}
+
+.tx-suica-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.25rem;
+  font-size: 0.95em;
+  line-height: 1;
 }
 
 .expense-cycle-chip {
@@ -6580,8 +6675,20 @@ html.theme-cyberpunk .detail-why-btn:disabled {
 
 html.theme-cyberpunk .badge-all,
 html.theme-cyberpunk .badge-jpy,
-html.theme-cyberpunk .badge-hkd {
+html.theme-cyberpunk .badge-hkd,
+html.theme-cyberpunk .badge-suica {
   background: #121226 !important;
+}
+
+html.theme-cyberpunk .suica-wallet-card {
+  background: linear-gradient(145deg, #102 intermediate 0%, #163528 55%, #1a2f24 100%) !important;
+  border-color: rgba(57, 255, 20, 0.28) !important;
+  color: var(--text-dark) !important;
+}
+
+html.theme-cyberpunk .suica-wallet-brand,
+html.theme-cyberpunk .suica-wallet-balance strong {
+  color: #39ff14 !important;
 }
 
 html.theme-cyberpunk .stat-chip {

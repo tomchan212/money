@@ -54,7 +54,8 @@
     "HKD": "HKD",
     "symbolJPY": "¥",
     "symbolHKD": "$",
-    "all": "全部幣別"
+    "all": "全部幣別",
+    "suica": "Suica"
   },
 
   "categories": {
@@ -68,6 +69,7 @@
     "景點": "景點",
     "便利店": "便利店",
     "雜項": "雜項",
+    "🐧Suica": "🐧Suica",
     "還錢": "還錢",
     "借錢": "借錢",
     "custom": "自定",
@@ -92,14 +94,20 @@
     "labelCustomCategory": "自定分類名稱",
     "placeholderCustomCategory": "例：溫泉、門票",
     "labelDescription": "項目描述（選填）",
-    "placeholderDescription": "例：叙叙苑燒肉、Suica 增值",
-    "essentialsGridAria": "幣別、邊個俾錢、樣嘢點計",
+    "placeholderDescription": "例：叙叙苑燒肉、地鐵",
+    "essentialsGridAria": "幣別、邊個俾錢、樣嘢點計、點樣俾",
     "chipPayerCaption": "邊個俾",
     "chipSplitCaption": "樣嘢點計",
+    "chipPaymentCaption": "點樣俾",
+    "paymentCash": "現金",
+    "paymentSuica": "Suica",
     "labelAmount": "金額",
     "placeholderAmount": "0",
     "submitExpense": "記錄俾錢",
-    "defaultCategory": "午餐"
+    "defaultCategory": "午餐",
+    "suicaTopUpHint": "🐧 Suica 增值：強制 JPY，用現金入錢包",
+    "suicaPayHint": "🐧 用 Suica 俾：扣錢包餘額，唔再扣現金預算",
+    "suicaInsufficient": "Suica 餘額不足（而家 {amount}）"
   },
 
   "summary": {
@@ -107,6 +115,11 @@
     "btnLoan": "借錢",
     "btnLoanAria": "記錄借錢（現金）",
     "btnEditBudget": "改預算",
+    "suicaWalletTitle": "Suica 錢包",
+    "suicaBalance": "餘額",
+    "suicaTopUp": "增值",
+    "suicaSpent": "已用",
+    "suicaHint": "記帳揀「🐧Suica」就係增值；其他分類撳「🐧 Suica」俾錢就會扣呢個錢包。",
     "helpPayTitle": "邊個幫邊個俾",
     "settlementTitle": "而家邊個欠邊個",
     "btnRepay": "記錄還錢",
@@ -186,7 +199,9 @@
     "repay": {
       "title": "記錄還錢",
       "amountLabel": "還錢金額",
-      "notePlaceholder": "選擇或輸入：PayMe、現金…",
+      "noteSelectPlaceholder": "選擇付款方式（選填）",
+      "noteCustomPlaceholder": "輸入付款方式",
+      "noteCustomOption": "其他（自行輸入）",
       "noteOptions": ["PayMe", "Alipay", "ZA Bank", "現金"],
       "submit": "確認還錢",
       "contextSettled": "呢個幣別已經還清，可以轉第二個幣別",

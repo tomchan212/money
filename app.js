@@ -48,6 +48,13 @@ function getApiUrl() {
 let apiEndpointKey = resolveApiEndpoint();
 let API_URL = getApiUrl();
 
+const SUICA_CATEGORY = '🐧Suica';
+const SUICA_PAY_PREFIX = '「Suica」';
+const PAYMENT_CASH = '';
+const PAYMENT_SUICA = 'SUICA';
+const REPAY_NOTE_CUSTOM = '__custom__';
+const REPAY_NOTE_OPTIONS = ['PayMe', 'Alipay', 'ZA Bank', '現金'];
+
 const CATEGORY_EMOJI = {
   餐飲: '🍱',
   '餐飲-早餐': '🌅',
@@ -59,6 +66,7 @@ const CATEGORY_EMOJI = {
   景點: '🎟️',
   便利店: '🏪',
   雜項: '📦',
+  [SUICA_CATEGORY]: '🐧',
   還錢: '🤝🏻',
   借錢: '💸',
 };
@@ -86,6 +94,7 @@ const CATEGORY_CHART_COLORS = {
   景點: '#5ec98a',
   便利店: '#87ceeb',
   雜項: '#b8b8b8',
+  [SUICA_CATEGORY]: '#1f7a54',
 };
 
 const CHART_FALLBACK_COLORS = ['#e8a0bf', '#a0c4e8', '#c4e8a0', '#e8c4a0', '#a0e8d8', '#d8a0e8'];
@@ -111,6 +120,7 @@ const CATEGORY_PICKER_GROUPS = [
       { value: '景點', label: '景點' },
       { value: '便利店', label: '便利店' },
       { value: '雜項', label: '雜項' },
+      { value: SUICA_CATEGORY, label: 'Suica', emoji: '🐧' },
       { value: CUSTOM_CATEGORY, label: '自定', custom: true },
     ],
   },
@@ -134,6 +144,7 @@ const FILTER_CATEGORY_GROUPS = [
       { value: '景點', label: '景點' },
       { value: '便利店', label: '便利店' },
       { value: '雜項', label: '雜項' },
+      { value: SUICA_CATEGORY, label: 'Suica', emoji: '🐧' },
       { value: '還錢', label: '還錢' },
       { value: '借錢', label: '借錢' },
       { value: CUSTOM_CATEGORY, label: '自定', custom: true },
@@ -1149,6 +1160,11 @@ function buildTransactionItemHtml(tx) {
   const title = getTransactionTitle(tx);
   const iconHtml = transactionIconHtml(tx, 'list');
   const splitBadgeHtml = listRecordSplitIconHtml(tx);
+  const suicaBadge = isSuicaPayment(tx)
+    ? '<span class="tx-suica-badge" title="Suica 俾錢">🐧</span>'
+    : isSuicaTopUp(tx)
+      ? '<span class="tx-suica-badge" title="Suica 增值">🐧+</span>'
+      : '';
 
   return `
     <li class="transaction-item${specialClass}" data-key="${escapeHtml(txKey)}" data-detail-key="${escapeHtml(txKey)}" tabindex="0" role="button" aria-label="查看 ${escapeHtml(title)} 詳情">
@@ -1158,7 +1174,7 @@ function buildTransactionItemHtml(tx) {
         <span class="tx-record-time">${escapeHtml(formatListRecordTime(tx))}</span>
         <span class="tx-record-desc-group">
           <span class="tx-record-desc">${escapeHtml(title)}</span>
-          <span class="tx-record-split">${splitBadgeHtml}</span>
+          <span class="tx-record-split">${splitBadgeHtml}${suicaBadge}</span>
           ${buildTransactionLocationInlineHtml(tx)}
         </span>
       </div>
@@ -1209,14 +1225,49 @@ function splitTagHtml(tx) {
 }
 
 function getCategoryLabel(category) {
+  if (category === SUICA_CATEGORY) return '🐧Suica';
   if (String(category).startsWith('餐飲-')) return category.slice(3);
   return category;
+}
+
+function stripSuicaPayPrefix(description) {
+  const text = String(description || '');
+  if (text.startsWith(SUICA_PAY_PREFIX)) {
+    return text.slice(SUICA_PAY_PREFIX.length).trim();
+  }
+  return text.trim();
+}
+
+function encodeSuicaPayDescription(description) {
+  const clean = stripSuicaPayPrefix(description);
+  return clean ? `${SUICA_PAY_PREFIX}${clean}` : SUICA_PAY_PREFIX;
+}
+
+function getDisplayDescription(txOrDescription) {
+  if (txOrDescription && typeof txOrDescription === 'object') {
+    return stripSuicaPayPrefix(txOrDescription.description);
+  }
+  return stripSuicaPayPrefix(txOrDescription);
+}
+
+function isSuicaTopUp(tx) {
+  return tx?.category === SUICA_CATEGORY;
+}
+
+function isSuicaPayment(tx) {
+  if (!tx) return false;
+  if (tx.payment_method === PAYMENT_SUICA) return true;
+  return String(tx.description || '').startsWith(SUICA_PAY_PREFIX);
+}
+
+function getPaymentMethod(tx) {
+  return isSuicaPayment(tx) ? PAYMENT_SUICA : PAYMENT_CASH;
 }
 
 function getTransactionTitle(tx) {
   if (isRepayTransaction(tx)) return '還錢';
   if (isLoanTransaction(tx)) return '借錢';
-  const desc = String(tx.description || '').trim();
+  const desc = getDisplayDescription(tx);
   if (desc) return desc;
   return getCategoryLabel(tx.category) || '（無描述）';
 }
@@ -1270,8 +1321,10 @@ function getCategoryPickerLabel(value) {
 function buildCategoryPickerCard(item) {
   const iconHtml = item.custom
     ? uiIconHtml('edit', 'label')
-    : categoryIconHtml(item.value, 'picker') ||
-      `<span class="category-picker-emoji" aria-hidden="true">${getCategoryEmoji(item.value)}</span>`;
+    : item.emoji
+      ? `<span class="category-picker-emoji" aria-hidden="true">${item.emoji}</span>`
+      : categoryIconHtml(item.value, 'picker') ||
+        `<span class="category-picker-emoji" aria-hidden="true">${getCategoryEmoji(item.value)}</span>`;
   return `<button type="button" class="category-picker-card" data-value="${escapeHtml(item.value)}" role="radio" aria-checked="false" aria-label="${escapeHtml(item.label)}">
     <span class="category-picker-icon">${iconHtml}</span>
     <span class="category-picker-label">${escapeHtml(item.label)}</span>
@@ -1305,6 +1358,8 @@ function syncCategoryPickerTrigger(wrapEl, value) {
 
   if (item?.custom || value === CUSTOM_CATEGORY) {
     iconEl.innerHTML = uiIconHtml('edit', 'label');
+  } else if (item?.emoji) {
+    iconEl.innerHTML = `<span class="category-picker-emoji" aria-hidden="true">${item.emoji}</span>`;
   } else {
     iconEl.innerHTML =
       categoryIconHtml(value, 'inline') ||
@@ -1350,7 +1405,7 @@ function setCategoryFields(categoryInputEl, customInputEl, customRowEl, category
   setCategoryPickerOpen(wrapEl, false);
 }
 
-function setupCategoryPicker(categoryInputId, customRowId, customInputId) {
+function setupCategoryPicker(categoryInputId, customRowId, customInputId, { onChange } = {}) {
   const categoryInput = $(categoryInputId);
   const wrapEl = getCategoryPickerWrap(categoryInputId.slice(1));
   const pickerEl = wrapEl?.querySelector('.category-picker');
@@ -1377,6 +1432,7 @@ function setupCategoryPicker(categoryInputId, customRowId, customInputId) {
     row.classList.toggle('hidden', !isCustom);
     setCategoryPickerOpen(wrapEl, false);
     if (isCustom) input.focus();
+    if (onChange) onChange(categoryInput.value);
   });
 }
 
@@ -1541,6 +1597,7 @@ function nowLocalTimeHM() {
 const EXPENSE_CURRENCY_CYCLE = ['JPY', 'HKD'];
 const EXPENSE_PAYER_CYCLE = ['A', 'B'];
 const EXPENSE_SPLIT_CYCLE = ['SPLIT_5050', 'FOR_A', 'FOR_B'];
+const EXPENSE_PAYMENT_CYCLE = [PAYMENT_CASH, PAYMENT_SUICA];
 
 function cycleExpenseValue(order, current) {
   const idx = order.indexOf(current);
@@ -1551,16 +1608,53 @@ function getExpenseSplitModeValue(prefix = 'expense') {
   return $(`#${prefix}-split-mode`)?.value || 'SPLIT_5050';
 }
 
+function getExpensePaymentMethodValue(prefix = 'expense') {
+  return $(`#${prefix}-payment-method`)?.value || PAYMENT_CASH;
+}
+
+function getExpenseCategoryValue(prefix = 'expense') {
+  const categoryInput = $(`#${prefix}-category`);
+  const customInput = $(`#${prefix}-custom-category`);
+  if (!categoryInput) return '';
+  return resolveCategory(categoryInput, customInput);
+}
+
+function applyExpenseCategoryConstraints(prefix = 'expense', { onCurrencyChange } = {}) {
+  const category = getExpenseCategoryValue(prefix);
+  const paymentInput = $(`#${prefix}-payment-method`);
+  const currencyInput = $(`#${prefix}-currency`);
+  if (!currencyInput) return;
+
+  if (category === SUICA_CATEGORY) {
+    if (paymentInput) paymentInput.value = PAYMENT_CASH;
+    if (currencyInput.value !== 'JPY') {
+      currencyInput.value = 'JPY';
+      if (onCurrencyChange) onCurrencyChange('JPY');
+    }
+  } else if (getExpensePaymentMethodValue(prefix) === PAYMENT_SUICA && currencyInput.value !== 'JPY') {
+    currencyInput.value = 'JPY';
+    if (onCurrencyChange) onCurrencyChange('JPY');
+  }
+
+  syncExpenseEssentialsUi(prefix);
+}
+
 function syncExpenseEssentialsUi(prefix = 'expense') {
   const currency = $(`#${prefix}-currency`)?.value || 'JPY';
   const payer = $(`#${prefix}-payer`)?.value || 'A';
   const split = getExpenseSplitModeValue(prefix);
+  const payment = getExpensePaymentMethodValue(prefix);
+  const category = getExpenseCategoryValue(prefix);
   const payerName = payer === 'A' ? '男孩' : '女生';
+  const isTopUp = category === SUICA_CATEGORY;
+  const isSuicaPay = payment === PAYMENT_SUICA;
 
   const currencyIconEl = $(`#${prefix}-currency-chip-icon`);
   const currencyChip = $(`#${prefix}-currency-chip`);
   if (currencyIconEl) currencyIconEl.innerHTML = currencyUiIconHtml(currency, 'currency');
   currencyChip?.setAttribute('aria-label', `幣別：${currency}`);
+  currencyChip?.classList.toggle('is-locked', isTopUp || isSuicaPay);
+  currencyChip?.toggleAttribute('disabled', isTopUp || isSuicaPay);
 
   const payerIconEl = $(`#${prefix}-payer-chip-icon`);
   const payerChip = $(`#${prefix}-payer-chip`);
@@ -1582,20 +1676,40 @@ function syncExpenseEssentialsUi(prefix = 'expense') {
   }
   splitChip?.setAttribute('data-split-value', split);
 
+  const paymentIconEl = $(`#${prefix}-payment-chip-icon`);
+  const paymentChip = $(`#${prefix}-payment-chip`);
+  if (paymentIconEl) {
+    paymentIconEl.innerHTML = isSuicaPay
+      ? '<span class="payment-method-emoji" aria-hidden="true">🐧</span>'
+      : '<span class="payment-method-emoji" aria-hidden="true">💴</span>';
+  }
+  paymentChip?.setAttribute('aria-label', isSuicaPay ? '點樣俾：Suica' : '點樣俾：現金');
+  paymentChip?.setAttribute('data-payment-value', payment || 'CASH');
+  paymentChip?.classList.toggle('is-suica-pay', isSuicaPay);
+  paymentChip?.classList.toggle('is-locked', isTopUp);
+  paymentChip?.toggleAttribute('disabled', isTopUp);
+
   if (prefix === 'expense') updateExpenseSplitHint();
 }
 
-function setExpenseEssentials(prefix, { currency, payer, split } = {}) {
+function setExpenseEssentials(prefix, { currency, payer, split, payment } = {}) {
   if (currency) $(`#${prefix}-currency`).value = currency;
   if (payer) $(`#${prefix}-payer`).value = payer;
   if (split) $(`#${prefix}-split-mode`).value = split;
+  if (payment !== undefined) {
+    const paymentInput = $(`#${prefix}-payment-method`);
+    if (paymentInput) paymentInput.value = payment;
+  }
   syncExpenseEssentialsUi(prefix);
 }
 
 function setupExpenseEssentials(prefix, { onCurrencyChange } = {}) {
   $(`#${prefix}-currency-chip`)?.addEventListener('click', () => {
+    const chip = $(`#${prefix}-currency-chip`);
     const input = $(`#${prefix}-currency`);
-    if (!input) return;
+    if (!input || chip?.disabled || chip?.classList.contains('is-locked')) return;
+    const paymentInput = $(`#${prefix}-payment-method`);
+    if (paymentInput?.value === PAYMENT_SUICA) paymentInput.value = PAYMENT_CASH;
     input.value = cycleExpenseValue(EXPENSE_CURRENCY_CYCLE, input.value);
     if (onCurrencyChange) onCurrencyChange(input.value);
     syncExpenseEssentialsUi(prefix);
@@ -1612,6 +1726,22 @@ function setupExpenseEssentials(prefix, { onCurrencyChange } = {}) {
     const input = $(`#${prefix}-split-mode`);
     if (!input) return;
     input.value = cycleExpenseValue(EXPENSE_SPLIT_CYCLE, input.value);
+    syncExpenseEssentialsUi(prefix);
+  });
+
+  $(`#${prefix}-payment-chip`)?.addEventListener('click', () => {
+    const chip = $(`#${prefix}-payment-chip`);
+    const input = $(`#${prefix}-payment-method`);
+    if (!input || chip?.disabled || chip?.classList.contains('is-locked')) return;
+    if (getExpenseCategoryValue(prefix) === SUICA_CATEGORY) return;
+    input.value = cycleExpenseValue(EXPENSE_PAYMENT_CYCLE, input.value || PAYMENT_CASH);
+    if (input.value === PAYMENT_SUICA) {
+      const currencyInput = $(`#${prefix}-currency`);
+      if (currencyInput && currencyInput.value !== 'JPY') {
+        currencyInput.value = 'JPY';
+        if (onCurrencyChange) onCurrencyChange('JPY');
+      }
+    }
     syncExpenseEssentialsUi(prefix);
   });
 
@@ -2160,9 +2290,16 @@ function enrichTransaction(tx) {
       }
     : computeShares(tx.amount, tx.payer, splitMode);
 
+  const payment_method = String(tx.description || '').startsWith(SUICA_PAY_PREFIX)
+    ? PAYMENT_SUICA
+    : tx.payment_method === PAYMENT_SUICA
+      ? PAYMENT_SUICA
+      : PAYMENT_CASH;
+
   return {
     ...tx,
     split_mode: splitMode,
+    payment_method,
     ...shares,
     date: parseDate(tx.date),
     time: formatRecordTime(tx.time),
@@ -2957,12 +3094,30 @@ function calcSummary() {
   for (const tx of transactions) {
     const cur = tx.currency;
     if (cur !== 'JPY' && cur !== 'HKD') continue;
+    net[cur] += tx.net_b_owes_a;
+    // Suica 消費已喺增值時扣咗現金預算，唔好雙重計算
+    if (isSuicaPayment(tx)) continue;
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
-    net[cur] += tx.net_b_owes_a;
   }
 
   return { spent, net };
+}
+
+function calcSuicaWallet() {
+  let toppedUp = 0;
+  let spent = 0;
+  for (const tx of transactions) {
+    if (tx.currency !== 'JPY') continue;
+    const amount = Number(tx.amount) || 0;
+    if (isSuicaTopUp(tx)) toppedUp += amount;
+    else if (isSuicaPayment(tx)) spent += amount;
+  }
+  return {
+    toppedUp,
+    spent,
+    balance: toppedUp - spent,
+  };
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -3391,13 +3546,14 @@ function buildTransactionDetailHtml(tx) {
   const payerLabel = personImg(tx.payer, 'inline');
   const timePart = tx.time ? ` · ${formatRecordTime(tx.time)}` : '';
   const desc = getTransactionTitle(tx);
-  const rawDesc = String(tx.description || '').trim();
-  const showDesc = !isCashTransferTransaction(tx) && rawDesc && rawDesc !== desc;
+  const displayDesc = getDisplayDescription(tx);
+  const showDesc = !isCashTransferTransaction(tx) && displayDesc && displayDesc !== desc;
   const curClass = tx.currency === 'JPY' ? 'jpy' : 'hkd';
   const isRepay = isRepayTransaction(tx);
   const isLoan = isLoanTransaction(tx);
   const emojiHtml = transactionIconHtml(tx, 'detail');
   const splitHtml = splitTagHtml(tx);
+  const rawDesc = String(tx.description || '').trim();
 
   let html = `
     <div class="detail-hero">
@@ -3416,7 +3572,18 @@ function buildTransactionDetailHtml(tx) {
   if (showDesc) {
     html += `
       <dt>${uiIconHtml('notes', 'label')} 描述</dt>
-      <dd>${escapeHtml(rawDesc)}</dd>`;
+      <dd>${escapeHtml(displayDesc)}</dd>`;
+  }
+
+  if (!isCashTransferTransaction(tx)) {
+    const payLabel = isSuicaPayment(tx)
+      ? '🐧 Suica'
+      : isSuicaTopUp(tx)
+        ? '現金增值 Suica'
+        : '現金／其他';
+    html += `
+      <dt>💳 點樣俾</dt>
+      <dd>${payLabel}</dd>`;
   }
 
   const location = getLocationText(tx);
@@ -3827,16 +3994,44 @@ function renderSummary() {
     }
   });
 
+  renderSuicaWallet();
   applyRemainDisplayVisibility();
   updateSettlementChromeVisibility(net);
   applyCurrencyView();
+}
+
+function renderSuicaWallet() {
+  const wallet = calcSuicaWallet();
+  const balanceText = formatMoney(wallet.balance, 'JPY');
+  const topupText = formatMoney(wallet.toppedUp, 'JPY');
+  const spentText = formatMoney(wallet.spent, 'JPY');
+  const homeBalance = $('#home-suica-balance');
+  const summaryBalance = $('#summary-suica-balance');
+  const summaryTopup = $('#summary-suica-topup');
+  const summarySpent = $('#summary-suica-spent');
+  if (homeBalance) {
+    homeBalance.textContent = balanceText;
+    homeBalance.classList.toggle('over-budget', wallet.balance < 0);
+  }
+  if (summaryBalance) {
+    summaryBalance.textContent = balanceText;
+    summaryBalance.classList.toggle('over-budget', wallet.balance < 0);
+  }
+  if (summaryTopup) summaryTopup.textContent = topupText;
+  if (summarySpent) summarySpent.textContent = spentText;
 }
 
 function updateSettlementChromeVisibility(net = calcSummary().net) {
   const jpyDebt = !isNegligibleMoney(net.JPY, 'JPY');
   const hkdDebt = !isNegligibleMoney(net.HKD, 'HKD');
   const showRepay =
-    currencyView === 'jpy' ? jpyDebt : currencyView === 'hkd' ? hkdDebt : jpyDebt || hkdDebt;
+    currencyView === 'suica'
+      ? false
+      : currencyView === 'jpy'
+        ? jpyDebt
+        : currencyView === 'hkd'
+          ? hkdDebt
+          : jpyDebt || hkdDebt;
 
   // 即使未有互相幫俾，都顯示空狀態，唔好成個 block 收埋
   $('#settlement-actions')?.classList.toggle('hidden', !showRepay);
@@ -4098,6 +4293,7 @@ function getPersonSpendRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
+    if (isSuicaPayment(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4126,6 +4322,7 @@ function getPersonSpendChartRows() {
     if (tx.currency !== currency) return false;
     if (isRepayTransaction(tx)) return false;
     if (isLoanTransaction(tx)) return false;
+    if (isSuicaPayment(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
     if (!matchesCategoryFilter(tx.category, category)) return false;
@@ -4572,23 +4769,34 @@ function updateExpenseSplitHint() {
 
   const payer = $('#expense-payer').value;
   const split = getExpenseSplitModeValue('expense');
+  const category = getExpenseCategoryValue('expense');
+  const payment = getExpensePaymentMethodValue('expense');
 
+  let base = '';
   if (split === 'FOR_B' && payer === 'A') {
-    hint.innerHTML = `${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 俾 → ${personImg('B', 'inline')} 要還全額`;
+    base = `${personImg('A', 'inline')} 幫 ${personImg('B', 'inline')} 俾 → ${personImg('B', 'inline')} 要還全額`;
   } else if (split === 'FOR_A' && payer === 'B') {
-    hint.innerHTML = `${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 俾 → ${personImg('A', 'inline')} 要還全額`;
+    base = `${personImg('B', 'inline')} 幫 ${personImg('A', 'inline')} 俾 → ${personImg('A', 'inline')} 要還全額`;
   } else if (split === 'SPLIT_5050') {
-    hint.innerHTML =
+    base =
       payer === 'A'
         ? `${personImg('A', 'inline')} 俾，${personImg('B', 'inline')} 還一半`
         : `${personImg('B', 'inline')} 俾，${personImg('A', 'inline')} 還一半`;
   } else if (split === 'FOR_A' && payer === 'A') {
-    hint.innerHTML = `${personImg('A', 'inline')} 自己嘅，自己俾 → 唔使還`;
+    base = `${personImg('A', 'inline')} 自己嘅，自己俾 → 唔使還`;
   } else if (split === 'FOR_B' && payer === 'B') {
-    hint.innerHTML = `${personImg('B', 'inline')} 自己嘅，自己俾 → 唔使還`;
-  } else {
-    hint.innerHTML = '';
+    base = `${personImg('B', 'inline')} 自己嘅，自己俾 → 唔使還`;
   }
+
+  if (category === SUICA_CATEGORY) {
+    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 Suica 增值：強制 JPY，用現金入錢包`;
+    return;
+  }
+  if (payment === PAYMENT_SUICA) {
+    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 用 Suica 俾：扣錢包餘額，唔再扣現金預算`;
+    return;
+  }
+  hint.innerHTML = base;
 }
 
 /* ===== Modals ===== */
@@ -4885,7 +5093,7 @@ function updateRepayModalView() {
 function openRepayModal() {
   const currency = pickRepayCurrency();
   setToggleValue('#repay-currency-toggle', '#repay-currency', 'currency', currency);
-  $('#repay-note').value = '';
+  resetRepayNoteFields();
   const amountEl = $('#repay-amount');
   amountEl.value = '';
   delete amountEl.dataset.touched;
@@ -4945,7 +5153,7 @@ function openEditModal(key) {
     $('#edit-custom-category-row'),
     tx.category
   );
-  $('#edit-description').value = tx.description;
+  $('#edit-description').value = getDisplayDescription(tx);
   $('#edit-amount').value = tx.amount;
   const essentialsRow = $('#edit-essentials-row');
   if (isCashTransferTransaction(tx)) {
@@ -4955,14 +5163,54 @@ function openEditModal(key) {
   } else {
     essentialsRow?.classList.remove('hidden');
     setExpenseEssentials('edit', {
-      currency: tx.currency,
+      currency: isSuicaPayment(tx) || isSuicaTopUp(tx) ? 'JPY' : tx.currency,
       payer: tx.payer,
       split: tx.split_mode,
+      payment: getPaymentMethod(tx),
+    });
+    applyExpenseCategoryConstraints('edit', {
+      onCurrencyChange: (currency) => updateMoneyPrefix($('#edit-amount-prefix'), currency),
     });
   }
-  updateMoneyPrefix($('#edit-amount-prefix'), tx.currency);
+  updateMoneyPrefix($('#edit-amount-prefix'), $('#edit-currency').value || tx.currency);
 
   openModal(els.editModal);
+}
+
+function resetRepayNoteFields() {
+  const select = $('#repay-note-select');
+  const customRow = $('#repay-note-custom-row');
+  const noteInput = $('#repay-note');
+  if (select) select.value = '';
+  if (noteInput) noteInput.value = '';
+  customRow?.classList.add('hidden');
+}
+
+function getRepayNoteValue() {
+  const select = $('#repay-note-select');
+  const noteInput = $('#repay-note');
+  if (!select) return noteInput?.value.trim() || '';
+  if (select.value === REPAY_NOTE_CUSTOM) {
+    return noteInput?.value.trim() || '';
+  }
+  return select.value.trim();
+}
+
+function setupRepayNoteSelect() {
+  const select = $('#repay-note-select');
+  const customRow = $('#repay-note-custom-row');
+  const noteInput = $('#repay-note');
+  if (!select || !customRow || !noteInput) return;
+
+  select.addEventListener('change', () => {
+    const isCustom = select.value === REPAY_NOTE_CUSTOM;
+    customRow.classList.toggle('hidden', !isCustom);
+    if (isCustom) {
+      noteInput.focus();
+    } else {
+      noteInput.value = '';
+    }
+  });
 }
 
 async function deleteTransactionRecord() {
@@ -5148,7 +5396,11 @@ function applyCurrencyView() {
   });
 
   document.querySelectorAll('[data-currency-panel]').forEach((panel) => {
-    const show = currencyView === 'all' || panel.dataset.currencyPanel === currencyView;
+    const panelKey = panel.dataset.currencyPanel;
+    const show =
+      currencyView === 'all'
+        ? panelKey === 'jpy' || panelKey === 'hkd'
+        : panelKey === currencyView;
     panel.classList.toggle('hidden', !show);
   });
 
@@ -5176,8 +5428,19 @@ function setupEventListeners() {
   });
 
   setupListFilters();
-  setupCategoryPicker('#expense-category', '#expense-custom-category-row', '#expense-custom-category');
-  setupCategoryPicker('#edit-category', '#edit-custom-category-row', '#edit-custom-category');
+  setupCategoryPicker('#expense-category', '#expense-custom-category-row', '#expense-custom-category', {
+    onChange: () =>
+      applyExpenseCategoryConstraints('expense', {
+        onCurrencyChange: (currency) => updateMoneyPrefix($('#expense-amount-prefix'), currency),
+      }),
+  });
+  setupCategoryPicker('#edit-category', '#edit-custom-category-row', '#edit-custom-category', {
+    onChange: () =>
+      applyExpenseCategoryConstraints('edit', {
+        onCurrencyChange: (currency) => updateMoneyPrefix($('#edit-amount-prefix'), currency),
+      }),
+  });
+  setupRepayNoteSelect();
 
   $('#btn-edit-budget').addEventListener('click', openBudgetModal);
   $$('.budget-remain-toggle').forEach((btn) => {
@@ -5291,7 +5554,7 @@ function setupEventListeners() {
       return;
     }
 
-    const note = $('#repay-note').value.trim();
+    const note = getRepayNoteValue();
     const defaultDesc = '還錢';
     const repayAmount =
       inputAmount >= debt.amount - moneyEpsilon(currency) ? debt.exactAmount : inputAmount;
@@ -5391,14 +5654,27 @@ function setupEventListeners() {
       return;
     }
 
+    const paymentMethod =
+      category === SUICA_CATEGORY ? PAYMENT_CASH : getExpensePaymentMethodValue('expense');
+    let currency = $('#expense-currency').value;
+    if (category === SUICA_CATEGORY || paymentMethod === PAYMENT_SUICA) {
+      currency = 'JPY';
+    }
+    const rawDescription = String(form.get('description') || '').trim();
+    const description =
+      paymentMethod === PAYMENT_SUICA
+        ? encodeSuicaPayDescription(rawDescription)
+        : stripSuicaPayPrefix(rawDescription);
+
     const tx = {
       date: form.get('date') || $('#expense-date')?.value || '',
       category,
-      description: form.get('description').trim(),
-      currency: $('#expense-currency').value,
+      description,
+      currency,
       amount: Number(form.get('amount')),
       payer: $('#expense-payer').value,
       split_mode: form.get('split_mode'),
+      payment_method: paymentMethod,
       time: nowLocalTimeHM(),
     };
 
@@ -5412,6 +5688,15 @@ function setupEventListeners() {
       endMutation();
       showToast('請填寫有效金額', 'error');
       return;
+    }
+
+    if (paymentMethod === PAYMENT_SUICA) {
+      const wallet = calcSuicaWallet();
+      if (tx.amount - wallet.balance > moneyEpsilon('JPY')) {
+        endMutation();
+        showToast(`Suica 餘額不足（而家 ${formatMoney(wallet.balance, 'JPY')}）`, 'error');
+        return;
+      }
     }
 
     try {
@@ -5433,6 +5718,7 @@ function setupEventListeners() {
         currency: 'JPY',
         payer: 'A',
         split: 'SPLIT_5050',
+        payment: PAYMENT_CASH,
       });
       updateMoneyPrefix($('#expense-amount-prefix'), 'JPY');
       updateExpenseSplitHint();
@@ -5503,16 +5789,44 @@ function setupEventListeners() {
       return;
     }
 
+    const paymentMethod = isCashTransferTransaction(existing)
+      ? PAYMENT_CASH
+      : category === SUICA_CATEGORY
+        ? PAYMENT_CASH
+        : getExpensePaymentMethodValue('edit');
+    let currency = $('#edit-currency').value;
+    if (category === SUICA_CATEGORY || paymentMethod === PAYMENT_SUICA) {
+      currency = 'JPY';
+    }
+    const rawDescription = $('#edit-description').value.trim();
+    const description =
+      paymentMethod === PAYMENT_SUICA
+        ? encodeSuicaPayDescription(rawDescription)
+        : stripSuicaPayPrefix(rawDescription);
+
+    if (paymentMethod === PAYMENT_SUICA) {
+      const wallet = calcSuicaWallet();
+      const previousSuicaAmount =
+        isSuicaPayment(existing) && existing.currency === 'JPY' ? Number(existing.amount) || 0 : 0;
+      const available = wallet.balance + previousSuicaAmount;
+      if (amount - available > moneyEpsilon('JPY')) {
+        endMutation();
+        showToast(`Suica 餘額不足（而家 ${formatMoney(available, 'JPY')}）`, 'error');
+        return;
+      }
+    }
+
     const updated = {
       transaction_id: transactionId,
       date: editDate,
       category,
-      description: $('#edit-description').value.trim(),
+      description,
       location: getLocationText(existing),
-      currency: $('#edit-currency').value,
+      currency,
       amount,
       payer: $('#edit-payer').value,
       split_mode: resolveEditSplitMode(existing),
+      payment_method: paymentMethod,
     };
 
     enqueueEdit(existing, updated);
