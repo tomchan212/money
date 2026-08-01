@@ -8,7 +8,7 @@
   <title>日本旅遊記帳 🇯🇵</title>
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=20260801deploy1">
+  <link rel="stylesheet" href="styles.css?v=20260801deploy2">
 </head>
 <body>
   <header class="app-header">
@@ -125,9 +125,22 @@
           </div>
           <div class="currency-section" data-currency-panel="suica">
             <div class="currency-section-body">
-              <div class="suica-wallet-card home-suica-wallet">
-                <div class="suica-wallet-brand"><span aria-hidden="true">🐧</span> Suica</div>
-                <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance">¥0</strong></div>
+              <div class="suica-wallet-heading home-suica-heading"><span aria-hidden="true">🐧</span> Suica</div>
+              <div class="home-spent-currency">
+                <div class="home-spent-row suica-wallet-row">
+                  <div class="suica-wallet-card home-suica-wallet" data-suica-person="A">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                    <div class="suica-wallet-body">
+                      <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance-a">¥0</strong></div>
+                    </div>
+                  </div>
+                  <div class="suica-wallet-card home-suica-wallet" data-suica-person="B">
+                    <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                    <div class="suica-wallet-body">
+                      <div class="suica-wallet-balance">餘額 <strong id="home-suica-balance-b">¥0</strong></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -299,15 +312,30 @@
 
         <div class="currency-section" data-currency-panel="suica">
           <div class="currency-section-body">
-            <div class="suica-wallet-card">
-              <div class="suica-wallet-brand"><span aria-hidden="true">🐧</span> Suica 錢包</div>
-              <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance">¥0</strong></div>
-              <div class="suica-wallet-meta">
-                <span>增值 <strong id="summary-suica-topup">¥0</strong></span>
-                <span>已用 <strong id="summary-suica-spent">¥0</strong></span>
+            <div class="suica-wallet-heading"><span aria-hidden="true">🐧</span> Suica 錢包</div>
+            <div class="summary-stats suica-wallet-row">
+              <div class="suica-wallet-card" data-suica-person="A">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt=""></span>
+                <div class="suica-wallet-body">
+                  <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-a">¥0</strong></div>
+                  <div class="suica-wallet-meta">
+                    <span>增值 <strong id="summary-suica-topup-a">¥0</strong></span>
+                    <span>已用 <strong id="summary-suica-spent-a">¥0</strong></span>
+                  </div>
+                </div>
               </div>
-              <p class="suica-wallet-hint">記帳揀「🐧Suica」就係增值；其他分類撳「🐧 Suica」俾錢就會扣呢個錢包。</p>
+              <div class="suica-wallet-card" data-suica-person="B">
+                <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt=""></span>
+                <div class="suica-wallet-body">
+                  <div class="suica-wallet-balance">餘額 <strong id="summary-suica-balance-b">¥0</strong></div>
+                  <div class="suica-wallet-meta">
+                    <span>增值 <strong id="summary-suica-topup-b">¥0</strong></span>
+                    <span>已用 <strong id="summary-suica-spent-b">¥0</strong></span>
+                  </div>
+                </div>
+              </div>
             </div>
+            <p class="suica-wallet-hint">記帳揀「🐧Suica」就係增值到俾錢嗰位嘅錢包；其他分類撳「🐧 Suica」俾錢就會扣返嗰位嘅餘額。</p>
           </div>
         </div>
 
@@ -1043,6 +1071,6 @@
   </script>
   <script src="offlineQueue.js?v=20260730oq2"></script>
   <script src="syncManager.js?v=20260730sm2"></script>
-  <script src="app.js?v=20260801deploy1"></script>
+  <script src="app.js?v=20260801deploy2"></script>
 </body>
 </html>

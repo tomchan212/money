@@ -1897,9 +1897,31 @@ button.currency-label.badge-suica.active {
   line-height: 1;
 }
 
-.suica-wallet-card {
+.suica-wallet-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 800;
+  font-size: var(--type-body);
+  color: #1f7a54;
+  margin-bottom: 0.5rem;
+}
+
+.home-suica-heading {
+  margin-bottom: 0.4rem;
+}
+
+.suica-wallet-row {
   width: 100%;
-  padding: 0.9rem 1rem;
+}
+
+.suica-wallet-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.8rem 0.85rem;
   border: 1.5px solid rgba(31, 122, 84, 0.28);
   border-radius: var(--radius-sm);
   background: linear-gradient(145deg, #f3fff8 0%, #dff5ea 55%, #cfeadb 100%);
@@ -1907,27 +1929,22 @@ button.currency-label.badge-suica.active {
 }
 
 .home-suica-wallet {
-  padding: 0.75rem 0.9rem;
+  padding: 0.65rem 0.75rem;
 }
 
-.suica-wallet-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-weight: 800;
-  font-size: var(--type-body-lg);
-  color: #1f7a54;
-  margin-bottom: 0.35rem;
+.suica-wallet-body {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .suica-wallet-balance {
-  font-size: 1.15rem;
+  font-size: var(--type-body);
   font-weight: 700;
 }
 
 .suica-wallet-balance strong {
   color: #1f7a54;
-  font-size: 1.45rem;
+  font-size: 1.2rem;
 }
 
 .suica-wallet-balance strong.over-budget {
@@ -1937,14 +1954,14 @@ button.currency-label.badge-suica.active {
 .suica-wallet-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1.1rem;
-  margin-top: 0.45rem;
+  gap: 0.45rem 0.85rem;
+  margin-top: 0.28rem;
   color: var(--text-muted);
   font-size: var(--type-caption);
 }
 
 .suica-wallet-hint {
-  margin-top: 0.55rem;
+  margin-top: 0.65rem;
   color: var(--text-muted);
   font-size: var(--type-caption);
   line-height: 1.45;
@@ -6686,7 +6703,7 @@ html.theme-cyberpunk .suica-wallet-card {
   color: var(--text-dark) !important;
 }
 
-html.theme-cyberpunk .suica-wallet-brand,
+html.theme-cyberpunk .suica-wallet-heading,
 html.theme-cyberpunk .suica-wallet-balance strong {
   color: #39ff14 !important;
 }

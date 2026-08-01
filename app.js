@@ -3104,20 +3104,33 @@ function calcSummary() {
   return { spent, net };
 }
 
-function calcSuicaWallet() {
-  let toppedUp = 0;
-  let spent = 0;
+function emptySuicaWallet() {
+  return { toppedUp: 0, spent: 0, balance: 0 };
+}
+
+function calcSuicaWallet(person) {
+  const wallets = {
+    A: emptySuicaWallet(),
+    B: emptySuicaWallet(),
+  };
+
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
+    const owner = tx.payer === 'B' ? 'B' : 'A';
     const amount = Number(tx.amount) || 0;
-    if (isSuicaTopUp(tx)) toppedUp += amount;
-    else if (isSuicaPayment(tx)) spent += amount;
+    if (isSuicaTopUp(tx)) {
+      wallets[owner].toppedUp += amount;
+    } else if (isSuicaPayment(tx)) {
+      wallets[owner].spent += amount;
+    }
   }
-  return {
-    toppedUp,
-    spent,
-    balance: toppedUp - spent,
-  };
+
+  ['A', 'B'].forEach((key) => {
+    wallets[key].balance = wallets[key].toppedUp - wallets[key].spent;
+  });
+
+  if (person === 'A' || person === 'B') return wallets[person];
+  return wallets;
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4001,24 +4014,31 @@ function renderSummary() {
 }
 
 function renderSuicaWallet() {
-  const wallet = calcSuicaWallet();
-  const balanceText = formatMoney(wallet.balance, 'JPY');
-  const topupText = formatMoney(wallet.toppedUp, 'JPY');
-  const spentText = formatMoney(wallet.spent, 'JPY');
-  const homeBalance = $('#home-suica-balance');
-  const summaryBalance = $('#summary-suica-balance');
-  const summaryTopup = $('#summary-suica-topup');
-  const summarySpent = $('#summary-suica-spent');
-  if (homeBalance) {
-    homeBalance.textContent = balanceText;
-    homeBalance.classList.toggle('over-budget', wallet.balance < 0);
-  }
-  if (summaryBalance) {
-    summaryBalance.textContent = balanceText;
-    summaryBalance.classList.toggle('over-budget', wallet.balance < 0);
-  }
-  if (summaryTopup) summaryTopup.textContent = topupText;
-  if (summarySpent) summarySpent.textContent = spentText;
+  const wallets = calcSuicaWallet();
+  ['A', 'B'].forEach((person) => {
+    const key = person.toLowerCase();
+    const wallet = wallets[person];
+    const balanceText = formatMoney(wallet.balance, 'JPY');
+    const topupText = formatMoney(wallet.toppedUp, 'JPY');
+    const spentText = formatMoney(wallet.spent, 'JPY');
+
+    const homeBalance = $(`#home-suica-balance-${key}`);
+    if (homeBalance) {
+      homeBalance.textContent = balanceText;
+      homeBalance.classList.toggle('over-budget', wallet.balance < 0);
+    }
+
+    const summaryBalance = $(`#summary-suica-balance-${key}`);
+    if (summaryBalance) {
+      summaryBalance.textContent = balanceText;
+      summaryBalance.classList.toggle('over-budget', wallet.balance < 0);
+    }
+
+    const summaryTopup = $(`#summary-suica-topup-${key}`);
+    const summarySpent = $(`#summary-suica-spent-${key}`);
+    if (summaryTopup) summaryTopup.textContent = topupText;
+    if (summarySpent) summarySpent.textContent = spentText;
+  });
 }
 
 function updateSettlementChromeVisibility(net = calcSummary().net) {
@@ -5691,10 +5711,14 @@ function setupEventListeners() {
     }
 
     if (paymentMethod === PAYMENT_SUICA) {
-      const wallet = calcSuicaWallet();
+      const payer = tx.payer === 'B' ? 'B' : 'A';
+      const wallet = calcSuicaWallet(payer);
       if (tx.amount - wallet.balance > moneyEpsilon('JPY')) {
         endMutation();
-        showToast(`Suica 餘額不足（而家 ${formatMoney(wallet.balance, 'JPY')}）`, 'error');
+        showToast(
+          `${personName(payer)} 嘅 Suica 餘額不足（而家 ${formatMoney(wallet.balance, 'JPY')}）`,
+          'error'
+        );
         return;
       }
     }
@@ -5805,13 +5829,21 @@ function setupEventListeners() {
         : stripSuicaPayPrefix(rawDescription);
 
     if (paymentMethod === PAYMENT_SUICA) {
-      const wallet = calcSuicaWallet();
+      const payer = ($('#edit-payer').value === 'B' ? 'B' : 'A');
+      const wallet = calcSuicaWallet(payer);
       const previousSuicaAmount =
-        isSuicaPayment(existing) && existing.currency === 'JPY' ? Number(existing.amount) || 0 : 0;
+        isSuicaPayment(existing) &&
+        existing.currency === 'JPY' &&
+        (existing.payer === 'B' ? 'B' : 'A') === payer
+          ? Number(existing.amount) || 0
+          : 0;
       const available = wallet.balance + previousSuicaAmount;
       if (amount - available > moneyEpsilon('JPY')) {
         endMutation();
-        showToast(`Suica 餘額不足（而家 ${formatMoney(available, 'JPY')}）`, 'error');
+        showToast(
+          `${personName(payer)} 嘅 Suica 餘額不足（而家 ${formatMoney(available, 'JPY')}）`,
+          'error'
+        );
         return;
       }
     }
