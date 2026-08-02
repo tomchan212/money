@@ -72,6 +72,7 @@ const SyncManager = (function () {
           transaction_id: op.payload.transaction_id || '',
           client_id: op.payload.clientId || op.clientId || '',
           date: op.payload.tx.date,
+          time: op.payload.tx.time || '',
           category: op.payload.tx.category,
           description: op.payload.tx.description,
           location: op.payload.tx.location || '',

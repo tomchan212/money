@@ -1104,6 +1104,10 @@ button.stat-chip.person-spend-btn {
   color: var(--hkd-color);
 }
 
+.home-spent-item .spent-value-suica-extra {
+  font-size: 0.82em;
+}
+
 .currency-selector {
   display: flex;
   gap: 0.35rem;
@@ -1160,6 +1164,9 @@ button.currency-label.badge-suica.active {
   color: #1f7a54;
   font-size: 1.15rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 [data-currency-panel].hidden {
@@ -1411,6 +1418,14 @@ button.currency-label.badge-suica.active {
 
 .stat-chip .spent-value[data-currency="hkd"] {
   color: var(--hkd-color);
+}
+
+.spent-value-suica-extra {
+  display: inline;
+  font-size: 0.88em;
+  font-weight: 600;
+  color: #1f7a54;
+  white-space: nowrap;
 }
 
 .stat-remain,
@@ -1899,6 +1914,9 @@ button.currency-label.badge-suica.active {
 }
 
 .payment-method-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 2.2rem;
   line-height: 1;
 }
@@ -1911,6 +1929,13 @@ button.currency-label.badge-suica.active {
   font-size: var(--type-body);
   color: #1f7a54;
   margin-bottom: 0.5rem;
+}
+
+.suica-wallet-heading > span[aria-hidden="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .home-suica-heading {
@@ -2008,13 +2033,111 @@ button.suica-wallet-card:focus-visible {
   line-height: 1.45;
 }
 
+.suica-wallet-explain {
+  margin-top: 0.55rem;
+}
+
+.suica-explain-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.suica-explain-person-box {
+  background: #faf8f9;
+  border: 1px solid #f0e8eb;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.55rem 0.55rem;
+  min-width: 0;
+}
+
+.suica-explain-person-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.84rem;
+  margin-bottom: 0.25rem;
+}
+
+.suica-explain-section {
+  margin-top: 0.35rem;
+}
+
+.suica-explain-section .explain-section-title {
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.suica-explain-person-box .explain-empty {
+  margin: 0.05rem 0 0.2rem;
+  font-size: 0.78rem;
+}
+
+.suica-matrix-scroll {
+  margin: 0.2rem 0 0;
+}
+
+.suica-wallet-matrix {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.suica-wallet-matrix th,
+.suica-wallet-matrix td {
+  padding: 0.32rem 0.4rem;
+}
+
+.suica-wallet-matrix .help-pay-matrix-desc {
+  max-width: 7.5rem;
+}
+
+.suica-matrix-footer {
+  padding: 0.3rem 0.4rem 0.05rem;
+  border-top: 1px solid #ece6e9;
+}
+
+.suica-matrix-total-row {
+  display: grid;
+  grid-template-columns: auto minmax(4.5rem, 5.25rem);
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0;
+  font-size: 0.78rem;
+}
+
+.suica-matrix-total-row span:first-child {
+  white-space: nowrap;
+  text-align: left;
+}
+
+.suica-explain-balance-footer {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.4rem 0.1rem;
+  border-top: 1.5px solid #ddd2d8;
+  font-size: 0.78rem;
+}
+
+.suica-explain-balance-footer .help-pay-matrix-net-row {
+  line-height: 1.35;
+}
+
+@media (max-width: 480px) {
+  .suica-explain-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .tx-suica-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   margin-left: 0.25rem;
   font-size: 0.95em;
   line-height: 1;
+  vertical-align: middle;
 }
 
 .expense-cycle-chip {
@@ -2147,6 +2270,60 @@ button.suica-wallet-card:focus-visible {
 
 .expense-essentials-row .form-hint {
   margin-top: 0.35rem;
+}
+
+.expense-partial-split-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.3rem;
+}
+
+.expense-partial-split-wrap.hidden {
+  display: none;
+}
+
+.expense-partial-split-btn {
+  border: 1.5px solid #e8d8de;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text-muted, #7a6e74);
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  padding: 0.32rem 0.72rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.expense-partial-split-btn:hover {
+  border-color: rgba(255, 117, 140, 0.45);
+  color: var(--text, #4a4045);
+}
+
+.expense-partial-split-btn[aria-pressed="true"] {
+  border-color: #ff9eb0;
+  background: #fff5f7;
+  color: #c84d67;
+  font-weight: 600;
+}
+
+.expense-partial-split-btn:focus-visible {
+  outline: 2px solid var(--pink-start);
+  outline-offset: 2px;
+}
+
+.partial-split-context {
+  margin: 0 0 0.65rem;
+  color: var(--text-muted, #7a6e74);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.partial-split-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
 }
 
 .transaction-item.repay-item {
@@ -2812,6 +2989,7 @@ button.suica-wallet-card:focus-visible {
 .form-row input[type="text"]:not(.money-input),
 .form-row input[type="number"],
 .form-row input[type="date"],
+.form-row input[type="time"],
 .form-row select {
   width: 100%;
   padding: 0.65rem 0.75rem;
@@ -5409,6 +5587,13 @@ button.suica-wallet-card:focus-visible {
   font-size: 0.84rem;
 }
 
+.person-spend-row-title .person-spend-suica-badge {
+  margin-left: 0.2rem;
+  font-size: 0.95em;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .person-spend-row-meta {
   font-size: 0.72rem;
   color: var(--text-muted);
@@ -6274,6 +6459,7 @@ html.theme-cyberpunk .form-row input[type="text"],
 html.theme-cyberpunk .form-row input[type="text"]:not(.money-input),
 html.theme-cyberpunk .form-row input[type="number"],
 html.theme-cyberpunk .form-row input[type="date"],
+html.theme-cyberpunk .form-row input[type="time"],
 html.theme-cyberpunk .form-row select,
 html.theme-cyberpunk .filter-item select,
 html.theme-cyberpunk .filter-item input,
@@ -6736,6 +6922,11 @@ html.theme-cyberpunk .badge-jpy,
 html.theme-cyberpunk .badge-hkd,
 html.theme-cyberpunk .badge-suica {
   background: #121226 !important;
+}
+
+html.theme-cyberpunk .suica-explain-person-box {
+  background: #121226 !important;
+  border-color: var(--border-soft);
 }
 
 html.theme-cyberpunk .suica-wallet-card {
