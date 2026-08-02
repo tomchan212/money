@@ -4702,37 +4702,6 @@ function personSpendRowHtml(tx, person, currency) {
       </li>`;
 }
 
-function calcPersonRepaidTotal(person, currency) {
-  return transactions
-    .filter((tx) => tx.currency === currency && isRepayTransaction(tx) && tx.payer === person)
-    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-}
-
-function calcPersonBorrowedTotal(person, currency) {
-  return transactions
-    .filter((tx) => tx.currency === currency && isLoanTransaction(tx) && getLoanBorrower(tx) === person)
-    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
-}
-
-function personSpendCashStatsHtml(person, currency) {
-  const repaid = calcPersonRepaidTotal(person, currency);
-  const borrowed = calcPersonBorrowedTotal(person, currency);
-  const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
-  const repayIcon = categoryIconHtml('還錢', 'inline', '還錢');
-  const loanIcon = categoryIconHtml('借錢', 'inline', '借錢');
-  return `<span class="person-spend-cash-stat">
-      ${repayIcon}<span>總共還咗 <strong class="person-spend-cash-value ${curClass}">${escapeHtml(formatMoney(repaid, currency))}</strong></span>
-    </span>
-    <span class="person-spend-cash-stat">
-      ${loanIcon}<span>借咗 <strong class="person-spend-cash-value ${curClass}">${escapeHtml(formatMoney(borrowed, currency))}</strong></span>
-    </span>`;
-}
-
-function renderPersonSpendCashStats(container, person, currency) {
-  if (!container || !person || !currency) return;
-  container.innerHTML = personSpendCashStatsHtml(person, currency);
-}
-
 function getPersonSpendRows() {
   const { person, currency, category, sort } = personSpendView;
   if (!person || !currency) return [];
@@ -4932,7 +4901,6 @@ function renderPersonSpendChart() {
   const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
 
   subtitleEl.innerHTML = `${personImg(person, 'inline')} ${escapeHtml(currency)} · 合共用咗 ${escapeHtml(formatMoney(total, currency))}`;
-  renderPersonSpendCashStats($('#person-spend-chart-cash-stats'), person, currency);
 
   if (!slices.length || isNegligibleMoney(total, currency)) {
     wrapEl.classList.add('hidden');
@@ -5022,7 +4990,6 @@ function renderPersonSpendList() {
   if (totalEl) {
     totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆`;
   }
-  renderPersonSpendCashStats($('#person-spend-cash-stats'), person, currency);
 
   if (!rows.length) {
     list.innerHTML = `<li class="person-spend-empty">呢個篩選之下未有用咗紀錄</li>`;

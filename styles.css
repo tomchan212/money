@@ -5517,45 +5517,6 @@ button.suica-wallet-card:focus-visible {
   color: var(--text-dark);
 }
 
-.person-spend-cash-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem 0.65rem;
-  margin: 0 0 0.75rem;
-}
-
-.person-spend-cash-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.28rem;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.person-spend-cash-stat .category-icon-inline {
-  width: 0.95rem;
-  height: 0.95rem;
-  flex-shrink: 0;
-}
-
-.person-spend-cash-value {
-  font-weight: 700;
-}
-
-.person-spend-cash-value.jpy {
-  color: var(--jpy-color);
-}
-
-.person-spend-cash-value.hkd {
-  color: var(--hkd-color);
-}
-
-.modal-content-person-spend-chart .person-spend-cash-stats {
-  justify-content: center;
-  margin-top: -0.15rem;
-}
-
 .person-spend-filters {
   display: grid;
   grid-template-columns: 1fr 1fr;
