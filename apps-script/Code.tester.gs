@@ -237,7 +237,6 @@ function buildSummary_(transactions, budgets) {
     A: { JPY: 0, HKD: 0 },
     B: { JPY: 0, HKD: 0 },
   };
-  var transferredToSuica = { A: 0, B: 0 };
   var suica = {
     A: { toppedUp: 0, spent: 0 },
     B: { toppedUp: 0, spent: 0 },
@@ -249,11 +248,8 @@ function buildSummary_(transactions, budgets) {
     if (cur !== 'JPY' && cur !== 'HKD') return;
     net[cur] += tx.net_b_owes_a;
 
-    // 增值＝現金轉去 Suica；Suica 俾錢／餘額調整＝錢包帳，都唔算現金消費
     if (isSuicaTopUp_(tx)) {
       if (cur === 'JPY') {
-        var payer = tx.payer === 'B' ? 'B' : 'A';
-        transferredToSuica[payer] += Number(tx.amount) || 0;
         suica[getSuicaWalletOwner_(tx)].toppedUp += Number(tx.amount) || 0;
       }
       return;
@@ -268,7 +264,6 @@ function buildSummary_(transactions, budgets) {
       if (cur === 'JPY') {
         suica[getSuicaWalletOwner_(tx)].spent += Number(tx.amount) || 0;
       }
-      return;
     }
 
     spent.A[cur] += tx.a_share;
@@ -280,13 +275,12 @@ function buildSummary_(transactions, budgets) {
     ['JPY', 'HKD'].forEach(function(currency) {
       var initial = budgetMap[person + '_' + currency] || 0;
       var totalSpent = spent[person][currency];
-      var transferred = currency === 'JPY' ? transferredToSuica[person] : 0;
       rows.push({
         person: person,
         currency: currency,
         initial_budget: initial,
         total_spent: totalSpent,
-        remaining_budget: initial - totalSpent - transferred,
+        remaining_budget: initial - totalSpent,
         net_balance: net[currency],
       });
     });

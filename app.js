@@ -2558,7 +2558,7 @@ function getSummaryRow(person, currency) {
 }
 
 function buildLocalSummary() {
-  const { spent, net, transferredToSuica } = calcSummary();
+  const { spent, net } = calcSummary();
   const wallets = calcSuicaWallet();
   const result = { A: {}, B: {} };
 
@@ -2566,11 +2566,10 @@ function buildLocalSummary() {
     ['JPY', 'HKD'].forEach((currency) => {
       const initial = budgets[person][currency];
       const totalSpent = spent[person][currency];
-      const transferred = currency === 'JPY' ? transferredToSuica[person] : 0;
       result[person][currency] = {
         initial_budget: initial,
         total_spent: totalSpent,
-        remaining_budget: initial - totalSpent - transferred,
+        remaining_budget: initial - totalSpent,
         net_balance: net[currency],
       };
     });
@@ -3259,7 +3258,6 @@ function calcSummary() {
     A: { JPY: 0, HKD: 0 },
     B: { JPY: 0, HKD: 0 },
   };
-  const transferredToSuica = { A: 0, B: 0 };
   const net = { JPY: 0, HKD: 0 };
 
   for (const tx of transactions) {
@@ -3267,21 +3265,14 @@ function calcSummary() {
     if (cur !== 'JPY' && cur !== 'HKD') continue;
     net[cur] += tx.net_b_owes_a;
 
-    // 增值＝現金轉去 Suica；Suica 俾錢／餘額調整＝錢包帳，都唔算 JPY 現金消費
-    if (isSuicaTopUp(tx)) {
-      if (cur === 'JPY') {
-        const payer = tx.payer === 'B' ? 'B' : 'A';
-        transferredToSuica[payer] += Number(tx.amount) || 0;
-      }
-      continue;
-    }
-    if (isSuicaPayment(tx) || isSuicaCredit(tx)) continue;
+    // 增值／餘額調整＝Suica 錢包帳；Suica 俾錢＝實際消費，計入用咗
+    if (isSuicaTopUp(tx) || isSuicaCredit(tx)) continue;
 
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
   }
 
-  return { spent, net, transferredToSuica };
+  return { spent, net };
 }
 
 function emptySuicaWallet() {
@@ -3345,22 +3336,22 @@ function calcSuicaWallet(person) {
 }
 
 function calcPersonJpySpentBreakdown(person) {
-  let cash = 0;
+  let consumption = 0;
   let suicaTopUp = 0;
 
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
     const share = getPersonShare(tx, person);
-    if (isSuicaPayment(tx) || isSuicaCredit(tx)) continue;
+    if (isSuicaCredit(tx)) continue;
     if (isSuicaTopUp(tx)) {
       suicaTopUp += share;
       continue;
     }
-    cash += share;
+    consumption += share;
   }
 
   return {
-    cash,
+    consumption,
     suicaTopUpTotal: suicaTopUp,
   };
 }
@@ -3370,12 +3361,12 @@ function formatPersonSpentValueHtml(person, currency) {
     return escapeHtml(formatMoney(calcSummary().spent[person][currency], currency));
   }
 
-  const { cash, suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
-  const cashText = escapeHtml(formatMoney(cash, 'JPY'));
-  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return cashText;
+  const { consumption, suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
+  const spentText = escapeHtml(formatMoney(consumption, 'JPY'));
+  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return spentText;
 
   const suicaText = escapeHtml(formatMoney(suicaTopUpTotal, 'JPY'));
-  return `${cashText} <span class="spent-value-suica-extra">（＋🐧${suicaText}）</span>`;
+  return `${spentText} <span class="spent-value-suica-extra">（＋🐧${suicaText} 增值）</span>`;
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4207,16 +4198,14 @@ function updateExplainPreview() {
 
 /* ===== Render ===== */
 function renderSummary() {
-  const { spent, net, transferredToSuica } = calcSummary();
+  const { spent, net } = calcSummary();
 
   ['JPY', 'HKD'].forEach((cur) => {
     const lower = cur.toLowerCase();
     ['A', 'B'].forEach((person) => {
       const p = person.toLowerCase();
       const used = spent[person][cur];
-      const transferred = cur === 'JPY' ? transferredToSuica[person] : 0;
-      // 剩餘要扣走轉入 Suica 嘅現金，避免同錢包重複當作仲喺袋
-      const remaining = budgets[person][cur] - used - transferred;
+      const remaining = budgets[person][cur] - used;
 
       const spentText = formatMoney(used, cur);
       const remainText = `剩餘 ${formatMoney(remaining, cur)}`;

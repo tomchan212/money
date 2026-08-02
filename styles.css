@@ -1043,11 +1043,16 @@ button.currency-label.currency-icon-only .ui-icon-currency {
   gap: 0.35rem;
 }
 
+.home-spent-row > * {
+  min-width: 0;
+}
+
 .home-spent-item {
   background: #fff;
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.4rem;
   text-align: center;
+  min-width: 0;
 }
 
 button.home-spent-item,
@@ -1268,6 +1273,21 @@ button.currency-label.badge-suica.active {
   box-shadow: var(--shadow);
 }
 
+.summary-card {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.summary-card .currency-section,
+.summary-card .currency-section-body,
+.summary-card .summary-stats,
+.summary-card .stat-chip,
+.summary-card .suica-wallet-explain,
+.summary-card .suica-explain-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .card h2 {
   font-size: calc(var(--type-body-lg) + 0.05rem);
   font-weight: 700;
@@ -1296,6 +1316,10 @@ button.currency-label.badge-suica.active {
   margin-bottom: 0.75rem;
 }
 
+.summary-stats > * {
+  min-width: 0;
+}
+
 .stat-chip {
   display: flex;
   align-items: flex-start;
@@ -1304,6 +1328,7 @@ button.currency-label.badge-suica.active {
   background: #faf8f9;
   border: 1px solid #f0e8eb;
   border-radius: var(--radius-sm);
+  min-width: 0;
 }
 
 .stat-chip .person-emoji {
@@ -1323,10 +1348,21 @@ button.currency-label.badge-suica.active {
 .stat-chip .stat-spent {
   font-size: var(--type-label);
   margin-bottom: 0.15rem;
+  line-height: 1.35;
+}
+
+.stat-chip .stat-spent strong,
+.stat-chip .spent-value {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .stat-chip .stat-spent strong {
-  font-size: var(--type-body-lg);
+  font-size: 0.92rem;
 }
 
 .stat-chip .stat-remain {
@@ -1421,11 +1457,18 @@ button.currency-label.badge-suica.active {
 }
 
 .spent-value-suica-extra {
-  display: inline;
-  font-size: 0.88em;
+  display: block;
+  font-size: 0.78em;
   font-weight: 600;
   color: #1f7a54;
-  white-space: nowrap;
+  white-space: normal;
+  line-height: 1.25;
+  margin-top: 0.1rem;
+}
+
+.stat-chip .spent-value-suica-extra,
+.home-spent-item .spent-value-suica-extra {
+  font-size: 0.72rem;
 }
 
 .stat-remain,
@@ -1433,6 +1476,9 @@ button.currency-label.badge-suica.active {
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--amount-remain);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .currency-block:first-of-type .stat-remain {
