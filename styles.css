@@ -1,7 +1,9 @@
 /* ===== Custom Font ===== */
 @font-face {
   font-family: "Canva Handwriting Style TC";
-  src: url("fonts/CanvaHandwritingStyleTC.ttf") format("truetype");
+  src:
+    url("fonts/CanvaHandwritingStyleTC.woff2") format("woff2"),
+    url("fonts/CanvaHandwritingStyleTC.ttf") format("truetype");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;

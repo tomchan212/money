@@ -25,9 +25,10 @@ const THEME_STORAGE_KEY = 'money-theme';
 const LIST_DETAIL_STORAGE_KEY = 'money-list-detail-expanded';
 const REMAIN_DISPLAY_STORAGE_KEY = 'money-remain-display';
 const ASSETS_PRELOADED_STORAGE_KEY = 'money-assets-preloaded';
-const ASSETS_PRELOAD_VERSION = '20260731a';
+const ASSETS_PRELOAD_VERSION = '20260802perf';
 const APP_FONT_FAMILY = 'Canva Handwriting Style TC';
-const APP_FONT_URL = 'fonts/CanvaHandwritingStyleTC.ttf';
+const APP_FONT_URL = 'fonts/CanvaHandwritingStyleTC.woff2';
+const APP_FONT_FALLBACK_URL = 'fonts/CanvaHandwritingStyleTC.ttf';
 const PARTICLE_COLORS_LIGHT = ['#ff758c', '#ff7eb3', '#ffc2d1', '#fff0f3', '#f7c948', '#ffffff'];
 const PARTICLE_COLORS_CYBER = ['#ff2bd6', '#00f6ff', '#7a3cff', '#39ff14', '#ffffff', '#ff9f1c'];
 let PARTICLE_COLORS = PARTICLE_COLORS_LIGHT;
@@ -491,6 +492,21 @@ function markAssetsPreloaded() {
 
 function collectAssetUrls() {
   const urls = new Set();
+  // Critical chrome first (above-the-fold), then the rest.
+  [
+    APP_FONT_URL,
+    APP_FONT_FALLBACK_URL,
+    'boy.png',
+    'girl.png',
+    'icons/jpy.png?v=20260730dc',
+    'icons/hkd.png?v=20260730dc',
+    'icons/exchange.png?v=20260730dc',
+    'icons/theme.png?v=20260730df',
+    'icons/add-record.png?v=20260730de',
+    'icons/expense.png',
+    'icons/savings.png',
+  ].forEach((src) => urls.add(src));
+
   Object.values(CATEGORY_ICONS).forEach((src) => urls.add(src));
   Object.values(UI_ICONS).forEach((src) => {
     urls.add(src);
@@ -503,15 +519,6 @@ function collectAssetUrls() {
   EXTRA_STICKER_ICONS.forEach((src) => urls.add(src));
   Object.values(PERSON).forEach((meta) => urls.add(meta.src));
   urls.add('icon.png');
-  urls.add(APP_FONT_URL);
-  // Hardcoded cache-busted icons used in index.html chrome
-  [
-    'icons/jpy.png?v=20260730dc',
-    'icons/hkd.png?v=20260730dc',
-    'icons/exchange.png?v=20260730dc',
-    'icons/theme.png?v=20260730df',
-    'icons/add-record.png?v=20260730de',
-  ].forEach((src) => urls.add(src));
   return [...urls];
 }
 
@@ -556,7 +563,7 @@ function preloadImageAsset(url, force = false) {
   });
 }
 
-async function preloadFontAsset(force = false) {
+async function preloadFontAsset(force = false, url = APP_FONT_URL) {
   try {
     if (document.fonts?.load) {
       await document.fonts.load(`1em "${APP_FONT_FAMILY}"`);
@@ -567,7 +574,7 @@ async function preloadFontAsset(force = false) {
   } catch (_) {}
 
   try {
-    await fetch(APP_FONT_URL, {
+    await fetch(url, {
       cache: force ? 'reload' : 'force-cache',
       mode: 'same-origin',
     });
@@ -575,8 +582,8 @@ async function preloadFontAsset(force = false) {
 }
 
 async function preloadAssetUrl(url, force = false) {
-  if (url === APP_FONT_URL || /\.(ttf|otf|woff2?)$/i.test(url)) {
-    await preloadFontAsset(force);
+  if (url === APP_FONT_URL || url === APP_FONT_FALLBACK_URL || /\.(ttf|otf|woff2?)$/i.test(url)) {
+    await preloadFontAsset(force, url);
     return;
   }
   if (force) {
@@ -600,7 +607,8 @@ async function runAssetPreload({ force = false, silent = false } = {}) {
   setAssetPreloadProgress(0, urls.length);
 
   try {
-    const concurrency = 6;
+    // Higher concurrency: assets are now small (~KB), so network round-trips dominate.
+    const concurrency = 10;
     let index = 0;
 
     async function worker() {
@@ -616,7 +624,7 @@ async function runAssetPreload({ force = false, silent = false } = {}) {
     await Promise.all(Array.from({ length: Math.min(concurrency, urls.length) }, () => worker()));
     markAssetsPreloaded();
     if (!silent) {
-      const remaining = Math.max(0, 1000 - (Date.now() - startedAt));
+      const remaining = Math.max(0, 400 - (Date.now() - startedAt));
       if (remaining > 0) await sleep(remaining);
     }
     return true;
@@ -6552,6 +6560,7 @@ function setupIconTapFeedback() {
 }
 
 async function init() {
+  // Asset preload runs in parallel with API sync and must not gate first paint/data.
   const assetsReadyPromise = ensureAssetsPreloaded();
 
   loadRemainDisplayPrefs();
@@ -6585,13 +6594,10 @@ async function init() {
   });
 
   try {
-    await Promise.all([assetsReadyPromise, fetchAllData()]);
+    await fetchAllData();
     SyncManager.scheduleSync();
   } catch (err) {
     console.error('fetchAllData failed:', err);
-    try {
-      await assetsReadyPromise;
-    } catch (_) {}
     if (OfflineQueue.size() > 0) {
       reapplyPendingFromQueue();
       updateSyncStatusFromQueue();
@@ -6600,6 +6606,10 @@ async function init() {
     }
     renderAll();
     SyncManager.scheduleSync();
+  } finally {
+    try {
+      await assetsReadyPromise;
+    } catch (_) {}
   }
   updateMutationControls();
 }
