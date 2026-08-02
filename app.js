@@ -56,7 +56,7 @@ const PAYMENT_CASH = '';
 const PAYMENT_SUICA = 'SUICA';
 const REPAY_NOTE_CUSTOM = '__custom__';
 const REPAY_NOTE_OPTIONS = ['PayMe', 'Alipay', 'ZA Bank', '現金'];
-const SUICA_ADJUST_CATEGORIES = ['交通', '雜項'];
+const SUICA_ADJUST_CATEGORY = '交通/雜項';
 const SUICA_SPLIT_CYCLE = ['FOR_A', 'FOR_B'];
 
 const CATEGORY_EMOJI = {
@@ -70,6 +70,7 @@ const CATEGORY_EMOJI = {
   景點: '🎟️',
   便利店: '🏪',
   雜項: '📦',
+  [SUICA_ADJUST_CATEGORY]: '🚗',
   [SUICA_CATEGORY]: '🐧',
   還錢: '🤝🏻',
   借錢: '💸',
@@ -86,6 +87,7 @@ const CATEGORY_ICONS = {
   景點: 'icons/ticket.png',
   便利店: 'icons/convenience.png',
   雜項: 'icons/misc.png',
+  [SUICA_ADJUST_CATEGORY]: 'icons/transport.png',
   還錢: 'icons/repayment.png',
   借錢: 'icons/expense.png',
 };
@@ -98,6 +100,7 @@ const CATEGORY_CHART_COLORS = {
   景點: '#5ec98a',
   便利店: '#87ceeb',
   雜項: '#b8b8b8',
+  [SUICA_ADJUST_CATEGORY]: '#8aa9c4',
   [SUICA_CATEGORY]: '#1f7a54',
 };
 
@@ -1347,6 +1350,12 @@ function matchesCategoryFilter(txCategory, filterValue) {
   if (!filterValue) return true;
   if (filterValue === '餐飲') {
     return txCategory === '餐飲' || String(txCategory).startsWith('餐飲-');
+  }
+  if (
+    (filterValue === '交通' || filterValue === '雜項') &&
+    txCategory === SUICA_ADJUST_CATEGORY
+  ) {
+    return true;
   }
   return txCategory === filterValue;
 }
@@ -4435,11 +4444,10 @@ function updateSuicaAdjustDiffHint() {
     hint.textContent = '餘額無變動';
     return;
   }
-  const category = $('#suica-adjust-category')?.value || '交通';
   if (diff > 0) {
-    hint.textContent = `會增加 ${formatMoney(diff, 'JPY')}，記做「${category}」調整`;
+    hint.textContent = `會增加 ${formatMoney(diff, 'JPY')}，記做「${SUICA_ADJUST_CATEGORY}」調整`;
   } else {
-    hint.textContent = `會減少 ${formatMoney(Math.abs(diff), 'JPY')}，記做「${category}」`;
+    hint.textContent = `會減少 ${formatMoney(Math.abs(diff), 'JPY')}，記做「${SUICA_ADJUST_CATEGORY}」`;
   }
 }
 
@@ -4448,7 +4456,6 @@ function openSuicaAdjustModal(person) {
   const wallet = calcSuicaWallet(owner);
   $('#suica-adjust-person').value = owner;
   $('#suica-adjust-amount').value = String(Math.round(wallet.balance));
-  setToggleValue('#suica-adjust-category-toggle', '#suica-adjust-category', 'category', '交通');
   const context = $('#suica-adjust-context');
   if (context) {
     context.innerHTML = `${personImg(owner, 'inline')} 而家餘額 ${escapeHtml(formatMoney(wallet.balance, 'JPY'))}`;
@@ -5881,15 +5888,6 @@ function setupEventListeners() {
   });
   setupRepayNoteSelect();
 
-  setupToggle('#suica-adjust-category-toggle', '#suica-adjust-category', 'category', '交通');
-  $('#suica-adjust-category-toggle')?.querySelectorAll('.toggle-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      $('#suica-adjust-category-toggle')?.querySelectorAll('.toggle-btn').forEach((b) => {
-        b.setAttribute('aria-pressed', b.classList.contains('active') ? 'true' : 'false');
-      });
-      updateSuicaAdjustDiffHint();
-    });
-  });
   $('#suica-adjust-amount')?.addEventListener('input', updateSuicaAdjustDiffHint);
   document.querySelectorAll('.suica-wallet-edit-btn').forEach((btn) => {
     btn.addEventListener('click', () => openSuicaAdjustModal(btn.dataset.suicaPerson));
@@ -5901,9 +5899,7 @@ function setupEventListeners() {
     const person = $('#suica-adjust-person')?.value === 'B' ? 'B' : 'A';
     const current = calcSuicaWallet(person).balance;
     const next = Number($('#suica-adjust-amount')?.value);
-    const category = SUICA_ADJUST_CATEGORIES.includes($('#suica-adjust-category')?.value)
-      ? $('#suica-adjust-category').value
-      : '交通';
+    const category = SUICA_ADJUST_CATEGORY;
 
     if (!Number.isFinite(next) || next < 0) {
       endMutation();
