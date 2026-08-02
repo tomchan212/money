@@ -25,10 +25,11 @@ const THEME_STORAGE_KEY = 'money-theme';
 const LIST_DETAIL_STORAGE_KEY = 'money-list-detail-expanded';
 const REMAIN_DISPLAY_STORAGE_KEY = 'money-remain-display';
 const ASSETS_PRELOADED_STORAGE_KEY = 'money-assets-preloaded';
-const ASSETS_PRELOAD_VERSION = '20260802perf';
+const ASSETS_PRELOAD_VERSION = '20260802fullfont';
 const APP_FONT_FAMILY = 'Canva Handwriting Style TC';
 const APP_FONT_URL = 'fonts/CanvaHandwritingStyleTC.woff2';
 const APP_FONT_FALLBACK_URL = 'fonts/CanvaHandwritingStyleTC.ttf';
+let appFontLoadPromise = null;
 const PARTICLE_COLORS_LIGHT = ['#ff758c', '#ff7eb3', '#ffc2d1', '#fff0f3', '#f7c948', '#ffffff'];
 const PARTICLE_COLORS_CYBER = ['#ff2bd6', '#00f6ff', '#7a3cff', '#39ff14', '#ffffff', '#ff9f1c'];
 let PARTICLE_COLORS = PARTICLE_COLORS_LIGHT;
@@ -493,12 +494,11 @@ function markAssetsPreloaded() {
   document.documentElement.classList.add('assets-ready');
 }
 
-function collectAssetUrls() {
+function collectAssetUrls({ includeFont = false } = {}) {
   const urls = new Set();
-  // Critical chrome first (above-the-fold), then the rest.
+  // Stickers / chrome only by default. The restored full handwriting font is
+  // ~12MB WOFF2, so it must not share the first sync's mobile bandwidth.
   [
-    APP_FONT_URL,
-    APP_FONT_FALLBACK_URL,
     'boy.png',
     'girl.png',
     'icons/jpy.png?v=20260730dc',
@@ -522,6 +522,7 @@ function collectAssetUrls() {
   EXTRA_STICKER_ICONS.forEach((src) => urls.add(src));
   Object.values(PERSON).forEach((meta) => urls.add(meta.src));
   urls.add('icon.png');
+  if (includeFont) urls.add(APP_FONT_URL);
   return [...urls];
 }
 
@@ -566,27 +567,53 @@ function preloadImageAsset(url, force = false) {
   });
 }
 
+function markAppFontReady() {
+  document.documentElement.classList.add('font-ready');
+}
+
 async function preloadFontAsset(force = false, url = APP_FONT_URL) {
   try {
-    if (document.fonts?.load) {
+    await fetch(url, {
+      cache: force ? 'reload' : 'force-cache',
+      mode: 'same-origin',
+      // Keep spreadsheet sync ahead of this large file when run in parallel.
+      priority: 'low',
+    });
+  } catch (_) {}
+
+  try {
+    if (typeof FontFace !== 'undefined' && document.fonts?.add) {
+      const face = new FontFace(APP_FONT_FAMILY, `url("${url}") format("woff2")`, {
+        style: 'normal',
+        weight: '100 900',
+        display: 'swap',
+      });
+      const loaded = await face.load();
+      document.fonts.add(loaded);
+    } else if (document.fonts?.load) {
       await document.fonts.load(`1em "${APP_FONT_FAMILY}"`);
     }
     if (document.fonts?.ready) {
       await document.fonts.ready;
     }
-  } catch (_) {}
+    markAppFontReady();
+  } catch (_) {
+    // Fall back to CSS @font-face + system stack if FontFace fails.
+    markAppFontReady();
+  }
+}
 
-  try {
-    await fetch(url, {
-      cache: force ? 'reload' : 'force-cache',
-      mode: 'same-origin',
-    });
-  } catch (_) {}
+function ensureAppFontLoaded({ force = false } = {}) {
+  if (!force && appFontLoadPromise) return appFontLoadPromise;
+  appFontLoadPromise = preloadFontAsset(force, APP_FONT_URL).catch(() => {
+    markAppFontReady();
+  });
+  return appFontLoadPromise;
 }
 
 async function preloadAssetUrl(url, force = false) {
   if (url === APP_FONT_URL || url === APP_FONT_FALLBACK_URL || /\.(ttf|otf|woff2?)$/i.test(url)) {
-    await preloadFontAsset(force, url);
+    await ensureAppFontLoaded({ force });
     return;
   }
   if (force) {
@@ -597,20 +624,22 @@ async function preloadAssetUrl(url, force = false) {
   await preloadImageAsset(url, false);
 }
 
-async function runAssetPreload({ force = false, silent = false } = {}) {
+async function runAssetPreload({ force = false, silent = false, includeFont = force } = {}) {
   if (isAssetPreloading) return false;
   isAssetPreloading = true;
   if (els.preloadAssetsBtn) els.preloadAssetsBtn.disabled = true;
 
-  if (!silent) showAssetPreloadOverlay('加載貼圖同字體中…');
+  if (!silent) {
+    showAssetPreloadOverlay(includeFont ? '加載貼圖同字體中…' : '加載貼圖中…');
+  }
 
-  const urls = collectAssetUrls();
+  const urls = collectAssetUrls({ includeFont });
   let done = 0;
   const startedAt = Date.now();
   setAssetPreloadProgress(0, urls.length);
 
   try {
-    // Higher concurrency: assets are now small (~KB), so network round-trips dominate.
+    // Stickers are small; keep concurrency high. Full font is opt-in via includeFont.
     const concurrency = 10;
     let index = 0;
 
@@ -6523,8 +6552,11 @@ function setupIconTapFeedback() {
 }
 
 async function init() {
-  // Asset preload runs in parallel with API sync and must not gate first paint/data.
+  // Stickers may preload beside sync; the full font waits until after the first
+  // spreadsheet fetch so a ~12MB download cannot stall sync on mobile.
   const assetsReadyPromise = ensureAssetsPreloaded();
+  // Return visits: font is likely cached, so low-priority warm-up is safe.
+  if (hasAssetsPreloaded()) ensureAppFontLoaded();
 
   loadRemainDisplayPrefs();
   applyRemainDisplayVisibility();
@@ -6573,6 +6605,8 @@ async function init() {
     try {
       await assetsReadyPromise;
     } catch (_) {}
+    // Fire-and-forget: apply handwriting after sync has finished using the network.
+    ensureAppFontLoaded();
   }
   updateMutationControls();
 }
