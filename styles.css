@@ -2072,6 +2072,48 @@ button.suica-wallet-card:focus-visible {
   margin: 0.35rem 0 0.85rem;
 }
 
+.budget-rate-section {
+  margin: 0 0 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border: 1.5px solid #ece6e9;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 245, 247, 0.45);
+}
+
+.budget-rate-row {
+  margin-bottom: 0;
+}
+
+.budget-rate-row > label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+
+.budget-rate-input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1.5px solid #ece6e9;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text-dark);
+  box-sizing: border-box;
+}
+
+.budget-rate-input:focus {
+  outline: none;
+  border-color: var(--pink-end);
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.18);
+}
+
+.budget-rate-hint {
+  margin: 0.45rem 0 0;
+}
+
 .suica-wallet-meta {
   display: flex;
   flex-wrap: wrap;
@@ -6300,6 +6342,7 @@ html.theme-cyberpunk .transaction-item,
 html.theme-cyberpunk .tab-nav,
 html.theme-cyberpunk .theme-switcher-row,
 html.theme-cyberpunk .budget-person,
+html.theme-cyberpunk .budget-rate-section,
 html.theme-cyberpunk .budget-remain-section,
 html.theme-cyberpunk .budget-remain-toggle,
 html.theme-cyberpunk .btn-page,

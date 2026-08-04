@@ -24,6 +24,7 @@ const API_STORAGE_KEY = 'money-api-endpoint';
 const THEME_STORAGE_KEY = 'money-theme';
 const LIST_DETAIL_STORAGE_KEY = 'money-list-detail-expanded';
 const REMAIN_DISPLAY_STORAGE_KEY = 'money-remain-display';
+const EXCHANGE_RATE_STORAGE_KEY = 'money-exchange-rate-jpy-hkd';
 const ASSETS_PRELOADED_STORAGE_KEY = 'money-assets-preloaded';
 const ASSETS_PRELOAD_VERSION = '20260802fullfont';
 const APP_FONT_FAMILY = 'Canva Handwriting Style TC';
@@ -289,6 +290,9 @@ let remainDisplayPrefs = {
   JPY: true,
   HKD: false,
 };
+
+/** JPY→HKD 匯率：輸入 0.4795 即 1000 円 = 47.95 港幣（暫存，未套用換算） */
+let exchangeRateJpyHkd = '';
 
 const listFilters = {
   dayFrom: '',
@@ -5126,6 +5130,11 @@ function populateBudgetForm() {
   $('#budget-b-hkd').value = budgets.B.HKD;
   if ($('#budget-a-suica')) $('#budget-a-suica').value = budgets.A.Suica || 0;
   if ($('#budget-b-suica')) $('#budget-b-suica').value = budgets.B.Suica || 0;
+  const rateInput = $('#budget-exchange-rate');
+  if (rateInput) {
+    rateInput.value = exchangeRateJpyHkd;
+    updateExchangeRateHint();
+  }
 }
 
 /* ===== Toggle Helpers ===== */
@@ -5437,6 +5446,62 @@ function openBudgetModal() {
   populateBudgetForm();
   syncRemainDisplayToggleButtons();
   openModal(els.budgetModal);
+}
+
+function sanitizeRateInputValue(value) {
+  let v = String(value || '').replace(/[^\d.]/g, '');
+  const dot = v.indexOf('.');
+  if (dot === -1) return v;
+  const head = v.slice(0, dot + 1);
+  const tail = v.slice(dot + 1).replace(/\./g, '').slice(0, 6);
+  return head + tail;
+}
+
+function formatExchangeRateHkdPreview(rate) {
+  const n = Number(rate);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  // 0.4795 → 1000 円 = 47.95 港幣（即 rate × 100）
+  const hkd = n * 100;
+  return Number.isInteger(hkd) ? String(hkd) : hkd.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function updateExchangeRateHint() {
+  const hint = $('#budget-exchange-rate-hint');
+  const rateInput = $('#budget-exchange-rate');
+  if (!hint || !rateInput) return;
+  const preview = formatExchangeRateHkdPreview(rateInput.value);
+  if (preview) {
+    hint.textContent = `即 1000 円 = ${preview} 港幣`;
+  } else {
+    hint.textContent = '例如輸入 0.4795，即 1000 円 = 47.95 港幣';
+  }
+}
+
+function loadExchangeRatePref() {
+  try {
+    const raw = localStorage.getItem(EXCHANGE_RATE_STORAGE_KEY);
+    if (raw == null || raw === '') return;
+    const cleaned = sanitizeRateInputValue(raw);
+    if (cleaned !== '') exchangeRateJpyHkd = cleaned;
+  } catch (_) {}
+}
+
+function saveExchangeRatePref(value) {
+  const cleaned = sanitizeRateInputValue(value);
+  exchangeRateJpyHkd = cleaned;
+  try {
+    if (cleaned === '') localStorage.removeItem(EXCHANGE_RATE_STORAGE_KEY);
+    else localStorage.setItem(EXCHANGE_RATE_STORAGE_KEY, cleaned);
+  } catch (_) {}
+}
+
+function setupExchangeRateInput() {
+  const rateInput = $('#budget-exchange-rate');
+  if (!rateInput) return;
+  rateInput.addEventListener('input', () => {
+    rateInput.value = sanitizeRateInputValue(rateInput.value);
+    updateExchangeRateHint();
+  });
 }
 
 function loadRemainDisplayPrefs() {
@@ -6319,6 +6384,7 @@ function setupEventListeners() {
     };
 
     enqueueBudgetUpdate(newBudgets);
+    saveExchangeRatePref($('#budget-exchange-rate')?.value || '');
     endMutation();
     SyncManager.scheduleSync();
     closeModal(els.budgetModal);
@@ -6559,12 +6625,14 @@ async function init() {
   if (hasAssetsPreloaded()) ensureAppFontLoaded();
 
   loadRemainDisplayPrefs();
+  loadExchangeRatePref();
   applyRemainDisplayVisibility();
   setFormDateValue('expense-date', todayISO());
   initListDayFilter();
   setupTabs();
   setupCurrencyViewSelector();
   setupMoneyInputs();
+  setupExchangeRateInput();
   setupEventListeners();
   setupPersonSpendUI();
   setupParticleEffects();

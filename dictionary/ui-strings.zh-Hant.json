@@ -220,6 +220,10 @@
     "budget": {
       "title": "修改初始預算",
       "submit": "儲存預算",
+      "exchangeRateLabel": "匯率（JPY → HKD）",
+      "exchangeRatePlaceholder": "0.4795",
+      "exchangeRateHint": "例如輸入 0.4795，即 1000 円 = 47.95 港幣",
+      "exchangeRatePreview": "即 1000 円 = {hkd} 港幣",
       "remainSectionTitle": "關閉剩餘顯示",
       "remainToggleOn": "{currency} 剩餘：開",
       "remainToggleOff": "{currency} 剩餘：關"

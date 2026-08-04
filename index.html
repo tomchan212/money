@@ -842,6 +842,22 @@
           </div>
         </div>
         <p class="form-hint budget-suica-hint">Suica 初始＝出發前卡上原本有嘅錢。之後現金增值唔會當「用咗」JPY，只係轉入錢包。</p>
+        <div class="budget-rate-section">
+          <div class="form-row budget-rate-row">
+            <label for="budget-exchange-rate">匯率（JPY → HKD）</label>
+            <input
+              type="text"
+              inputmode="decimal"
+              pattern="[0-9]*[.]?[0-9]*"
+              autocomplete="off"
+              id="budget-exchange-rate"
+              class="budget-rate-input"
+              placeholder="0.4795"
+              aria-describedby="budget-exchange-rate-hint"
+            >
+          </div>
+          <p id="budget-exchange-rate-hint" class="form-hint budget-rate-hint">例如輸入 0.4795，即 1000 円 = 47.95 港幣</p>
+        </div>
         <div class="budget-remain-section" role="group" aria-label="關閉剩餘顯示">
           <div class="budget-remain-section-title">關閉剩餘顯示</div>
           <div class="budget-remain-toggles">
