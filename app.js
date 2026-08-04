@@ -5683,11 +5683,12 @@ function openEditModal(key) {
 
 function resetRepayNoteFields() {
   const select = $('#repay-note-select');
-  const customRow = $('#repay-note-custom-row');
   const noteInput = $('#repay-note');
   if (select) select.value = '';
-  if (noteInput) noteInput.value = '';
-  customRow?.classList.add('hidden');
+  if (noteInput) {
+    noteInput.value = '';
+    noteInput.classList.add('hidden');
+  }
 }
 
 function getRepayNoteValue() {
@@ -5702,13 +5703,12 @@ function getRepayNoteValue() {
 
 function setupRepayNoteSelect() {
   const select = $('#repay-note-select');
-  const customRow = $('#repay-note-custom-row');
   const noteInput = $('#repay-note');
-  if (!select || !customRow || !noteInput) return;
+  if (!select || !noteInput) return;
 
   select.addEventListener('change', () => {
     const isCustom = select.value === REPAY_NOTE_CUSTOM;
-    customRow.classList.toggle('hidden', !isCustom);
+    noteInput.classList.toggle('hidden', !isCustom);
     if (isCustom) {
       noteInput.focus();
     } else {
