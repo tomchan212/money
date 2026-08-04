@@ -2973,7 +2973,8 @@ button.suica-wallet-card:focus-visible {
 }
 
 .form-icon-field-control.money-input-wrap,
-.form-icon-field-control.toggle-group {
+.form-icon-field-control.toggle-group,
+.form-icon-field-control.repay-note-combo {
   flex: 1 1 auto;
   min-width: 0;
   width: auto;
@@ -3061,6 +3062,13 @@ button.suica-wallet-card:focus-visible {
   font-size: var(--type-body);
 }
 
+.repay-note-combo {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .form-row {
   margin-bottom: 0.875rem;
 }
@@ -3105,6 +3113,18 @@ button.suica-wallet-card:focus-visible {
   outline: none;
   border-color: var(--pink-start);
   box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.15);
+}
+
+.repay-note-combo > select,
+.repay-note-combo > .repay-note-custom {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+
+.repay-note-combo > .repay-note-custom.hidden {
+  display: none;
 }
 
 /* Money input */

@@ -648,23 +648,19 @@
         </div>
         <div class="form-row form-row-icon-field">
           <label for="repay-note-select" class="sr-only">備註（選填）</label>
-          <div class="form-icon-field">
+          <div class="form-icon-field repay-note-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/notes.png?v=20260730dc" alt="" loading="lazy" decoding="async"></span>
-            <select id="repay-note-select" aria-label="付款方式">
-              <option value="">選擇付款方式（選填）</option>
-              <option value="PayMe">PayMe</option>
-              <option value="Alipay">Alipay</option>
-              <option value="ZA Bank">ZA Bank</option>
-              <option value="現金">現金</option>
-              <option value="__custom__">其他（自行輸入）</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row form-row-icon-field hidden" id="repay-note-custom-row">
-          <label for="repay-note" class="sr-only">自行輸入付款方式</label>
-          <div class="form-icon-field">
-            <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/edit.png" alt="" loading="lazy" decoding="async"></span>
-            <input type="text" id="repay-note" placeholder="輸入付款方式" autocomplete="off">
+            <div class="repay-note-combo form-icon-field-control">
+              <select id="repay-note-select" aria-label="付款方式">
+                <option value="">選擇付款方式（選填）</option>
+                <option value="PayMe">PayMe</option>
+                <option value="Alipay">Alipay</option>
+                <option value="ZA Bank">ZA Bank</option>
+                <option value="現金">現金</option>
+                <option value="__custom__">其他（自行輸入）</option>
+              </select>
+              <input type="text" id="repay-note" class="repay-note-custom hidden" placeholder="輸入付款方式" autocomplete="off" aria-label="自行輸入付款方式">
+            </div>
           </div>
         </div>
         <button type="submit" class="btn btn-primary btn-block" id="repay-submit-btn">確認還錢 <img class="ui-icon ui-icon-btn" src="icons/confirm.png" alt="" aria-hidden="true" loading="lazy" decoding="async"></button>
