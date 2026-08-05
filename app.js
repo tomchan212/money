@@ -4231,11 +4231,9 @@ function renderSettlementExplain() {
     btn.addEventListener('click', () => switchTab('list'));
   });
 
-  if (detailsEl) {
-    detailsEl.classList.remove('hidden');
-    if (!anyOpenDebt) detailsEl.open = false;
-  }
+  if (detailsEl && !anyOpenDebt) detailsEl.open = false;
 
+  updateSettlementChromeVisibility();
   updateExplainPreview();
 }
 
