@@ -1290,7 +1290,9 @@ button.currency-label.badge-suica.active {
 .summary-card .currency-section,
 .summary-card .currency-section-body,
 .summary-card .summary-stats,
-.summary-card .stat-chip {
+.summary-card .stat-chip,
+.summary-card .suica-wallet-explain,
+.summary-card .suica-explain-grid {
   min-width: 0;
   max-width: 100%;
 }
@@ -2128,6 +2130,102 @@ button.suica-wallet-card:focus-visible {
   color: var(--text-muted);
   font-size: var(--type-caption);
   line-height: 1.45;
+}
+
+.suica-wallet-explain {
+  margin-top: 0.55rem;
+}
+
+.suica-explain-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.suica-explain-person-box {
+  background: #faf8f9;
+  border: 1px solid #f0e8eb;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.55rem 0.55rem;
+  min-width: 0;
+}
+
+.suica-explain-person-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  font-weight: 700;
+  font-size: 0.84rem;
+  margin-bottom: 0.25rem;
+}
+
+.suica-explain-section {
+  margin-top: 0.35rem;
+}
+
+.suica-explain-section .explain-section-title {
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.suica-explain-person-box .explain-empty {
+  margin: 0.05rem 0 0.2rem;
+  font-size: 0.78rem;
+}
+
+.suica-matrix-scroll {
+  margin: 0.2rem 0 0;
+}
+
+.suica-wallet-matrix {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.suica-wallet-matrix th,
+.suica-wallet-matrix td {
+  padding: 0.32rem 0.4rem;
+}
+
+.suica-wallet-matrix .help-pay-matrix-desc {
+  max-width: 7.5rem;
+}
+
+.suica-matrix-footer {
+  padding: 0.3rem 0.4rem 0.05rem;
+  border-top: 1px solid #ece6e9;
+}
+
+.suica-matrix-total-row {
+  display: grid;
+  grid-template-columns: auto minmax(4.5rem, 5.25rem);
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0;
+  font-size: 0.78rem;
+}
+
+.suica-matrix-total-row span:first-child {
+  white-space: nowrap;
+  text-align: left;
+}
+
+.suica-explain-balance-footer {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.4rem 0.1rem;
+  border-top: 1.5px solid #ddd2d8;
+  font-size: 0.78rem;
+}
+
+.suica-explain-balance-footer .help-pay-matrix-net-row {
+  line-height: 1.35;
+}
+
+@media (max-width: 480px) {
+  .suica-explain-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .tx-suica-badge {
@@ -6908,6 +7006,11 @@ html.theme-cyberpunk .badge-jpy,
 html.theme-cyberpunk .badge-hkd,
 html.theme-cyberpunk .badge-suica {
   background: #121226 !important;
+}
+
+html.theme-cyberpunk .suica-explain-person-box {
+  background: #121226 !important;
+  border-color: var(--border-soft);
 }
 
 html.theme-cyberpunk .suica-wallet-card {

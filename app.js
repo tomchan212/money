@@ -4325,6 +4325,118 @@ function renderSuicaWallet() {
       summaryRemain.classList.toggle('over-budget', wallet.balance < 0);
     }
   });
+  renderSuicaWalletExplain();
+}
+
+function sortSuicaWalletTxs(list) {
+  return list.slice().sort((a, b) => {
+    const da = `${a.date || ''}T${formatRecordTime(a.time) || '00:00'}`;
+    const db = `${b.date || ''}T${formatRecordTime(b.time) || '00:00'}`;
+    const cmp = db.localeCompare(da);
+    if (cmp !== 0) return cmp;
+    return String(b.transaction_id || '').localeCompare(String(a.transaction_id || ''));
+  });
+}
+
+function getSuicaWalletTxsForPerson(person) {
+  const toppedUp = [];
+  const spent = [];
+  let hasFunding = false;
+  for (const tx of getPersonSuicaWalletTxsChronological(person)) {
+    if (isSuicaTopUp(tx) || isSuicaCredit(tx)) {
+      toppedUp.push(tx);
+      hasFunding = true;
+    } else if (isSuicaPayment(tx)) {
+      if (!hasFunding) continue;
+      spent.push(tx);
+    }
+  }
+  return {
+    toppedUp: sortSuicaWalletTxs(toppedUp),
+    spent: sortSuicaWalletTxs(spent),
+  };
+}
+
+function renderSuicaWalletStepDesc(tx) {
+  if (isSuicaTopUp(tx)) {
+    const owner = getSuicaWalletOwner(tx);
+    const payer = tx.payer === 'B' ? 'B' : 'A';
+    if (payer !== owner) {
+      return `${personImg(payer, 'inline')} 幫 ${personImg(owner, 'inline')} 現金增值`;
+    }
+    return `${personImg(owner, 'inline')} 現金增值`;
+  }
+  if (isSuicaCredit(tx)) {
+    return '🐧 餘額調整';
+  }
+  return escapeHtml(getTransactionTitle(tx));
+}
+
+function renderSuicaWalletMatrixRow(tx, kind) {
+  const txKey = escapeHtml(getTxKey(tx));
+  const amount = Number(tx.amount) || 0;
+  const sign = kind === 'spent' ? '−' : '+';
+  const netClass = kind === 'spent' ? 'negative' : 'positive';
+  return `<tr class="help-pay-matrix-row" data-detail-key="${txKey}" tabindex="0" role="button" aria-label="查看詳情">
+    <td class="help-pay-matrix-desc">${renderSuicaWalletStepDesc(tx)}</td>
+    <td class="help-pay-matrix-amt"><span class="explain-step-net ${netClass}">${sign}${escapeHtml(formatMoney(amount, 'JPY'))}</span></td>
+  </tr>`;
+}
+
+function renderSuicaWalletMatrixSection(txs, kind, totalLabel) {
+  if (!txs.length) return '';
+  const total = txs.reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+  const sign = kind === 'spent' ? '−' : '+';
+  const rows = txs.map((tx) => renderSuicaWalletMatrixRow(tx, kind)).join('');
+  const maxH = Math.min(EXPLAIN_SCROLL_MAX, 140);
+  return `<div class="explain-scroll-wrap explain-scroll-matrix suica-matrix-scroll" style="max-height:${maxH}px">
+    <table class="help-pay-matrix suica-wallet-matrix" aria-label="Suica 明細">
+      <thead><tr><th scope="col">記錄</th><th scope="col">金額</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>
+  <div class="help-pay-matrix-footer suica-matrix-footer">
+    <div class="help-pay-matrix-total-row suica-matrix-total-row">
+      <span>${escapeHtml(totalLabel)}</span>
+      <span>${sign}${escapeHtml(formatMoney(total, 'JPY'))}</span>
+    </div>
+  </div>`;
+}
+
+function renderSuicaWalletPersonBox(person) {
+  const { toppedUp, spent } = getSuicaWalletTxsForPerson(person);
+  const wallet = calcSuicaWallet(person);
+
+  let html = `<div class="suica-explain-person-box" aria-label="${escapeHtml(personName(person))} Suica">`;
+  html += `<div class="suica-explain-person-head">${personImg(person, 'inline')}</div>`;
+
+  html += `<div class="explain-section suica-explain-section"><div class="explain-section-title">① 增值（入錢包）</div>`;
+  if (!toppedUp.length) html += `<p class="explain-empty">未有增值紀錄</p>`;
+  else html += renderSuicaWalletMatrixSection(toppedUp, 'topup', '增值合共');
+  html += `</div>`;
+
+  html += `<div class="explain-section suica-explain-section"><div class="explain-section-title">② 用 Suica 俾錢</div>`;
+  if (!spent.length) html += `<p class="explain-empty">未有 Suica 消費</p>`;
+  else html += renderSuicaWalletMatrixSection(spent, 'spent', '用咗合共');
+  html += `</div>`;
+
+  const balanceFormula = isNegligibleMoney(wallet.initial, 'JPY')
+    ? `${escapeHtml(formatMoney(wallet.toppedUp, 'JPY'))} − ${escapeHtml(formatMoney(wallet.spent, 'JPY'))} = ${moneyFigHtml(wallet.balance, 'JPY')}`
+    : `${escapeHtml(formatMoney(wallet.initial, 'JPY'))} + ${escapeHtml(formatMoney(wallet.toppedUp, 'JPY'))} − ${escapeHtml(formatMoney(wallet.spent, 'JPY'))} = ${moneyFigHtml(wallet.balance, 'JPY')}`;
+
+  html += `<div class="help-pay-matrix-footer suica-explain-balance-footer">
+    <div class="help-pay-matrix-net-row"><strong>餘額</strong> ${balanceFormula}</div>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function renderSuicaWalletExplain() {
+  const el = $('#suica-wallet-explain');
+  if (!el) return;
+  el.innerHTML = `<div class="suica-explain-grid">${renderSuicaWalletPersonBox('A')}${renderSuicaWalletPersonBox('B')}</div>`;
+  bindDetailTriggers(el);
 }
 
 function updateSettlementChromeVisibility(net = calcSummary().net) {
