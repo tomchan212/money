@@ -94,6 +94,7 @@ function getAllData_() {
     spreadsheet_name: ss.getName(),
     transactions: transactions,
     budgets: budgets,
+    exchange_rate_jpy_hkd: readExchangeRate_(),
     summary: buildSummary_(transactions, budgets),
     synced_at: new Date().toISOString(),
   };
@@ -337,6 +338,24 @@ function readBudgets_() {
   return budgets.length ? budgets : defaultBudgets_();
 }
 
+function readExchangeRate_() {
+  const sheet = getSheet_(SHEET_BUDGET);
+  const raw = sheet.getRange('C2').getValue();
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  return String(n);
+}
+
+function writeExchangeRate_(rate) {
+  const sheet = getSheet_(SHEET_BUDGET);
+  const n = Number(rate);
+  if (!Number.isFinite(n) || n <= 0) {
+    sheet.getRange('C2').clearContent();
+    return;
+  }
+  sheet.getRange('C2').setValue(n);
+}
+
 function defaultBudgets_() {
   return [
     { person: 'A', currency: 'JPY', initial_budget: 150000 },
@@ -478,6 +497,10 @@ function updateBudget_(params) {
       budgetSheet.appendRow([b.person, currency, amount]);
     }
   });
+
+  if (params.exchange_rate_jpy_hkd != null) {
+    writeExchangeRate_(params.exchange_rate_jpy_hkd);
+  }
 
   return getAllData_();
 }

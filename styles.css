@@ -3843,6 +3843,30 @@ button.suica-wallet-card:focus-visible {
   gap: 0.3rem;
 }
 
+.tx-amount-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.05rem;
+}
+
+.tx-record-equiv {
+  display: none;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #9a8f94;
+  white-space: nowrap;
+  line-height: 1.15;
+}
+
+.list-card.list-expanded .tx-record-equiv {
+  display: block;
+}
+
+.list-card.list-expanded .tx-record-amount {
+  align-items: flex-end;
+}
+
 .tx-list-payer {
   flex: 0 0 auto;
   display: inline-flex;
@@ -4584,7 +4608,8 @@ button.suica-wallet-card:focus-visible {
 .list-card.list-compact .tx-record-location,
 .list-card.list-compact .btn-edit-text,
 .list-card.list-compact .tx-list-payer,
-.list-card.list-compact .tx-currency {
+.list-card.list-compact .tx-currency,
+.list-card.list-compact .tx-record-equiv {
   display: none;
 }
 

@@ -291,7 +291,7 @@ let remainDisplayPrefs = {
   HKD: false,
 };
 
-/** JPY→HKD 匯率：輸入 0.4795 即 1000 円 = 47.95 港幣（暫存，未套用換算） */
+/** JPY→HKD 匯率：輸入 0.4795 即 1000 日圓 = 47.95 港幣（同步至 Budgets!C2） */
 let exchangeRateJpyHkd = '';
 
 const listFilters = {
@@ -1248,7 +1248,10 @@ function buildTransactionItemHtml(tx) {
       <div class="tx-record-secondary">
         <span class="tx-record-amount">
           <span class="tx-currency ${curClass}">${tx.currency}</span>
-          <span class="tx-amount ${curClass}">${formatMoney(tx.amount, tx.currency)}</span>
+          <span class="tx-amount-wrap">
+            <span class="tx-amount ${curClass}">${formatMoney(tx.amount, tx.currency)}</span>
+            ${buildTransactionEquivHkdHtml(tx)}
+          </span>
         </span>
         ${listRecordPayerHtml(tx)}
         <button type="button" class="btn-edit edit-btn" data-key="${escapeHtml(txKey)}" aria-label="編輯">
@@ -3044,6 +3047,11 @@ function applyServerData(data, applySeq) {
     });
   }
 
+  if (data.exchange_rate_jpy_hkd != null && data.exchange_rate_jpy_hkd !== '') {
+    const rate = sanitizeRateInputValue(String(data.exchange_rate_jpy_hkd));
+    if (rate !== '') saveExchangeRatePref(rate);
+  }
+
   summary = buildLocalSummary();
   lastSyncedAt = data.synced_at || new Date().toISOString();
   renderAll();
@@ -3120,6 +3128,9 @@ function reapplyPendingFromQueue() {
       }
       case 'updateBudget':
         applyLocalBudget(op.payload.budgets);
+        if (op.payload.exchange_rate_jpy_hkd != null) {
+          saveExchangeRatePref(op.payload.exchange_rate_jpy_hkd);
+        }
         break;
       case 'clearTransactions':
         applyLocalClearTransactions();
@@ -3191,13 +3202,18 @@ function enqueueDelete(existing) {
   applyLocalDelete(getTxKey(existing));
 }
 
-function enqueueBudgetUpdate(newBudgets) {
+function enqueueBudgetUpdate(newBudgets, exchangeRateValue) {
+  const rate = sanitizeRateInputValue(exchangeRateValue ?? exchangeRateJpyHkd);
   OfflineQueue.enqueue({
     type: 'updateBudget',
     clientId: OfflineQueue.generateId(),
-    payload: { budgets: structuredClone(newBudgets) },
+    payload: {
+      budgets: structuredClone(newBudgets),
+      exchange_rate_jpy_hkd: rate,
+    },
   });
   applyLocalBudget(newBudgets);
+  saveExchangeRatePref(rate);
 }
 
 function enqueueClearAll() {
@@ -3283,7 +3299,9 @@ async function syncDeleteTransaction(ids) {
   });
 }
 
-async function syncBudgets(b) {
+async function syncBudgets(payload) {
+  const b = payload.budgets || payload;
+  const rate = payload.exchange_rate_jpy_hkd ?? exchangeRateJpyHkd;
   return apiRequest({
     action: 'updateBudget',
     budgets: JSON.stringify(budgetsToApi(b)),
@@ -3293,6 +3311,7 @@ async function syncBudgets(b) {
     B_HKD: b.B.HKD,
     A_Suica: b.A.Suica || 0,
     B_Suica: b.B.Suica || 0,
+    exchange_rate_jpy_hkd: rate,
   });
 }
 
@@ -5454,9 +5473,30 @@ function sanitizeRateInputValue(value) {
 function formatExchangeRateHkdPreview(rate) {
   const n = Number(rate);
   if (!Number.isFinite(n) || n <= 0) return '';
-  // 0.4795 → 1000 円 = 47.95 港幣（即 rate × 100）
+  // 0.4795 → 1000 日圓 = 47.95 港幣（即 rate × 100）
   const hkd = n * 100;
   return Number.isInteger(hkd) ? String(hkd) : hkd.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function getExchangeRateJpyHkdNumber() {
+  const n = Number(sanitizeRateInputValue(exchangeRateJpyHkd));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** rate 0.4795 → 1000 日圓 = 47.95 港幣 */
+function convertJpyToHkd(jpyAmount) {
+  const rate = getExchangeRateJpyHkdNumber();
+  if (rate == null) return null;
+  const jpy = Number(jpyAmount) || 0;
+  if (jpy <= 0) return null;
+  return roundMoney((jpy * rate) / 10, 'HKD');
+}
+
+function buildTransactionEquivHkdHtml(tx) {
+  if (tx.currency !== 'JPY') return '';
+  const hkd = convertJpyToHkd(tx.amount);
+  if (hkd == null) return '';
+  return `<span class="tx-record-equiv">≈ ${escapeHtml(formatMoney(hkd, 'HKD'))}</span>`;
 }
 
 function updateExchangeRateHint() {
@@ -5465,9 +5505,9 @@ function updateExchangeRateHint() {
   if (!hint || !rateInput) return;
   const preview = formatExchangeRateHkdPreview(rateInput.value);
   if (preview) {
-    hint.textContent = `即 1000 円 = ${preview} 港幣`;
+    hint.textContent = `即 1000 日圓 = ${preview} 港幣`;
   } else {
-    hint.textContent = '例如輸入 0.4795，即 1000 円 = 47.95 港幣';
+    hint.textContent = '例如輸入 0.4795，即 1000 日圓 = 47.95 港幣';
   }
 }
 
@@ -6377,8 +6417,7 @@ function setupEventListeners() {
       },
     };
 
-    enqueueBudgetUpdate(newBudgets);
-    saveExchangeRatePref($('#budget-exchange-rate')?.value || '');
+    enqueueBudgetUpdate(newBudgets, $('#budget-exchange-rate')?.value || '');
     endMutation();
     SyncManager.scheduleSync();
     closeModal(els.budgetModal);

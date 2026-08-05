@@ -87,7 +87,7 @@ const SyncManager = (function () {
           client_id: op.payload.clientId || op.clientId || '',
         });
       case 'updateBudget':
-        return hooks.syncBudgets(op.payload.budgets);
+        return hooks.syncBudgets(op.payload);
       case 'clearTransactions':
         return hooks.syncClearAllTransactions();
       default:
