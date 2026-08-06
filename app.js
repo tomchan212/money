@@ -281,6 +281,7 @@ let lastAppliedServerSeq = 0;
 let openModalCount = 0;
 let lastSyncedAt = null;
 let currencyView = 'jpy';
+let calculatorExpression = '';
 let loadingProgressTimer = null;
 let loadingProgressValue = 0;
 let listViewExpanded = false;
@@ -326,6 +327,11 @@ const personSpendChartView = {
   categoryKey: null,
 };
 
+const calculatorState = {
+  targetInputSelector: '#expense-amount',
+  targetCurrencySelector: '#expense-currency',
+};
+
 /* ===== DOM References ===== */
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -351,6 +357,7 @@ const els = {
   loanModal: $('#loan-modal'),
   suicaAdjustModal: $('#suica-adjust-modal'),
   partialSplitModal: $('#partial-split-modal'),
+  calculatorModal: $('#calculator-modal'),
   deleteConfirmModal: $('#delete-confirm-modal'),
   dayRangeModal: $('#day-range-modal'),
 };
@@ -5599,6 +5606,176 @@ function formatMoneyInputPreset(amount, currency) {
   return String(rounded);
 }
 
+function normalizeCalculatorNumberString(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '0';
+  return Math.abs(num) < 1e-9 ? '0' : String(Number(num.toFixed(10)));
+}
+
+function getCalculatorTokens(expr) {
+  const matches = String(expr || '').match(/(\d+(?:\.\d+)?|\.\d+|[+\-*/])/g);
+  return matches ? matches.slice() : [];
+}
+
+function buildCalculatorExpression(tokens) {
+  return tokens.join('');
+}
+
+function getTrailingCalculatorNumberInfo(expr) {
+  const source = String(expr || '');
+  const match = source.match(/(\d+(?:\.\d+)?|\.\d+)$/);
+  if (!match) return null;
+  return {
+    start: match.index,
+    text: match[0],
+  };
+}
+
+function sanitizeCalculatorExpression(expr) {
+  const source = String(expr || '').replace(/\s+/g, '');
+  if (!source) return '';
+  const filtered = source.replace(/[^0-9.+\-*/]/g, '');
+  return filtered.replace(/^[+*/]+/, '');
+}
+
+function evaluateCalculatorExpression(expr) {
+  const sanitized = sanitizeCalculatorExpression(expr);
+  if (!sanitized) return 0;
+  if (!/^[0-9.+\-*/]+$/.test(sanitized)) throw new Error('invalid');
+  if (/[*\/]{2,}/.test(sanitized)) throw new Error('invalid');
+  if (/[+\-*/.]$/.test(sanitized)) throw new Error('incomplete');
+  if (!/\d/.test(sanitized)) throw new Error('invalid');
+  const result = Function(`"use strict"; return (${sanitized});`)();
+  if (!Number.isFinite(result)) throw new Error('invalid');
+  return result;
+}
+
+function formatCalculatorExpressionForDisplay(expr) {
+  return String(expr || '0')
+    .replace(/\*/g, '×')
+    .replace(/\//g, '÷')
+    .replace(/-/g, '−');
+}
+
+function getCalculatorCurrency() {
+  return $(calculatorState.targetCurrencySelector)?.value || $('#expense-currency')?.value || 'JPY';
+}
+
+function renderCalculator() {
+  const expressionEl = $('#calculator-expression');
+  const resultEl = $('#calculator-result');
+  const current = calculatorExpression || '0';
+  if (expressionEl) {
+    expressionEl.textContent = formatCalculatorExpressionForDisplay(current);
+  }
+  if (!resultEl) return;
+  try {
+    const result = evaluateCalculatorExpression(calculatorExpression || '0');
+    resultEl.textContent = `= ${formatMoneyInputPreset(result, getCalculatorCurrency())}`;
+  } catch (_) {
+    resultEl.textContent = '= —';
+  }
+}
+
+function appendCalculatorDigit(digit) {
+  if (!/^[0-9]$/.test(digit)) return;
+  calculatorExpression += digit;
+}
+
+function appendCalculatorDot() {
+  if (!calculatorExpression || /[+\-*/]$/.test(calculatorExpression)) {
+    calculatorExpression += '0.';
+    return;
+  }
+  const trailing = getTrailingCalculatorNumberInfo(calculatorExpression);
+  if (!trailing || trailing.text.includes('.')) return;
+  calculatorExpression += '.';
+}
+
+function appendCalculatorOperator(operator) {
+  if (!/[+\-*/]/.test(operator)) return;
+  if (!calculatorExpression) {
+    if (operator === '-') calculatorExpression = '-';
+    return;
+  }
+  if (/[+\-*/]$/.test(calculatorExpression)) {
+    if (operator === '-' && !/-$/.test(calculatorExpression)) {
+      calculatorExpression += '-';
+      return;
+    }
+    calculatorExpression = calculatorExpression.replace(/[+\-*/]+$/, operator);
+    return;
+  }
+  calculatorExpression += operator;
+}
+
+function applyCalculatorPercent() {
+  const trailing = getTrailingCalculatorNumberInfo(calculatorExpression);
+  if (!trailing) return;
+  const percentValue = Number(trailing.text) / 100;
+  calculatorExpression =
+    calculatorExpression.slice(0, trailing.start) + normalizeCalculatorNumberString(percentValue);
+}
+
+function backspaceCalculator() {
+  if (!calculatorExpression) return;
+  calculatorExpression = calculatorExpression.slice(0, -1);
+}
+
+function resolveCalculatorResult() {
+  const result = evaluateCalculatorExpression(calculatorExpression || '0');
+  calculatorExpression = normalizeCalculatorNumberString(result);
+  return result;
+}
+
+function openCalculatorModal() {
+  const amountInput = $('#expense-amount');
+  calculatorState.targetInputSelector = '#expense-amount';
+  calculatorState.targetCurrencySelector = '#expense-currency';
+  calculatorExpression = sanitizeCalculatorExpression(amountInput?.value || '');
+  const contextEl = $('#calculator-context');
+  if (contextEl) {
+    contextEl.textContent = '計完可以直接填返去金額';
+  }
+  renderCalculator();
+  openModal(els.calculatorModal);
+}
+
+function applyCalculatorResultToTarget() {
+  const targetInput = $(calculatorState.targetInputSelector);
+  if (!targetInput) return;
+  const currency = getCalculatorCurrency();
+  const result = resolveCalculatorResult();
+  targetInput.value = formatMoneyInputPreset(result, currency);
+  targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+  renderCalculator();
+  closeModal(els.calculatorModal);
+  targetInput.focus();
+}
+
+function onCalculatorKeyPress(action, value) {
+  try {
+    if (action === 'clear') {
+      calculatorExpression = '';
+    } else if (action === 'backspace') {
+      backspaceCalculator();
+    } else if (action === 'percent') {
+      applyCalculatorPercent();
+    } else if (action === 'equals') {
+      resolveCalculatorResult();
+    } else if (value === '.') {
+      appendCalculatorDot();
+    } else if (/[0-9]/.test(value || '')) {
+      appendCalculatorDigit(value);
+    } else if (/[+\-*/]/.test(value || '')) {
+      appendCalculatorOperator(value);
+    }
+    renderCalculator();
+  } catch (_) {
+    showToast('算式有啲問題，請再試', 'error');
+  }
+}
+
 function updateRepayModalView() {
   const currency = $('#repay-currency').value;
   const debt = getDebtInfo(currency);
@@ -5970,6 +6147,19 @@ function setupEventListeners() {
   $('#expense-partial-split-btn')?.addEventListener('click', openPartialSplitModal);
   $('#expense-amount')?.addEventListener('input', () => {
     if (expensePartialSplitAmount > 0) clearExpensePartialSplit();
+  });
+  $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
+  $('#calculator-apply-btn')?.addEventListener('click', () => {
+    try {
+      applyCalculatorResultToTarget();
+    } catch (_) {
+      showToast('算式未完成，未可以填入金額', 'error');
+    }
+  });
+  $$('.calculator-key').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      onCalculatorKeyPress(btn.dataset.calculatorAction || '', btn.dataset.calculatorValue || '');
+    });
   });
   $('#partial-split-amount')?.addEventListener('input', updatePartialSplitRemainHint);
   $('#partial-split-clear-btn')?.addEventListener('click', () => {
