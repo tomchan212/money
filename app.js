@@ -6140,9 +6140,21 @@ function setupTabs() {
   });
 }
 
+function focusExpenseDescriptionField() {
+  const input = $('#expense-description');
+  if (!input) return;
+  input.focus({ preventScroll: false });
+  try {
+    const end = String(input.value || '').length;
+    input.setSelectionRange(end, end);
+  } catch (_) {}
+}
+
 function setupNativeKeyboardDoneBar() {
   const doneBar = $('#keyboard-done-bar');
   const doneBtn = $('#keyboard-done-btn');
+  const amountInput = $('#expense-amount');
+  const descriptionInput = $('#expense-description');
   const supportedSelectors = ['#expense-amount', '#expense-description'];
 
   const shouldShowFor = (el) =>
@@ -6155,15 +6167,40 @@ function setupNativeKeyboardDoneBar() {
     if (doneBar) doneBar.setAttribute('aria-hidden', show ? 'false' : 'true');
   };
 
+  const finishAmountKeyboard = () => {
+    // Keep focus inside the user gesture so the description keyboard can open.
+    focusExpenseDescriptionField();
+    syncBar();
+  };
+
   document.addEventListener('focusin', syncBar);
   document.addEventListener('focusout', () => {
     window.setTimeout(syncBar, 30);
   });
 
+  // Native keyboard ✔ / Done / Enter on amount → jump to description.
+  amountInput?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    finishAmountKeyboard();
+  });
+
+  descriptionInput?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.currentTarget.blur();
+    syncBar();
+  });
+
   doneBtn?.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
+    const active = document.activeElement;
+    if (active === amountInput) {
+      finishAmountKeyboard();
+      return;
+    }
+    if (active instanceof HTMLElement) {
+      active.blur();
     }
     syncBar();
   });
@@ -6230,11 +6267,6 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       onCalculatorKeyPress(btn.dataset.calculatorAction || '', btn.dataset.calculatorValue || '');
     });
-  });
-  $('#expense-description')?.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    e.currentTarget.blur();
   });
   $('#partial-split-amount')?.addEventListener('input', updatePartialSplitRemainHint);
   $('#partial-split-clear-btn')?.addEventListener('click', () => {
