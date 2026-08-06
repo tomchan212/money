@@ -1707,6 +1707,13 @@ const EXPENSE_SPLIT_CYCLE = ['SPLIT_5050', 'FOR_A', 'FOR_B'];
 const EXPENSE_PAYMENT_CYCLE = [PAYMENT_CASH, PAYMENT_SUICA];
 
 let expensePartialSplitAmount = 0;
+let expensePartialForOtherAmount = 0;
+/** @type {'5050' | 'for_other'} */
+let partialSplitModalKind = '5050';
+
+function expenseOtherPerson(payer = $('#expense-payer')?.value) {
+  return payer === 'B' ? 'A' : 'B';
+}
 
 function isExpenseSelfSplitMode(prefix = 'expense') {
   const payer = $(`#${prefix}-payer`)?.value === 'B' ? 'B' : 'A';
@@ -1715,10 +1722,18 @@ function isExpenseSelfSplitMode(prefix = 'expense') {
   return (payer === 'A' && split === 'FOR_A') || (payer === 'B' && split === 'FOR_B');
 }
 
-function canUseExpensePartialSplit(prefix = 'expense') {
+function canUseExpensePartialExtras(prefix = 'expense') {
   if (prefix !== 'expense') return false;
   if (getExpenseCategoryValue(prefix) === SUICA_CATEGORY) return false;
   return isExpenseSelfSplitMode(prefix);
+}
+
+function canUseExpensePartialSplit(prefix = 'expense') {
+  return canUseExpensePartialExtras(prefix) && expensePartialForOtherAmount <= 0;
+}
+
+function canUseExpensePartialForOther(prefix = 'expense') {
+  return canUseExpensePartialExtras(prefix) && expensePartialSplitAmount <= 0;
 }
 
 function clearExpensePartialSplit() {
@@ -1727,27 +1742,64 @@ function clearExpensePartialSplit() {
   updateExpenseSplitHint();
 }
 
+function clearExpensePartialForOther() {
+  expensePartialForOtherAmount = 0;
+  updateExpensePartialSplitUi();
+  updateExpenseSplitHint();
+}
+
+function clearAllExpensePartialExtras() {
+  expensePartialSplitAmount = 0;
+  expensePartialForOtherAmount = 0;
+  updateExpensePartialSplitUi();
+  updateExpenseSplitHint();
+}
+
 function updateExpensePartialSplitUi() {
   const wrap = $('#expense-partial-split-wrap');
-  const btn = $('#expense-partial-split-btn');
-  if (!wrap || !btn) return;
+  const halfBtn = $('#expense-partial-split-btn');
+  const otherBtn = $('#expense-partial-for-other-btn');
+  if (!wrap || !halfBtn || !otherBtn) return;
 
-  const show = canUseExpensePartialSplit();
-  wrap.classList.toggle('hidden', !show);
-  if (!show) {
+  const showExtras = canUseExpensePartialExtras();
+  wrap.classList.toggle('hidden', !showExtras);
+  if (!showExtras) {
     expensePartialSplitAmount = 0;
-    btn.removeAttribute('aria-pressed');
-    btn.textContent = '部分一人一半';
+    expensePartialForOtherAmount = 0;
+    halfBtn.classList.remove('hidden');
+    otherBtn.classList.remove('hidden');
+    halfBtn.removeAttribute('aria-pressed');
+    otherBtn.removeAttribute('aria-pressed');
+    halfBtn.textContent = '部分一人一半';
+    otherBtn.innerHTML = '部分係';
     return;
   }
 
+  const currency = $('#expense-currency')?.value || 'JPY';
+  const other = expenseOtherPerson();
+  const showHalf = expensePartialForOtherAmount <= 0;
+  const showOther = expensePartialSplitAmount <= 0;
+
+  halfBtn.classList.toggle('hidden', !showHalf);
+  otherBtn.classList.toggle('hidden', !showOther);
+
   if (expensePartialSplitAmount > 0) {
-    const currency = $('#expense-currency')?.value || 'JPY';
-    btn.textContent = `一人一半 ${formatMoney(expensePartialSplitAmount, currency)}`;
-    btn.setAttribute('aria-pressed', 'true');
+    // 顯示未除二前嘅一人一半總額
+    halfBtn.textContent = `一人一半 ${formatMoney(expensePartialSplitAmount, currency)}`;
+    halfBtn.setAttribute('aria-pressed', 'true');
   } else {
-    btn.textContent = '部分一人一半';
-    btn.removeAttribute('aria-pressed');
+    halfBtn.textContent = '部分一人一半';
+    halfBtn.removeAttribute('aria-pressed');
+  }
+
+  if (expensePartialForOtherAmount > 0) {
+    otherBtn.innerHTML = `部分係 <span class="split-flow-arrow" aria-hidden="true">→</span> ${personImg(other, 'xs')} ${escapeHtml(formatMoney(expensePartialForOtherAmount, currency))}`;
+    otherBtn.setAttribute('aria-pressed', 'true');
+    otherBtn.setAttribute('aria-label', `部分係${other === 'A' ? '男孩' : '女生'} ${formatMoney(expensePartialForOtherAmount, currency)}`);
+  } else {
+    otherBtn.innerHTML = `部分係 <span class="split-flow-arrow" aria-hidden="true">→</span> ${personImg(other, 'xs')}`;
+    otherBtn.removeAttribute('aria-pressed');
+    otherBtn.setAttribute('aria-label', `部分係${other === 'A' ? '男孩' : '女生'}`);
   }
 }
 
@@ -1767,15 +1819,28 @@ function updatePartialSplitRemainHint() {
     return;
   }
   if (partial >= total - moneyEpsilon(currency)) {
-    hint.textContent = '一人一半金額要小過總金額';
+    hint.textContent =
+      partialSplitModalKind === 'for_other'
+        ? '部分金額要小過總金額'
+        : '一人一半總額要小過總金額';
     return;
   }
   const remain = total - partial;
-  hint.textContent = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(partial, currency)}`;
+  if (partialSplitModalKind === 'for_other') {
+    const other = expenseOtherPerson();
+    hint.innerHTML = `會記做兩筆：自己嘅 ${escapeHtml(formatMoney(remain, currency))} + ${personImg(other, 'inline')} 嘅 ${escapeHtml(formatMoney(partial, currency))}`;
+  } else {
+    // partial = 未除二前嘅一人一半總額；紀錄會顯示呢個總額
+    hint.textContent = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(partial, currency)}（未除二；每人 ${formatMoney(partial / 2, currency)}）`;
+  }
 }
 
-function openPartialSplitModal() {
-  if (!canUseExpensePartialSplit()) return;
+function openPartialSplitModal(kind = '5050') {
+  if (kind === 'for_other') {
+    if (!canUseExpensePartialForOther() && expensePartialForOtherAmount <= 0) return;
+  } else if (!canUseExpensePartialSplit() && expensePartialSplitAmount <= 0) {
+    return;
+  }
 
   const total = Number($('#expense-amount')?.value);
   const currency = $('#expense-currency')?.value || 'JPY';
@@ -1784,14 +1849,39 @@ function openPartialSplitModal() {
     return;
   }
 
+  partialSplitModalKind = kind === 'for_other' ? 'for_other' : '5050';
+  const kindInput = $('#partial-split-kind');
+  if (kindInput) kindInput.value = partialSplitModalKind;
+
+  const title = $('#partial-split-modal-title');
   const context = $('#partial-split-context');
-  if (context) {
-    context.textContent = `總金額 ${formatMoney(total, currency)}，入一人一半嘅部分`;
-  }
   const amountInput = $('#partial-split-amount');
-  if (amountInput) {
-    amountInput.value = expensePartialSplitAmount > 0 ? String(expensePartialSplitAmount) : '';
+  const other = expenseOtherPerson();
+
+  if (partialSplitModalKind === 'for_other') {
+    if (title) {
+      title.innerHTML = `${personImg(other, 'inline')} 部分係`;
+    }
+    if (context) {
+      context.innerHTML = `總金額 ${escapeHtml(formatMoney(total, currency))}，入屬於 ${personImg(other, 'inline')} 嘅部分`;
+    }
+    if (amountInput) {
+      amountInput.value =
+        expensePartialForOtherAmount > 0 ? String(expensePartialForOtherAmount) : '';
+    }
+  } else {
+    if (title) {
+      title.innerHTML = `<img class="ui-icon ui-icon-title" src="icons/split-half.png?v=20260729cx" alt="" aria-hidden="true" loading="lazy" decoding="async"> 部分一人一半`;
+    }
+    if (context) {
+      context.textContent = `總金額 ${formatMoney(total, currency)}，入一人一半嗰部分嘅總額（未除二）`;
+    }
+    if (amountInput) {
+      amountInput.value =
+        expensePartialSplitAmount > 0 ? String(expensePartialSplitAmount) : '';
+    }
   }
+
   updateMoneyPrefix($('#partial-split-amount-prefix'), currency);
   updatePartialSplitRemainHint();
   openModal(els.partialSplitModal);
@@ -5256,7 +5346,19 @@ function updateExpenseSplitHint() {
     const currency = $('#expense-currency')?.value || 'JPY';
     const remain = total - expensePartialSplitAmount;
     if (total > 0 && remain > moneyEpsilon(currency)) {
-      const splitNote = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(expensePartialSplitAmount, currency)}`;
+      const splitNote = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(expensePartialSplitAmount, currency)}（未除二）`;
+      hint.innerHTML = base ? `${base}<br>${splitNote}` : splitNote;
+      return;
+    }
+  }
+
+  if (expensePartialForOtherAmount > 0 && isExpenseSelfSplitMode()) {
+    const total = Number($('#expense-amount')?.value) || 0;
+    const currency = $('#expense-currency')?.value || 'JPY';
+    const remain = total - expensePartialForOtherAmount;
+    const other = expenseOtherPerson();
+    if (total > 0 && remain > moneyEpsilon(currency)) {
+      const splitNote = `會記做兩筆：自己嘅 ${escapeHtml(formatMoney(remain, currency))} + ${personImg(other, 'inline')} 嘅 ${escapeHtml(formatMoney(expensePartialForOtherAmount, currency))}`;
       hint.innerHTML = base ? `${base}<br>${splitNote}` : splitNote;
       return;
     }
@@ -6249,9 +6351,12 @@ function setupEventListeners() {
     onCurrencyChange: (currency) => updateMoneyPrefix($('#edit-amount-prefix'), currency),
   });
 
-  $('#expense-partial-split-btn')?.addEventListener('click', openPartialSplitModal);
+  $('#expense-partial-split-btn')?.addEventListener('click', () => openPartialSplitModal('5050'));
+  $('#expense-partial-for-other-btn')?.addEventListener('click', () => openPartialSplitModal('for_other'));
   $('#expense-amount')?.addEventListener('input', () => {
-    if (expensePartialSplitAmount > 0) clearExpensePartialSplit();
+    if (expensePartialSplitAmount > 0 || expensePartialForOtherAmount > 0) {
+      clearAllExpensePartialExtras();
+    }
   });
   $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
   $('#calculator-apply-btn')?.addEventListener('click', () => {
@@ -6270,7 +6375,8 @@ function setupEventListeners() {
   });
   $('#partial-split-amount')?.addEventListener('input', updatePartialSplitRemainHint);
   $('#partial-split-clear-btn')?.addEventListener('click', () => {
-    clearExpensePartialSplit();
+    if (partialSplitModalKind === 'for_other') clearExpensePartialForOther();
+    else clearExpensePartialSplit();
     closeModal(els.partialSplitModal);
   });
   $('#partial-split-form')?.addEventListener('submit', (e) => {
@@ -6278,6 +6384,7 @@ function setupEventListeners() {
     const total = Number($('#expense-amount')?.value);
     const partial = Number($('#partial-split-amount')?.value);
     const currency = $('#expense-currency')?.value || 'JPY';
+    const kind = $('#partial-split-kind')?.value === 'for_other' ? 'for_other' : '5050';
 
     if (!Number.isFinite(total) || total <= 0) {
       showToast('請先填寫總金額', 'error');
@@ -6288,11 +6395,18 @@ function setupEventListeners() {
       return;
     }
     if (partial >= total - moneyEpsilon(currency)) {
-      showToast('一人一半金額要小過總金額', 'error');
+      showToast(kind === 'for_other' ? '部分金額要小過總金額' : '一人一半總額要小過總金額', 'error');
       return;
     }
 
-    expensePartialSplitAmount = partial;
+    if (kind === 'for_other') {
+      expensePartialForOtherAmount = partial;
+      expensePartialSplitAmount = 0;
+    } else {
+      // 輸入＝未除二前嘅一人一半總額；紀錄直接用呢個金額
+      expensePartialSplitAmount = partial;
+      expensePartialForOtherAmount = 0;
+    }
     updateExpensePartialSplitUi();
     updateExpenseSplitHint();
     closeModal(els.partialSplitModal);
@@ -6637,30 +6751,48 @@ function setupEventListeners() {
     }
 
     const partialHalf =
-      canUseExpensePartialSplit() && expensePartialSplitAmount > 0
+      canUseExpensePartialExtras() && expensePartialSplitAmount > 0
         ? expensePartialSplitAmount
         : 0;
-    const selfPart = partialHalf > 0 ? tx.amount - partialHalf : tx.amount;
-    if (partialHalf > 0) {
+    const partialForOther =
+      canUseExpensePartialExtras() && expensePartialForOtherAmount > 0
+        ? expensePartialForOtherAmount
+        : 0;
+    const partialAmount = partialHalf || partialForOther;
+    const selfPart = partialAmount > 0 ? tx.amount - partialAmount : tx.amount;
+    if (partialAmount > 0) {
       if (selfPart <= moneyEpsilon(currency)) {
         endMutation();
-        showToast('一人一半金額要小過總金額', 'error');
+        showToast(
+          partialForOther > 0 ? '部分金額要小過總金額' : '一人一半總額要小過總金額',
+          'error'
+        );
         return;
       }
-      if (partialHalf >= tx.amount - moneyEpsilon(currency)) {
+      if (partialAmount >= tx.amount - moneyEpsilon(currency)) {
         endMutation();
-        showToast('一人一半金額要小過總金額', 'error');
+        showToast(
+          partialForOther > 0 ? '部分金額要小過總金額' : '一人一半總額要小過總金額',
+          'error'
+        );
         return;
       }
     }
 
+    const otherPerson = expenseOtherPerson(payer);
     const txsToCreate =
       partialHalf > 0
         ? [
             { ...tx, amount: selfPart, split_mode: selfSplitForPayer(payer) },
+            // partialHalf = 未除二總額；紀錄正常顯示呢個金額
             { ...tx, amount: partialHalf, split_mode: 'SPLIT_5050' },
           ]
-        : [tx];
+        : partialForOther > 0
+          ? [
+              { ...tx, amount: selfPart, split_mode: selfSplitForPayer(payer) },
+              { ...tx, amount: partialForOther, split_mode: selfSplitForPayer(otherPerson) },
+            ]
+          : [tx];
 
     try {
       await withSubmitLoading(async () => {
@@ -6678,7 +6810,7 @@ function setupEventListeners() {
       setCategoryPickerOpen(getCategoryPickerWrap('expense-category'), false);
       $('#expense-custom-category-row').classList.add('hidden');
       $('#expense-custom-category').value = '';
-      clearExpensePartialSplit();
+      clearAllExpensePartialExtras();
       setExpenseEssentials('expense', {
         currency: 'JPY',
         payer: 'A',

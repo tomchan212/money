@@ -2373,7 +2373,9 @@ button.suica-wallet-card:focus-visible {
 
 .expense-partial-split-wrap {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 0.35rem;
   margin-top: 0.3rem;
 }
 
@@ -2382,6 +2384,9 @@ button.suica-wallet-card:focus-visible {
 }
 
 .expense-partial-split-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   border: 1.5px solid #e8d8de;
   border-radius: 999px;
   background: #fff;
@@ -2392,6 +2397,16 @@ button.suica-wallet-card:focus-visible {
   padding: 0.32rem 0.72rem;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.expense-partial-split-btn.hidden {
+  display: none;
+}
+
+.expense-partial-for-other-btn .person-avatar-xs,
+.expense-partial-for-other-btn .person-avatar-inline {
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
 .expense-partial-split-btn:hover {

@@ -254,6 +254,7 @@
           <input type="hidden" id="expense-split-mode" name="split_mode" value="SPLIT_5050">
           <input type="hidden" id="expense-payment-method" name="payment_method" value="">
           <div class="expense-partial-split-wrap hidden" id="expense-partial-split-wrap">
+            <button type="button" class="expense-partial-split-btn expense-partial-for-other-btn" id="expense-partial-for-other-btn" aria-pressed="false">部分係</button>
             <button type="button" class="expense-partial-split-btn" id="expense-partial-split-btn" aria-pressed="false">部分一人一半</button>
           </div>
           <p class="form-hint" id="expense-split-hint" aria-live="polite"></p>
@@ -753,7 +754,7 @@
     </div>
   </div>
 
-  <!-- Partial Split Modal -->
+  <!-- Partial Split Modal（一人一半 / 部分係對方） -->
   <div id="partial-split-modal" class="modal hidden" role="dialog" aria-labelledby="partial-split-modal-title" aria-modal="true">
     <div class="modal-backdrop" data-close-modal></div>
     <div class="modal-content">
@@ -762,9 +763,10 @@
         <button type="button" class="modal-close" data-close-modal aria-label="關閉">&times;</button>
       </div>
       <form id="partial-split-form">
+        <input type="hidden" id="partial-split-kind" value="5050">
         <p class="partial-split-context" id="partial-split-context">—</p>
         <div class="form-row form-row-icon-field">
-          <label for="partial-split-amount" class="sr-only">一人一半金額</label>
+          <label for="partial-split-amount" class="sr-only">部分金額</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt="" loading="lazy" decoding="async"></span>
             <div class="money-input-wrap form-icon-field-control">
