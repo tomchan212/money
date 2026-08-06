@@ -1466,13 +1466,13 @@ button.currency-label.badge-suica.active {
 }
 
 .spent-value-suica-extra {
-  display: block;
+  display: inline;
   font-size: 0.78em;
   font-weight: 600;
   color: #1f7a54;
-  white-space: normal;
-  line-height: 1.25;
-  margin-top: 0.1rem;
+  white-space: nowrap;
+  line-height: inherit;
+  margin-top: 0;
 }
 
 .stat-chip .spent-value-suica-extra,
