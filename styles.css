@@ -3143,6 +3143,45 @@ button.suica-wallet-card:focus-visible {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
+.money-input-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.6rem;
+}
+
+.money-input-actions .money-input-wrap {
+  flex: 1;
+}
+
+.money-tool-btn {
+  appearance: none;
+  border: 1.5px solid #ece6e9;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(255, 117, 140, 0.12), rgba(255, 196, 125, 0.18));
+  color: var(--text-dark);
+  min-width: 5.5rem;
+  padding: 0 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.money-tool-btn:hover,
+.money-tool-btn:focus-visible {
+  border-color: rgba(255, 117, 140, 0.55);
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.16);
+}
+
+.money-tool-btn:active {
+  transform: scale(0.98);
+}
+
 .money-input-wrap:focus-within {
   border-color: var(--pink-start);
   box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.15);
@@ -5115,6 +5154,111 @@ button.suica-wallet-card:focus-visible {
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }
 
+.modal-content-calculator {
+  max-width: 420px;
+}
+
+.calculator-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.calculator-context {
+  margin: 0;
+  font-size: var(--type-caption);
+  color: var(--text-muted);
+}
+
+.calculator-display-wrap {
+  border: 1.5px solid #ece6e9;
+  border-radius: calc(var(--radius-sm) + 0.15rem);
+  background: linear-gradient(180deg, rgba(255, 247, 249, 0.95), rgba(255, 255, 255, 0.98));
+  padding: 0.85rem 0.95rem;
+  min-height: 5.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.calculator-expression,
+.calculator-result {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.calculator-expression {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.calculator-result {
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.calculator-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.calculator-key {
+  appearance: none;
+  border: 1.5px solid #ece6e9;
+  border-radius: 1rem;
+  background: #fff;
+  min-height: 3.2rem;
+  font: inherit;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.calculator-key:hover,
+.calculator-key:focus-visible {
+  border-color: rgba(255, 117, 140, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 117, 140, 0.14);
+}
+
+.calculator-key:active {
+  transform: scale(0.97);
+}
+
+.calculator-key-muted {
+  background: rgba(249, 243, 246, 0.95);
+}
+
+.calculator-key-operator {
+  background: rgba(255, 117, 140, 0.12);
+  color: #c15772;
+}
+
+.calculator-key-equals {
+  background: linear-gradient(135deg, var(--pink-start), var(--pink-end));
+  color: #fff;
+  border-color: transparent;
+}
+
+.calculator-key-zero {
+  grid-column: span 2;
+}
+
+.calculator-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.calculator-actions > .btn {
+  flex: 1;
+}
+
 .day-range-quick {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6599,6 +6743,34 @@ html.theme-cyberpunk .money-input-wrap .money-prefix {
   background: #1a1230 !important;
   border-color: var(--border-input) !important;
   color: var(--pink-start);
+}
+
+html.theme-cyberpunk .money-tool-btn,
+html.theme-cyberpunk .calculator-display-wrap,
+html.theme-cyberpunk .calculator-key {
+  background: #10101e !important;
+  border-color: rgba(0, 246, 255, 0.22) !important;
+  color: #eefcff !important;
+  box-shadow: none;
+}
+
+html.theme-cyberpunk .calculator-key-muted {
+  background: #16162b !important;
+}
+
+html.theme-cyberpunk .calculator-key-operator {
+  background: rgba(0, 246, 255, 0.12) !important;
+  color: #9af7ff !important;
+}
+
+html.theme-cyberpunk .calculator-key-equals {
+  background: linear-gradient(135deg, rgba(255, 0, 199, 0.86), rgba(0, 246, 255, 0.86)) !important;
+  border-color: transparent !important;
+}
+
+html.theme-cyberpunk .calculator-result,
+html.theme-cyberpunk .calculator-context {
+  color: #9fb4d1 !important;
 }
 
 html.theme-cyberpunk .money-prefix.prefix-jpy {

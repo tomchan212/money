@@ -10,10 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="preload" href="boy.png" as="image">
   <link rel="preload" href="girl.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260805suica">
+  <link rel="stylesheet" href="styles.css?v=20260806calc">
   <script src="offlineQueue.js?v=20260730oq2" defer></script>
   <script src="syncManager.js?v=20260802edittime" defer></script>
-  <script src="app.js?v=20260805suica2" defer></script>
+  <script src="app.js?v=20260806calc" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -247,9 +247,15 @@
 
         <div class="form-row">
           <label for="expense-amount"><img class="ui-icon ui-icon-label" src="icons/savings.png" alt="" aria-hidden="true" decoding="async"> 金額</label>
-          <div class="money-input-wrap">
-            <span class="money-prefix prefix-jpy" id="expense-amount-prefix">¥</span>
-            <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="expense-amount" name="amount" placeholder="0" required>
+          <div class="money-input-actions">
+            <div class="money-input-wrap">
+              <span class="money-prefix prefix-jpy" id="expense-amount-prefix">¥</span>
+              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="expense-amount" name="amount" placeholder="0" required>
+            </div>
+            <button type="button" class="money-tool-btn" id="btn-open-calculator" aria-label="打開計數機">
+              <span aria-hidden="true">🧮</span>
+              <span>計數機</span>
+            </button>
           </div>
         </div>
 
@@ -773,6 +779,53 @@
           <button type="submit" class="btn btn-primary btn-sm" id="partial-split-submit-btn">確認</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Calculator Modal -->
+  <div id="calculator-modal" class="modal hidden" role="dialog" aria-labelledby="calculator-modal-title" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content modal-content-calculator">
+      <div class="modal-header">
+        <h3 id="calculator-modal-title">🧮 計數機</h3>
+        <button type="button" class="modal-close" data-close-modal aria-label="關閉">&times;</button>
+      </div>
+      <div class="calculator-shell">
+        <p class="calculator-context" id="calculator-context">計完可以直接填返去金額</p>
+        <div class="calculator-display-wrap" aria-live="polite">
+          <div class="calculator-expression" id="calculator-expression">0</div>
+          <div class="calculator-result" id="calculator-result">= 0</div>
+        </div>
+        <div class="calculator-grid" role="group" aria-label="計數機按鍵">
+          <button type="button" class="calculator-key calculator-key-muted" data-calculator-action="clear">AC</button>
+          <button type="button" class="calculator-key calculator-key-muted" data-calculator-action="backspace">⌫</button>
+          <button type="button" class="calculator-key calculator-key-operator" data-calculator-action="percent">%</button>
+          <button type="button" class="calculator-key calculator-key-operator" data-calculator-value="/">÷</button>
+
+          <button type="button" class="calculator-key" data-calculator-value="7">7</button>
+          <button type="button" class="calculator-key" data-calculator-value="8">8</button>
+          <button type="button" class="calculator-key" data-calculator-value="9">9</button>
+          <button type="button" class="calculator-key calculator-key-operator" data-calculator-value="*">×</button>
+
+          <button type="button" class="calculator-key" data-calculator-value="4">4</button>
+          <button type="button" class="calculator-key" data-calculator-value="5">5</button>
+          <button type="button" class="calculator-key" data-calculator-value="6">6</button>
+          <button type="button" class="calculator-key calculator-key-operator" data-calculator-value="-">−</button>
+
+          <button type="button" class="calculator-key" data-calculator-value="1">1</button>
+          <button type="button" class="calculator-key" data-calculator-value="2">2</button>
+          <button type="button" class="calculator-key" data-calculator-value="3">3</button>
+          <button type="button" class="calculator-key calculator-key-operator" data-calculator-value="+">+</button>
+
+          <button type="button" class="calculator-key calculator-key-zero" data-calculator-value="0">0</button>
+          <button type="button" class="calculator-key" data-calculator-value=".">.</button>
+          <button type="button" class="calculator-key calculator-key-equals" data-calculator-action="equals">=</button>
+        </div>
+        <div class="calculator-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-close-modal>取消</button>
+          <button type="button" class="btn btn-primary btn-sm" id="calculator-apply-btn">用結果填入金額</button>
+        </div>
+      </div>
     </div>
   </div>
 
