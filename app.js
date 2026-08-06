@@ -5752,12 +5752,6 @@ function applyCalculatorResultToTarget() {
   return targetInput;
 }
 
-function finalizeCalculatorEntry() {
-  const targetInput = applyCalculatorResultToTarget();
-  closeModal(els.calculatorModal);
-  targetInput?.focus();
-}
-
 function onCalculatorKeyPress(action, value) {
   try {
     if (action === 'clear') {
@@ -6107,10 +6101,41 @@ function setupTabs() {
     btn.addEventListener('click', () => {
       switchTab(btn.dataset.tab);
       if (btn.dataset.tab === 'form') {
-        window.setTimeout(() => openCalculatorModal(), 10);
+        window.setTimeout(() => $('#expense-amount')?.focus(), 10);
       }
     });
   });
+}
+
+function setupNativeKeyboardDoneBar() {
+  const doneBar = $('#keyboard-done-bar');
+  const doneBtn = $('#keyboard-done-btn');
+  const supportedSelectors = ['#expense-amount', '#expense-description'];
+
+  const shouldShowFor = (el) =>
+    el instanceof HTMLElement && supportedSelectors.some((selector) => el.matches(selector));
+
+  const syncBar = () => {
+    const active = document.activeElement;
+    const show = shouldShowFor(active);
+    doneBar?.classList.toggle('hidden', !show);
+    if (doneBar) doneBar.setAttribute('aria-hidden', show ? 'false' : 'true');
+  };
+
+  document.addEventListener('focusin', syncBar);
+  document.addEventListener('focusout', () => {
+    window.setTimeout(syncBar, 30);
+  });
+
+  doneBtn?.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    syncBar();
+  });
+
+  syncBar();
 }
 
 function applyCurrencyView() {
@@ -6159,9 +6184,11 @@ function setupEventListeners() {
     if (expensePartialSplitAmount > 0) clearExpensePartialSplit();
   });
   $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
-  $('#calculator-done-btn')?.addEventListener('click', () => {
+  $('#calculator-apply-btn')?.addEventListener('click', () => {
     try {
-      finalizeCalculatorEntry();
+      const targetInput = applyCalculatorResultToTarget();
+      closeModal(els.calculatorModal);
+      targetInput?.focus();
     } catch (_) {
       showToast('算式未完成，未可以填入金額', 'error');
     }
@@ -6870,6 +6897,7 @@ async function init() {
   setupTabs();
   setupCurrencyViewSelector();
   setupMoneyInputs();
+  setupNativeKeyboardDoneBar();
   setupExchangeRateInput();
   setupEventListeners();
   setupPersonSpendUI();

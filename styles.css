@@ -5246,20 +5246,48 @@ button.suica-wallet-card:focus-visible {
   border-color: transparent;
 }
 
+.calculator-key-zero {
+  grid-column: span 2;
+}
+
 .calculator-actions {
   display: flex;
   gap: 0.6rem;
 }
 
-.calculator-key-done {
-  background: linear-gradient(135deg, rgba(255, 196, 125, 0.95), rgba(255, 117, 140, 0.95));
-  color: #fff;
-  border-color: transparent;
+.calculator-actions > .btn {
+  flex: 1;
 }
 
-.calculator-actions > .btn {
-  flex: 0 0 auto;
-  width: 100%;
+.keyboard-done-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1rem 0.75rem;
+  z-index: 1400;
+  pointer-events: none;
+}
+
+.keyboard-done-bar.hidden {
+  display: none;
+}
+
+.keyboard-done-btn {
+  pointer-events: auto;
+  appearance: none;
+  border: 1px solid rgba(255, 117, 140, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--text-dark);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.6rem 1rem;
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .day-range-quick {
@@ -6771,14 +6799,16 @@ html.theme-cyberpunk .calculator-key-equals {
   border-color: transparent !important;
 }
 
-html.theme-cyberpunk .calculator-key-done {
-  background: linear-gradient(135deg, rgba(255, 142, 61, 0.92), rgba(255, 0, 199, 0.9)) !important;
-  border-color: transparent !important;
-}
-
 html.theme-cyberpunk .calculator-result,
 html.theme-cyberpunk .calculator-context {
   color: #9fb4d1 !important;
+}
+
+html.theme-cyberpunk .keyboard-done-btn {
+  background: rgba(16, 16, 30, 0.96) !important;
+  color: #eefcff !important;
+  border-color: rgba(0, 246, 255, 0.22) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 html.theme-cyberpunk .money-prefix.prefix-jpy {

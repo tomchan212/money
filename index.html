@@ -10,10 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="preload" href="boy.png" as="image">
   <link rel="preload" href="girl.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260806numpad2">
+  <link rel="stylesheet" href="styles.css?v=20260806nativekbd">
   <script src="offlineQueue.js?v=20260730oq2" defer></script>
   <script src="syncManager.js?v=20260802edittime" defer></script>
-  <script src="app.js?v=20260806numpad2" defer></script>
+  <script src="app.js?v=20260806nativekbd" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -157,7 +157,7 @@
           <div class="money-input-actions">
             <div class="money-input-wrap">
               <span class="money-prefix prefix-jpy" id="expense-amount-prefix">¥</span>
-              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="expense-amount" name="amount" placeholder="0" required>
+              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="expense-amount" name="amount" placeholder="0" required enterkeyhint="done">
             </div>
             <button type="button" class="money-tool-btn" id="btn-open-calculator" aria-label="打開計數機">
               <span aria-hidden="true">🧮</span>
@@ -817,16 +817,20 @@
           <button type="button" class="calculator-key" data-calculator-value="3">3</button>
           <button type="button" class="calculator-key calculator-key-operator" data-calculator-value="+">+</button>
 
-          <button type="button" class="calculator-key" data-calculator-value="0">0</button>
+          <button type="button" class="calculator-key calculator-key-zero" data-calculator-value="0">0</button>
           <button type="button" class="calculator-key" data-calculator-value=".">.</button>
           <button type="button" class="calculator-key calculator-key-equals" data-calculator-action="equals">=</button>
-          <button type="button" class="calculator-key calculator-key-done" id="calculator-done-btn">完成</button>
         </div>
         <div class="calculator-actions">
           <button type="button" class="btn btn-ghost btn-sm" data-close-modal>取消</button>
+          <button type="button" class="btn btn-primary btn-sm" id="calculator-apply-btn">用結果填入金額</button>
         </div>
       </div>
     </div>
+  </div>
+
+  <div id="keyboard-done-bar" class="keyboard-done-bar hidden" aria-hidden="true">
+    <button type="button" class="keyboard-done-btn" id="keyboard-done-btn">完成</button>
   </div>
 
   <!-- Budget Modal -->
