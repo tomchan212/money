@@ -5246,17 +5246,20 @@ button.suica-wallet-card:focus-visible {
   border-color: transparent;
 }
 
-.calculator-key-zero {
-  grid-column: span 2;
-}
-
 .calculator-actions {
   display: flex;
   gap: 0.6rem;
 }
 
+.calculator-key-done {
+  background: linear-gradient(135deg, rgba(255, 196, 125, 0.95), rgba(255, 117, 140, 0.95));
+  color: #fff;
+  border-color: transparent;
+}
+
 .calculator-actions > .btn {
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .day-range-quick {
@@ -6765,6 +6768,11 @@ html.theme-cyberpunk .calculator-key-operator {
 
 html.theme-cyberpunk .calculator-key-equals {
   background: linear-gradient(135deg, rgba(255, 0, 199, 0.86), rgba(0, 246, 255, 0.86)) !important;
+  border-color: transparent !important;
+}
+
+html.theme-cyberpunk .calculator-key-done {
+  background: linear-gradient(135deg, rgba(255, 142, 61, 0.92), rgba(255, 0, 199, 0.9)) !important;
   border-color: transparent !important;
 }
 
