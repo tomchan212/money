@@ -1706,13 +1706,26 @@ const EXPENSE_PAYER_CYCLE = ['A', 'B'];
 const EXPENSE_SPLIT_CYCLE = ['SPLIT_5050', 'FOR_A', 'FOR_B'];
 const EXPENSE_PAYMENT_CYCLE = [PAYMENT_CASH, PAYMENT_SUICA];
 
-let expensePartialSplitAmount = 0;
-let expensePartialForOtherAmount = 0;
+const partialExtrasByPrefix = {
+  expense: { half: 0, forOther: 0 },
+  edit: { half: 0, forOther: 0 },
+};
 /** @type {'5050' | 'for_other'} */
 let partialSplitModalKind = '5050';
+/** @type {'expense' | 'edit'} */
+let partialSplitModalPrefix = 'expense';
 
-function expenseOtherPerson(payer = $('#expense-payer')?.value) {
+function getPartialExtras(prefix = 'expense') {
+  return partialExtrasByPrefix[prefix] || partialExtrasByPrefix.expense;
+}
+
+function expenseOtherPerson(payer) {
   return payer === 'B' ? 'A' : 'B';
+}
+
+function formOtherPerson(prefix = 'expense') {
+  const payer = $(`#${prefix}-payer`)?.value === 'B' ? 'B' : 'A';
+  return expenseOtherPerson(payer);
 }
 
 function isExpenseSelfSplitMode(prefix = 'expense') {
@@ -1723,49 +1736,58 @@ function isExpenseSelfSplitMode(prefix = 'expense') {
 }
 
 function canUseExpensePartialExtras(prefix = 'expense') {
-  if (prefix !== 'expense') return false;
+  if (prefix !== 'expense' && prefix !== 'edit') return false;
   if (getExpenseCategoryValue(prefix) === SUICA_CATEGORY) return false;
+  if (prefix === 'edit') {
+    const key = $('#edit-transaction-key')?.value;
+    const tx = key ? findTransactionByKey(key) : null;
+    if (tx && isCashTransferTransaction(tx)) return false;
+  }
   return isExpenseSelfSplitMode(prefix);
 }
 
 function canUseExpensePartialSplit(prefix = 'expense') {
-  return canUseExpensePartialExtras(prefix) && expensePartialForOtherAmount <= 0;
+  const extras = getPartialExtras(prefix);
+  return canUseExpensePartialExtras(prefix) && extras.forOther <= 0;
 }
 
 function canUseExpensePartialForOther(prefix = 'expense') {
-  return canUseExpensePartialExtras(prefix) && expensePartialSplitAmount <= 0;
+  const extras = getPartialExtras(prefix);
+  return canUseExpensePartialExtras(prefix) && extras.half <= 0;
 }
 
-function clearExpensePartialSplit() {
-  expensePartialSplitAmount = 0;
-  updateExpensePartialSplitUi();
-  updateExpenseSplitHint();
+function clearExpensePartialSplit(prefix = partialSplitModalPrefix) {
+  getPartialExtras(prefix).half = 0;
+  updateExpensePartialSplitUi(prefix);
+  updateExpenseSplitHint(prefix);
 }
 
-function clearExpensePartialForOther() {
-  expensePartialForOtherAmount = 0;
-  updateExpensePartialSplitUi();
-  updateExpenseSplitHint();
+function clearExpensePartialForOther(prefix = partialSplitModalPrefix) {
+  getPartialExtras(prefix).forOther = 0;
+  updateExpensePartialSplitUi(prefix);
+  updateExpenseSplitHint(prefix);
 }
 
-function clearAllExpensePartialExtras() {
-  expensePartialSplitAmount = 0;
-  expensePartialForOtherAmount = 0;
-  updateExpensePartialSplitUi();
-  updateExpenseSplitHint();
+function clearAllExpensePartialExtras(prefix = 'expense') {
+  const extras = getPartialExtras(prefix);
+  extras.half = 0;
+  extras.forOther = 0;
+  updateExpensePartialSplitUi(prefix);
+  updateExpenseSplitHint(prefix);
 }
 
-function updateExpensePartialSplitUi() {
-  const wrap = $('#expense-partial-split-wrap');
-  const halfBtn = $('#expense-partial-split-btn');
-  const otherBtn = $('#expense-partial-for-other-btn');
+function updateExpensePartialSplitUi(prefix = 'expense') {
+  const wrap = $(`#${prefix}-partial-split-wrap`);
+  const halfBtn = $(`#${prefix}-partial-split-btn`);
+  const otherBtn = $(`#${prefix}-partial-for-other-btn`);
   if (!wrap || !halfBtn || !otherBtn) return;
 
-  const showExtras = canUseExpensePartialExtras();
+  const extras = getPartialExtras(prefix);
+  const showExtras = canUseExpensePartialExtras(prefix);
   wrap.classList.toggle('hidden', !showExtras);
   if (!showExtras) {
-    expensePartialSplitAmount = 0;
-    expensePartialForOtherAmount = 0;
+    extras.half = 0;
+    extras.forOther = 0;
     halfBtn.classList.remove('hidden');
     otherBtn.classList.remove('hidden');
     halfBtn.removeAttribute('aria-pressed');
@@ -1775,27 +1797,27 @@ function updateExpensePartialSplitUi() {
     return;
   }
 
-  const currency = $('#expense-currency')?.value || 'JPY';
-  const other = expenseOtherPerson();
-  const showHalf = expensePartialForOtherAmount <= 0;
-  const showOther = expensePartialSplitAmount <= 0;
+  const currency = $(`#${prefix}-currency`)?.value || 'JPY';
+  const other = formOtherPerson(prefix);
+  const showHalf = extras.forOther <= 0;
+  const showOther = extras.half <= 0;
 
   halfBtn.classList.toggle('hidden', !showHalf);
   otherBtn.classList.toggle('hidden', !showOther);
 
-  if (expensePartialSplitAmount > 0) {
+  if (extras.half > 0) {
     // 顯示未除二前嘅一人一半總額
-    halfBtn.textContent = `一人一半 ${formatMoney(expensePartialSplitAmount, currency)}`;
+    halfBtn.textContent = `一人一半 ${formatMoney(extras.half, currency)}`;
     halfBtn.setAttribute('aria-pressed', 'true');
   } else {
     halfBtn.textContent = '部分一人一半';
     halfBtn.removeAttribute('aria-pressed');
   }
 
-  if (expensePartialForOtherAmount > 0) {
-    otherBtn.innerHTML = `部分係 <span class="split-flow-arrow" aria-hidden="true">→</span> ${personImg(other, 'xs')} ${escapeHtml(formatMoney(expensePartialForOtherAmount, currency))}`;
+  if (extras.forOther > 0) {
+    otherBtn.innerHTML = `部分係 <span class="split-flow-arrow" aria-hidden="true">→</span> ${personImg(other, 'xs')} ${escapeHtml(formatMoney(extras.forOther, currency))}`;
     otherBtn.setAttribute('aria-pressed', 'true');
-    otherBtn.setAttribute('aria-label', `部分係${other === 'A' ? '男孩' : '女生'} ${formatMoney(expensePartialForOtherAmount, currency)}`);
+    otherBtn.setAttribute('aria-label', `部分係${other === 'A' ? '男孩' : '女生'} ${formatMoney(extras.forOther, currency)}`);
   } else {
     otherBtn.innerHTML = `部分係 <span class="split-flow-arrow" aria-hidden="true">→</span> ${personImg(other, 'xs')}`;
     otherBtn.removeAttribute('aria-pressed');
@@ -1805,13 +1827,14 @@ function updateExpensePartialSplitUi() {
 
 function updatePartialSplitRemainHint() {
   const hint = $('#partial-split-remain-hint');
-  const total = Number($('#expense-amount')?.value);
+  const prefix = partialSplitModalPrefix;
+  const total = Number($(`#${prefix}-amount`)?.value);
   const partial = Number($('#partial-split-amount')?.value);
-  const currency = $('#expense-currency')?.value || 'JPY';
+  const currency = $(`#${prefix}-currency`)?.value || 'JPY';
   if (!hint) return;
 
   if (!Number.isFinite(total) || total <= 0) {
-    hint.textContent = '請先喺記賬表填寫總金額';
+    hint.textContent = '請先填寫總金額';
     return;
   }
   if (!Number.isFinite(partial) || partial <= 0) {
@@ -1827,7 +1850,7 @@ function updatePartialSplitRemainHint() {
   }
   const remain = total - partial;
   if (partialSplitModalKind === 'for_other') {
-    const other = expenseOtherPerson();
+    const other = formOtherPerson(prefix);
     hint.innerHTML = `會記做兩筆：自己嘅 ${escapeHtml(formatMoney(remain, currency))} + ${personImg(other, 'inline')} 嘅 ${escapeHtml(formatMoney(partial, currency))}`;
   } else {
     // partial = 未除二前嘅一人一半總額；紀錄會顯示呢個總額
@@ -1835,28 +1858,32 @@ function updatePartialSplitRemainHint() {
   }
 }
 
-function openPartialSplitModal(kind = '5050') {
+function openPartialSplitModal(kind = '5050', prefix = 'expense') {
+  const extras = getPartialExtras(prefix);
   if (kind === 'for_other') {
-    if (!canUseExpensePartialForOther() && expensePartialForOtherAmount <= 0) return;
-  } else if (!canUseExpensePartialSplit() && expensePartialSplitAmount <= 0) {
+    if (!canUseExpensePartialForOther(prefix) && extras.forOther <= 0) return;
+  } else if (!canUseExpensePartialSplit(prefix) && extras.half <= 0) {
     return;
   }
 
-  const total = Number($('#expense-amount')?.value);
-  const currency = $('#expense-currency')?.value || 'JPY';
+  const total = Number($(`#${prefix}-amount`)?.value);
+  const currency = $(`#${prefix}-currency`)?.value || 'JPY';
   if (!Number.isFinite(total) || total <= 0) {
     showToast('請先填寫金額', 'error');
     return;
   }
 
+  partialSplitModalPrefix = prefix === 'edit' ? 'edit' : 'expense';
   partialSplitModalKind = kind === 'for_other' ? 'for_other' : '5050';
   const kindInput = $('#partial-split-kind');
   if (kindInput) kindInput.value = partialSplitModalKind;
+  const prefixInput = $('#partial-split-prefix');
+  if (prefixInput) prefixInput.value = partialSplitModalPrefix;
 
   const title = $('#partial-split-modal-title');
   const context = $('#partial-split-context');
   const amountInput = $('#partial-split-amount');
-  const other = expenseOtherPerson();
+  const other = formOtherPerson(prefix);
 
   if (partialSplitModalKind === 'for_other') {
     if (title) {
@@ -1866,8 +1893,7 @@ function openPartialSplitModal(kind = '5050') {
       context.innerHTML = `總金額 ${escapeHtml(formatMoney(total, currency))}，入屬於 ${personImg(other, 'inline')} 嘅部分`;
     }
     if (amountInput) {
-      amountInput.value =
-        expensePartialForOtherAmount > 0 ? String(expensePartialForOtherAmount) : '';
+      amountInput.value = extras.forOther > 0 ? String(extras.forOther) : '';
     }
   } else {
     if (title) {
@@ -1877,8 +1903,7 @@ function openPartialSplitModal(kind = '5050') {
       context.textContent = `總金額 ${formatMoney(total, currency)}，入一人一半嗰部分嘅總額（未除二）`;
     }
     if (amountInput) {
-      amountInput.value =
-        expensePartialSplitAmount > 0 ? String(expensePartialSplitAmount) : '';
+      amountInput.value = extras.half > 0 ? String(extras.half) : '';
     }
   }
 
@@ -1982,9 +2007,9 @@ function syncExpenseEssentialsUi(prefix = 'expense') {
   paymentChip?.classList.toggle('is-locked', isTopUp);
   paymentChip?.toggleAttribute('disabled', isTopUp);
 
-  if (prefix === 'expense') {
-    updateExpensePartialSplitUi();
-    updateExpenseSplitHint();
+  if (prefix === 'expense' || prefix === 'edit') {
+    updateExpensePartialSplitUi(prefix);
+    updateExpenseSplitHint(prefix);
   }
 }
 
@@ -5302,14 +5327,15 @@ function setToggleValue(groupId, hiddenId, attr, value) {
   hidden.value = value;
 }
 
-function updateExpenseSplitHint() {
-  const hint = $('#expense-split-hint');
+function updateExpenseSplitHint(prefix = 'expense') {
+  const hint = $(`#${prefix}-split-hint`);
   if (!hint) return;
 
-  const payer = $('#expense-payer').value;
-  const split = getExpenseSplitModeValue('expense');
-  const category = getExpenseCategoryValue('expense');
-  const payment = getExpensePaymentMethodValue('expense');
+  const payer = $(`#${prefix}-payer`)?.value === 'B' ? 'B' : 'A';
+  const split = getExpenseSplitModeValue(prefix);
+  const category = getExpenseCategoryValue(prefix);
+  const payment = getExpensePaymentMethodValue(prefix);
+  const extras = getPartialExtras(prefix);
 
   let base = '';
   if (split === 'FOR_B' && payer === 'A') {
@@ -5341,24 +5367,24 @@ function updateExpenseSplitHint() {
     return;
   }
 
-  if (expensePartialSplitAmount > 0 && isExpenseSelfSplitMode()) {
-    const total = Number($('#expense-amount')?.value) || 0;
-    const currency = $('#expense-currency')?.value || 'JPY';
-    const remain = total - expensePartialSplitAmount;
+  if (extras.half > 0 && isExpenseSelfSplitMode(prefix)) {
+    const total = Number($(`#${prefix}-amount`)?.value) || 0;
+    const currency = $(`#${prefix}-currency`)?.value || 'JPY';
+    const remain = total - extras.half;
     if (total > 0 && remain > moneyEpsilon(currency)) {
-      const splitNote = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(expensePartialSplitAmount, currency)}（未除二）`;
+      const splitNote = `會記做兩筆：自己嘅 ${formatMoney(remain, currency)} + 一人一半 ${formatMoney(extras.half, currency)}（未除二）`;
       hint.innerHTML = base ? `${base}<br>${splitNote}` : splitNote;
       return;
     }
   }
 
-  if (expensePartialForOtherAmount > 0 && isExpenseSelfSplitMode()) {
-    const total = Number($('#expense-amount')?.value) || 0;
-    const currency = $('#expense-currency')?.value || 'JPY';
-    const remain = total - expensePartialForOtherAmount;
-    const other = expenseOtherPerson();
+  if (extras.forOther > 0 && isExpenseSelfSplitMode(prefix)) {
+    const total = Number($(`#${prefix}-amount`)?.value) || 0;
+    const currency = $(`#${prefix}-currency`)?.value || 'JPY';
+    const remain = total - extras.forOther;
+    const other = formOtherPerson(prefix);
     if (total > 0 && remain > moneyEpsilon(currency)) {
-      const splitNote = `會記做兩筆：自己嘅 ${escapeHtml(formatMoney(remain, currency))} + ${personImg(other, 'inline')} 嘅 ${escapeHtml(formatMoney(expensePartialForOtherAmount, currency))}`;
+      const splitNote = `會記做兩筆：自己嘅 ${escapeHtml(formatMoney(remain, currency))} + ${personImg(other, 'inline')} 嘅 ${escapeHtml(formatMoney(extras.forOther, currency))}`;
       hint.innerHTML = base ? `${base}<br>${splitNote}` : splitNote;
       return;
     }
@@ -5958,6 +5984,8 @@ function openEditModal(key) {
   const tx = findTransactionByKey(key);
   if (!tx) return;
 
+  clearAllExpensePartialExtras('edit');
+
   $('#edit-transaction-id').value = tx.transaction_id || '';
   $('#edit-transaction-key').value = getTxKey(tx);
   setFormDateValue('edit-date', tx.date);
@@ -6351,12 +6379,17 @@ function setupEventListeners() {
     onCurrencyChange: (currency) => updateMoneyPrefix($('#edit-amount-prefix'), currency),
   });
 
-  $('#expense-partial-split-btn')?.addEventListener('click', () => openPartialSplitModal('5050'));
-  $('#expense-partial-for-other-btn')?.addEventListener('click', () => openPartialSplitModal('for_other'));
+  $('#expense-partial-split-btn')?.addEventListener('click', () => openPartialSplitModal('5050', 'expense'));
+  $('#expense-partial-for-other-btn')?.addEventListener('click', () => openPartialSplitModal('for_other', 'expense'));
+  $('#edit-partial-split-btn')?.addEventListener('click', () => openPartialSplitModal('5050', 'edit'));
+  $('#edit-partial-for-other-btn')?.addEventListener('click', () => openPartialSplitModal('for_other', 'edit'));
   $('#expense-amount')?.addEventListener('input', () => {
-    if (expensePartialSplitAmount > 0 || expensePartialForOtherAmount > 0) {
-      clearAllExpensePartialExtras();
-    }
+    const extras = getPartialExtras('expense');
+    if (extras.half > 0 || extras.forOther > 0) clearAllExpensePartialExtras('expense');
+  });
+  $('#edit-amount')?.addEventListener('input', () => {
+    const extras = getPartialExtras('edit');
+    if (extras.half > 0 || extras.forOther > 0) clearAllExpensePartialExtras('edit');
   });
   $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
   $('#calculator-apply-btn')?.addEventListener('click', () => {
@@ -6375,16 +6408,18 @@ function setupEventListeners() {
   });
   $('#partial-split-amount')?.addEventListener('input', updatePartialSplitRemainHint);
   $('#partial-split-clear-btn')?.addEventListener('click', () => {
-    if (partialSplitModalKind === 'for_other') clearExpensePartialForOther();
-    else clearExpensePartialSplit();
+    if (partialSplitModalKind === 'for_other') clearExpensePartialForOther(partialSplitModalPrefix);
+    else clearExpensePartialSplit(partialSplitModalPrefix);
     closeModal(els.partialSplitModal);
   });
   $('#partial-split-form')?.addEventListener('submit', (e) => {
     e.preventDefault();
-    const total = Number($('#expense-amount')?.value);
+    const prefix = $('#partial-split-prefix')?.value === 'edit' ? 'edit' : 'expense';
+    const total = Number($(`#${prefix}-amount`)?.value);
     const partial = Number($('#partial-split-amount')?.value);
-    const currency = $('#expense-currency')?.value || 'JPY';
+    const currency = $(`#${prefix}-currency`)?.value || 'JPY';
     const kind = $('#partial-split-kind')?.value === 'for_other' ? 'for_other' : '5050';
+    const extras = getPartialExtras(prefix);
 
     if (!Number.isFinite(total) || total <= 0) {
       showToast('請先填寫總金額', 'error');
@@ -6400,15 +6435,16 @@ function setupEventListeners() {
     }
 
     if (kind === 'for_other') {
-      expensePartialForOtherAmount = partial;
-      expensePartialSplitAmount = 0;
+      extras.forOther = partial;
+      extras.half = 0;
     } else {
       // 輸入＝未除二前嘅一人一半總額；紀錄直接用呢個金額
-      expensePartialSplitAmount = partial;
-      expensePartialForOtherAmount = 0;
+      extras.half = partial;
+      extras.forOther = 0;
     }
-    updateExpensePartialSplitUi();
-    updateExpenseSplitHint();
+    partialSplitModalPrefix = prefix;
+    updateExpensePartialSplitUi(prefix);
+    updateExpenseSplitHint(prefix);
     closeModal(els.partialSplitModal);
   });
 
@@ -6750,13 +6786,14 @@ function setupEventListeners() {
       }
     }
 
+    const extras = getPartialExtras('expense');
     const partialHalf =
-      canUseExpensePartialExtras() && expensePartialSplitAmount > 0
-        ? expensePartialSplitAmount
+      canUseExpensePartialExtras('expense') && extras.half > 0
+        ? extras.half
         : 0;
     const partialForOther =
-      canUseExpensePartialExtras() && expensePartialForOtherAmount > 0
-        ? expensePartialForOtherAmount
+      canUseExpensePartialExtras('expense') && extras.forOther > 0
+        ? extras.forOther
         : 0;
     const partialAmount = partialHalf || partialForOther;
     const selfPart = partialAmount > 0 ? tx.amount - partialAmount : tx.amount;
@@ -6810,7 +6847,7 @@ function setupEventListeners() {
       setCategoryPickerOpen(getCategoryPickerWrap('expense-category'), false);
       $('#expense-custom-category-row').classList.add('hidden');
       $('#expense-custom-category').value = '';
-      clearAllExpensePartialExtras();
+      clearAllExpensePartialExtras('expense');
       setExpenseEssentials('expense', {
         currency: 'JPY',
         payer: 'A',
@@ -6933,6 +6970,33 @@ function setupEventListeners() {
       }
     }
 
+    const extras = getPartialExtras('edit');
+    const canPartial =
+      !isCashTransferTransaction(existing) && canUseExpensePartialExtras('edit');
+    const partialHalf = canPartial && extras.half > 0 ? extras.half : 0;
+    const partialForOther = canPartial && extras.forOther > 0 ? extras.forOther : 0;
+    const partialAmount = partialHalf || partialForOther;
+    const selfPart = partialAmount > 0 ? amount - partialAmount : amount;
+    if (partialAmount > 0) {
+      if (selfPart <= moneyEpsilon(currency)) {
+        endMutation();
+        showToast(
+          partialForOther > 0 ? '部分金額要小過總金額' : '一人一半總額要小過總金額',
+          'error'
+        );
+        return;
+      }
+      if (partialAmount >= amount - moneyEpsilon(currency)) {
+        endMutation();
+        showToast(
+          partialForOther > 0 ? '部分金額要小過總金額' : '一人一半總額要小過總金額',
+          'error'
+        );
+        return;
+      }
+    }
+
+    const otherPerson = expenseOtherPerson(payer);
     const updated = {
       transaction_id: transactionId,
       date: editDate,
@@ -6941,18 +7005,52 @@ function setupEventListeners() {
       description,
       location: getLocationText(existing),
       currency,
-      amount,
+      amount: partialAmount > 0 ? selfPart : amount,
       payer,
-      split_mode: splitMode,
+      split_mode: partialAmount > 0 ? selfSplitForPayer(payer) : splitMode,
       payment_method: paymentMethod,
     };
 
+    const extraTx =
+      partialHalf > 0
+        ? {
+            date: editDate,
+            time: editTime,
+            category,
+            description,
+            location: getLocationText(existing),
+            currency,
+            amount: partialHalf,
+            payer,
+            split_mode: 'SPLIT_5050',
+            payment_method: paymentMethod,
+          }
+        : partialForOther > 0
+          ? {
+              date: editDate,
+              time: editTime,
+              category,
+              description,
+              location: getLocationText(existing),
+              currency,
+              amount: partialForOther,
+              payer,
+              split_mode: selfSplitForPayer(otherPerson),
+              payment_method: paymentMethod,
+            }
+          : null;
+
     enqueueEdit(existing, updated);
+    if (extraTx) enqueueCreate(extraTx);
+    clearAllExpensePartialExtras('edit');
     endMutation();
     SyncManager.scheduleSync();
     closeModal(els.editModal);
     dismissDetailModal();
-    showToast(`${uiIconHtml('save', 'btn')} 已更新`, 'success');
+    showToast(
+      `${uiIconHtml('save', 'btn')} 已更新${extraTx ? '（拆成 2 筆）' : ''}`,
+      'success'
+    );
     onRecordSyncComplete();
   });
 }

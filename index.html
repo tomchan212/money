@@ -764,6 +764,7 @@
       </div>
       <form id="partial-split-form">
         <input type="hidden" id="partial-split-kind" value="5050">
+        <input type="hidden" id="partial-split-prefix" value="expense">
         <p class="partial-split-context" id="partial-split-context">—</p>
         <div class="form-row form-row-icon-field">
           <label for="partial-split-amount" class="sr-only">部分金額</label>
@@ -824,8 +825,8 @@
           <button type="button" class="calculator-key calculator-key-equals" data-calculator-action="equals">=</button>
         </div>
         <div class="calculator-actions">
-          <button type="button" class="btn btn-ghost btn-sm" data-close-modal>取消</button>
-          <button type="button" class="btn btn-primary btn-sm" id="calculator-apply-btn">用結果填入金額</button>
+          <button type="button" class="btn btn-ghost calculator-action-btn" data-close-modal>取消</button>
+          <button type="button" class="btn btn-primary calculator-action-btn" id="calculator-apply-btn">用結果填入金額</button>
         </div>
       </div>
     </div>
@@ -1020,6 +1021,11 @@
           <input type="hidden" id="edit-payer" value="A">
           <input type="hidden" id="edit-split-mode" value="SPLIT_5050">
           <input type="hidden" id="edit-payment-method" value="">
+          <div class="expense-partial-split-wrap hidden" id="edit-partial-split-wrap">
+            <button type="button" class="expense-partial-split-btn expense-partial-for-other-btn" id="edit-partial-for-other-btn" aria-pressed="false">部分係</button>
+            <button type="button" class="expense-partial-split-btn" id="edit-partial-split-btn" aria-pressed="false">部分一人一半</button>
+          </div>
+          <p class="form-hint" id="edit-split-hint" aria-live="polite"></p>
         </div>
         <div class="form-row">
           <label for="edit-amount"><img class="ui-icon ui-icon-label" src="icons/savings.png" alt="" aria-hidden="true" loading="lazy" decoding="async"> 金額</label>
