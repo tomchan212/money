@@ -6096,14 +6096,47 @@ function onRecordSyncComplete() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function focusExpenseAmountKeyboard() {
+  const panel = $('#tab-form');
+  const input = $('#expense-amount');
+  if (!input) return;
+
+  // Force layout after display:none → block so mobile browsers accept focus.
+  if (panel) void panel.offsetHeight;
+
+  input.focus({ preventScroll: false });
+  try {
+    const end = String(input.value || '').length;
+    input.setSelectionRange(end, end);
+  } catch (_) {}
+
+  // Some Android WebViews only open the soft keyboard after an explicit click.
+  try {
+    input.click();
+  } catch (_) {}
+}
+
 function setupTabs() {
   $$('.tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    const openFormKeyboard = () => {
       switchTab(btn.dataset.tab);
       if (btn.dataset.tab === 'form') {
-        window.setTimeout(() => $('#expense-amount')?.focus(), 10);
+        // Must stay inside the user gesture — setTimeout prevents the native keyboard.
+        focusExpenseAmountKeyboard();
       }
-    });
+    };
+
+    // Prefer touchend on phones so focus stays inside the gesture that opened the tab.
+    btn.addEventListener(
+      'touchend',
+      (e) => {
+        if (btn.dataset.tab !== 'form') return;
+        if (e.cancelable) e.preventDefault();
+        openFormKeyboard();
+      },
+      { passive: false }
+    );
+    btn.addEventListener('click', openFormKeyboard);
   });
 }
 
