@@ -5749,8 +5749,13 @@ function applyCalculatorResultToTarget() {
   targetInput.value = formatMoneyInputPreset(result, currency);
   targetInput.dispatchEvent(new Event('input', { bubbles: true }));
   renderCalculator();
+  return targetInput;
+}
+
+function finalizeCalculatorEntry() {
+  const targetInput = applyCalculatorResultToTarget();
   closeModal(els.calculatorModal);
-  targetInput.focus();
+  targetInput?.focus();
 }
 
 function onCalculatorKeyPress(action, value) {
@@ -6099,7 +6104,12 @@ function onRecordSyncComplete() {
 
 function setupTabs() {
   $$('.tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      switchTab(btn.dataset.tab);
+      if (btn.dataset.tab === 'form') {
+        window.setTimeout(() => openCalculatorModal(), 10);
+      }
+    });
   });
 }
 
@@ -6149,9 +6159,9 @@ function setupEventListeners() {
     if (expensePartialSplitAmount > 0) clearExpensePartialSplit();
   });
   $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
-  $('#calculator-apply-btn')?.addEventListener('click', () => {
+  $('#calculator-done-btn')?.addEventListener('click', () => {
     try {
-      applyCalculatorResultToTarget();
+      finalizeCalculatorEntry();
     } catch (_) {
       showToast('算式未完成，未可以填入金額', 'error');
     }
@@ -6160,6 +6170,11 @@ function setupEventListeners() {
     btn.addEventListener('click', () => {
       onCalculatorKeyPress(btn.dataset.calculatorAction || '', btn.dataset.calculatorValue || '');
     });
+  });
+  $('#expense-description')?.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.currentTarget.blur();
   });
   $('#partial-split-amount')?.addEventListener('input', updatePartialSplitRemainHint);
   $('#partial-split-clear-btn')?.addEventListener('click', () => {
