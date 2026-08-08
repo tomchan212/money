@@ -6300,32 +6300,29 @@ function ensureFocusedFieldVisible(el = document.activeElement) {
     return;
   }
 
-  const rect = el.getBoundingClientRect();
-  const fullyVisible = rect.top >= visibleTop && rect.bottom <= visibleBottom;
-  if (fullyVisible) return;
-
-  // scrollIntoView + scroll-padding-bottom handles iOS/Android coordinate quirks.
-  try {
-    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
-  } catch (_) {
-    el.scrollIntoView();
-  }
-
-  // Second pass after layout settles: if still clipped, hard-correct with scrollBy.
-  window.setTimeout(() => {
-    if (document.activeElement !== el) return;
-    const next = el.getBoundingClientRect();
+  const moveIntoVisualViewport = () => {
     const nextMetrics = getVisualViewportMetrics();
     const nextTop = nextMetrics.offsetTop + KEYBOARD_FIELD_MARGIN_PX;
     const nextBottom =
       nextMetrics.offsetTop + nextMetrics.height - doneSpace - KEYBOARD_FIELD_MARGIN_PX;
+    if (nextBottom <= nextTop + 40) return false;
+    const next = el.getBoundingClientRect();
+    // Aim for the upper-middle of the visual viewport so numpad + done bar stay clear.
+    const targetCenter = (nextTop + nextBottom) / 2;
+    const fieldCenter = next.top + next.height / 2;
     let delta = 0;
-    if (next.top < nextTop) delta = next.top - nextTop;
-    else if (next.bottom > nextBottom) delta = next.bottom - nextBottom;
-    if (Math.abs(delta) >= 2) {
-      window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+    if (next.top < nextTop || next.bottom > nextBottom) {
+      delta = fieldCenter - targetCenter;
     }
-  }, 50);
+    if (Math.abs(delta) < 2) return false;
+    window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+    return true;
+  };
+
+  moveIntoVisualViewport();
+  // Keyboard geometry can settle after focus; retry a couple of times.
+  window.setTimeout(moveIntoVisualViewport, 80);
+  window.setTimeout(moveIntoVisualViewport, 220);
 }
 
 function syncKeyboardAvoidanceChrome() {
