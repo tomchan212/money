@@ -6226,6 +6226,159 @@ function onRecordSyncComplete() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+const KEYBOARD_OPEN_THRESHOLD_PX = 120;
+const KEYBOARD_FIELD_MARGIN_PX = 16;
+const KEYBOARD_DONE_BAR_SPACE_PX = 58;
+let keyboardAvoidanceSyncTimer = 0;
+
+function isEditableField(el) {
+  if (!(el instanceof HTMLElement) || el.disabled) return false;
+  if (el.isContentEditable) return true;
+  if (el instanceof HTMLTextAreaElement) return !el.readOnly;
+  if (!(el instanceof HTMLInputElement) || el.readOnly) return false;
+  return !['button', 'checkbox', 'radio', 'file', 'submit', 'reset', 'hidden', 'image', 'color', 'range'].includes(
+    el.type
+  );
+}
+
+function getVisualViewportMetrics() {
+  const vv = window.visualViewport;
+  if (!vv) {
+    return {
+      height: window.innerHeight,
+      offsetTop: 0,
+      inset: 0,
+    };
+  }
+  const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+  return {
+    height: vv.height,
+    offsetTop: vv.offsetTop,
+    inset,
+  };
+}
+
+function clearModalKeyboardMaxHeights() {
+  document.querySelectorAll('.modal-content[data-keyboard-max-height="1"]').forEach((node) => {
+    node.style.maxHeight = '';
+    node.removeAttribute('data-keyboard-max-height');
+  });
+}
+
+function ensureFocusedFieldVisible(el = document.activeElement) {
+  if (!isEditableField(el)) return;
+
+  const metrics = getVisualViewportMetrics();
+  const doneBar = $('#keyboard-done-bar');
+  const doneSpace =
+    doneBar && !doneBar.classList.contains('hidden')
+      ? KEYBOARD_DONE_BAR_SPACE_PX
+      : KEYBOARD_FIELD_MARGIN_PX;
+  const visibleTop = metrics.offsetTop + KEYBOARD_FIELD_MARGIN_PX;
+  const visibleBottom = metrics.offsetTop + metrics.height - doneSpace - KEYBOARD_FIELD_MARGIN_PX;
+  if (visibleBottom <= visibleTop + 40) return;
+
+  const modalContent = el.closest('.modal-content');
+  if (modalContent instanceof HTMLElement) {
+    modalContent.style.maxHeight = `${Math.max(200, Math.floor(metrics.height - 8))}px`;
+    modalContent.setAttribute('data-keyboard-max-height', '1');
+
+    const rect = el.getBoundingClientRect();
+    let delta = 0;
+    if (rect.top < visibleTop) delta = rect.top - visibleTop;
+    else if (rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
+    if (Math.abs(delta) >= 2) modalContent.scrollTop += delta;
+
+    // Also nudge within the modal scroller if the field is clipped by the sheet itself.
+    const parentRect = modalContent.getBoundingClientRect();
+    const nextRect = el.getBoundingClientRect();
+    if (nextRect.top < parentRect.top + KEYBOARD_FIELD_MARGIN_PX) {
+      modalContent.scrollTop -= parentRect.top + KEYBOARD_FIELD_MARGIN_PX - nextRect.top;
+    } else if (nextRect.bottom > parentRect.bottom - KEYBOARD_FIELD_MARGIN_PX) {
+      modalContent.scrollTop += nextRect.bottom - (parentRect.bottom - KEYBOARD_FIELD_MARGIN_PX);
+    }
+    return;
+  }
+
+  const moveIntoVisualViewport = () => {
+    const nextMetrics = getVisualViewportMetrics();
+    const nextTop = nextMetrics.offsetTop + KEYBOARD_FIELD_MARGIN_PX;
+    const nextBottom =
+      nextMetrics.offsetTop + nextMetrics.height - doneSpace - KEYBOARD_FIELD_MARGIN_PX;
+    if (nextBottom <= nextTop + 40) return false;
+    const next = el.getBoundingClientRect();
+    // Aim for the upper-middle of the visual viewport so numpad + done bar stay clear.
+    const targetCenter = (nextTop + nextBottom) / 2;
+    const fieldCenter = next.top + next.height / 2;
+    let delta = 0;
+    if (next.top < nextTop || next.bottom > nextBottom) {
+      delta = fieldCenter - targetCenter;
+    }
+    if (Math.abs(delta) < 2) return false;
+    window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+    return true;
+  };
+
+  moveIntoVisualViewport();
+  // Keyboard geometry can settle after focus; retry a couple of times.
+  window.setTimeout(moveIntoVisualViewport, 80);
+  window.setTimeout(moveIntoVisualViewport, 220);
+}
+
+function syncKeyboardAvoidanceChrome() {
+  const root = document.documentElement;
+  const doneBar = $('#keyboard-done-bar');
+  const metrics = getVisualViewportMetrics();
+  const active = document.activeElement;
+  const keyboardLikelyOpen = metrics.inset >= KEYBOARD_OPEN_THRESHOLD_PX && isEditableField(active);
+
+  root.style.setProperty('--keyboard-inset', `${Math.round(metrics.inset)}px`);
+  root.style.setProperty('--vv-height', `${Math.round(metrics.height)}px`);
+  root.style.setProperty('--vv-offset-top', `${Math.round(metrics.offsetTop)}px`);
+  root.classList.toggle('keyboard-open', keyboardLikelyOpen);
+
+  if (doneBar) {
+    if (keyboardLikelyOpen) {
+      // Sit just above the soft keyboard / numpad.
+      doneBar.style.bottom = `${Math.round(metrics.inset + 8)}px`;
+    } else {
+      // Fall back to stylesheet position above the tab bar.
+      doneBar.style.bottom = '';
+    }
+  }
+
+  if (keyboardLikelyOpen) {
+    ensureFocusedFieldVisible(active);
+  } else {
+    clearModalKeyboardMaxHeights();
+  }
+}
+
+function scheduleKeyboardAvoidanceSync() {
+  window.clearTimeout(keyboardAvoidanceSyncTimer);
+  keyboardAvoidanceSyncTimer = window.setTimeout(syncKeyboardAvoidanceChrome, 40);
+}
+
+function setupKeyboardAvoidance() {
+  const onViewportChange = () => scheduleKeyboardAvoidanceSync();
+  window.addEventListener('resize', onViewportChange);
+  window.visualViewport?.addEventListener('resize', onViewportChange);
+  window.visualViewport?.addEventListener('scroll', onViewportChange);
+
+  document.addEventListener('focusin', (e) => {
+    if (!isEditableField(e.target)) return;
+    scheduleKeyboardAvoidanceSync();
+    // iOS often finalizes keyboard geometry a beat after focus.
+    window.setTimeout(() => ensureFocusedFieldVisible(e.target), 80);
+    window.setTimeout(() => ensureFocusedFieldVisible(e.target), 220);
+  });
+  document.addEventListener('focusout', () => {
+    window.setTimeout(scheduleKeyboardAvoidanceSync, 30);
+  });
+
+  syncKeyboardAvoidanceChrome();
+}
+
 function focusExpenseAmountKeyboard() {
   const panel = $('#tab-form');
   const input = $('#expense-amount');
@@ -6234,7 +6387,7 @@ function focusExpenseAmountKeyboard() {
   // Force layout after display:none → block so mobile browsers accept focus.
   if (panel) void panel.offsetHeight;
 
-  input.focus({ preventScroll: false });
+  input.focus({ preventScroll: true });
   try {
     const end = String(input.value || '').length;
     input.setSelectionRange(end, end);
@@ -6244,6 +6397,9 @@ function focusExpenseAmountKeyboard() {
   try {
     input.click();
   } catch (_) {}
+
+  ensureFocusedFieldVisible(input);
+  scheduleKeyboardAvoidanceSync();
 }
 
 function setupTabs() {
@@ -6273,11 +6429,13 @@ function setupTabs() {
 function focusExpenseDescriptionField() {
   const input = $('#expense-description');
   if (!input) return;
-  input.focus({ preventScroll: false });
+  input.focus({ preventScroll: true });
   try {
     const end = String(input.value || '').length;
     input.setSelectionRange(end, end);
   } catch (_) {}
+  ensureFocusedFieldVisible(input);
+  scheduleKeyboardAvoidanceSync();
 }
 
 function setupNativeKeyboardDoneBar() {
@@ -6295,6 +6453,7 @@ function setupNativeKeyboardDoneBar() {
     const show = shouldShowFor(active);
     doneBar?.classList.toggle('hidden', !show);
     if (doneBar) doneBar.setAttribute('aria-hidden', show ? 'false' : 'true');
+    scheduleKeyboardAvoidanceSync();
   };
 
   const finishAmountKeyboard = () => {
@@ -7192,6 +7351,7 @@ async function init() {
   setupTabs();
   setupCurrencyViewSelector();
   setupMoneyInputs();
+  setupKeyboardAvoidance();
   setupNativeKeyboardDoneBar();
   setupExchangeRateInput();
   setupEventListeners();
