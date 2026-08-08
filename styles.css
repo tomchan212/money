@@ -353,6 +353,7 @@ html.theme-cyberpunk .asset-preload-percent {
   box-shadow: 0 -4px 24px rgba(255, 117, 140, 0.1);
   padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
   z-index: 900;
+  transition: transform 0.16s ease, opacity 0.16s ease;
 }
 
 .tab-btn {
@@ -5292,10 +5293,36 @@ button.suica-wallet-card:focus-visible {
   padding: 0 1rem 0.75rem;
   z-index: 1400;
   pointer-events: none;
+  transition: bottom 0.16s ease;
 }
 
 .keyboard-done-bar.hidden {
   display: none;
+}
+
+/* Soft keyboard / numpad open: free vertical space and keep fields reachable. */
+html.keyboard-open .tab-nav {
+  transform: translateY(110%);
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+html.keyboard-open body {
+  padding-bottom: calc(var(--keyboard-inset, 0px) + 5.5rem);
+}
+
+html.keyboard-open .modal {
+  align-items: flex-start;
+  top: var(--vv-offset-top, 0px);
+  height: var(--vv-height, 100%);
+  bottom: auto;
+}
+
+html.keyboard-open .modal-content {
+  max-height: calc(var(--vv-height, 100vh) - 0.5rem);
+  margin-top: auto;
+  margin-bottom: 0;
 }
 
 .keyboard-done-btn {
