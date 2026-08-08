@@ -238,6 +238,9 @@
     "personSpend": {
       "title": "{person} 啲錢用咗去邊 · {currency}",
       "total": "合共用咗 {amount} · {count} 筆",
+      "cashTotal": "合共現金用咗 {amount} · {count} 筆",
+      "showSuicaTopUp": "顯示Suica增值",
+      "showingSuicaTopUp": "顯示緊Suica增值",
       "repaidTotal": "總共還咗 {amount}",
       "borrowedTotal": "借咗 {amount}",
       "empty": "呢個篩選之下未有用咗紀錄",

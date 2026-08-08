@@ -320,6 +320,8 @@ const personSpendView = {
   currency: null,
   category: '',
   sort: 'date-desc',
+  /** When true: show cash + Suica top-ups; hide Suica payments. */
+  showSuicaTopUp: false,
 };
 
 /** 圖表分析 → 分類 drill-down */
@@ -4851,14 +4853,33 @@ function getPersonShare(tx, person) {
 
 function isPersonSpendExpenseTx(tx) {
   if (isRepayTransaction(tx) || isLoanTransaction(tx)) return false;
-  if (isSuicaTopUp(tx) || isSuicaCredit(tx)) return false;
+  if (isSuicaCredit(tx)) return false;
+  if (personSpendView.showSuicaTopUp) {
+    // Cash-spent view: keep cash expenses + Suica top-ups; drop wallet payments.
+    if (isSuicaPayment(tx)) return false;
+    return true;
+  }
+  if (isSuicaTopUp(tx)) return false;
   return true;
 }
 
 function personSpendSuicaBadgeHtml(tx) {
-  return isSuicaPayment(tx)
-    ? '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 俾錢">🐧</span>'
-    : '';
+  if (isSuicaPayment(tx)) {
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 俾錢">🐧</span>';
+  }
+  if (isSuicaTopUp(tx)) {
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 增值">🐧+</span>';
+  }
+  return '';
+}
+
+function syncPersonSpendSuicaTopUpBtn() {
+  const btn = $('#person-spend-show-suica-topup');
+  if (!btn) return;
+  const on = Boolean(personSpendView.showSuicaTopUp);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.classList.toggle('is-active', on);
+  btn.textContent = on ? '顯示緊Suica增值' : '顯示Suica增值';
 }
 
 function personSpendRowHtml(tx, person, currency) {
@@ -5075,7 +5096,8 @@ function renderPersonSpendChart() {
   const { slices, total } = buildPersonSpendChartSlices();
   const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
 
-  subtitleEl.innerHTML = `${personImg(person, 'inline')} ${escapeHtml(currency)} · 合共用咗 ${escapeHtml(formatMoney(total, currency))}`;
+  const totalLabel = personSpendView.showSuicaTopUp ? '合共現金用咗' : '合共用咗';
+  subtitleEl.innerHTML = `${personImg(person, 'inline')} ${escapeHtml(currency)} · ${totalLabel} ${escapeHtml(formatMoney(total, currency))}`;
 
   if (!slices.length || isNegligibleMoney(total, currency)) {
     wrapEl.classList.add('hidden');
@@ -5163,7 +5185,8 @@ function renderPersonSpendList() {
     titleEl.innerHTML = `${personImg(person, 'inline')} 啲錢用咗去邊 · ${escapeHtml(currency)}`;
   }
   if (totalEl) {
-    totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆`;
+    const totalLabel = personSpendView.showSuicaTopUp ? '合共現金用咗' : '合共用咗';
+    totalEl.textContent = `${totalLabel} ${formatMoney(total, currency)} · ${rows.length} 筆`;
   }
 
   if (!rows.length) {
@@ -5182,11 +5205,13 @@ function openPersonSpendModal(person, currency) {
   personSpendView.currency = currency;
   personSpendView.category = '';
   personSpendView.sort = 'date-desc';
+  personSpendView.showSuicaTopUp = false;
 
   const catEl = $('#person-spend-category');
   const sortEl = $('#person-spend-sort');
   if (catEl) catEl.value = '';
   if (sortEl) sortEl.value = 'date-desc';
+  syncPersonSpendSuicaTopUpBtn();
 
   renderPersonSpendList();
   openModal(els.personSpendModal);
@@ -5197,6 +5222,7 @@ function closePersonSpendModal() {
   closeModal(els.personSpendModal);
   personSpendView.person = null;
   personSpendView.currency = null;
+  personSpendView.showSuicaTopUp = false;
 }
 
 function setupPersonSpendUI() {
@@ -5214,6 +5240,16 @@ function setupPersonSpendUI() {
   $('#person-spend-sort')?.addEventListener('change', (e) => {
     personSpendView.sort = e.target.value;
     renderPersonSpendList();
+  });
+
+  $('#person-spend-show-suica-topup')?.addEventListener('click', () => {
+    personSpendView.showSuicaTopUp = !personSpendView.showSuicaTopUp;
+    syncPersonSpendSuicaTopUpBtn();
+    renderPersonSpendList();
+    // Keep chart in sync if it is already open.
+    if (els.personSpendChartModal && !els.personSpendChartModal.classList.contains('hidden')) {
+      renderPersonSpendChart();
+    }
   });
 
   $$('[data-close-person-spend]').forEach((el) => {
