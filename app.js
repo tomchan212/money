@@ -6282,23 +6282,50 @@ function ensureFocusedFieldVisible(el = document.activeElement) {
   if (modalContent instanceof HTMLElement) {
     modalContent.style.maxHeight = `${Math.max(200, Math.floor(metrics.height - 8))}px`;
     modalContent.setAttribute('data-keyboard-max-height', '1');
-  }
 
-  const rect = el.getBoundingClientRect();
-  let delta = 0;
-  if (rect.top < visibleTop) {
-    delta = rect.top - visibleTop;
-  } else if (rect.bottom > visibleBottom) {
-    delta = rect.bottom - visibleBottom;
-  }
-  if (Math.abs(delta) < 2) return;
+    const rect = el.getBoundingClientRect();
+    let delta = 0;
+    if (rect.top < visibleTop) delta = rect.top - visibleTop;
+    else if (rect.bottom > visibleBottom) delta = rect.bottom - visibleBottom;
+    if (Math.abs(delta) >= 2) modalContent.scrollTop += delta;
 
-  if (modalContent instanceof HTMLElement) {
-    modalContent.scrollTop += delta;
+    // Also nudge within the modal scroller if the field is clipped by the sheet itself.
+    const parentRect = modalContent.getBoundingClientRect();
+    const nextRect = el.getBoundingClientRect();
+    if (nextRect.top < parentRect.top + KEYBOARD_FIELD_MARGIN_PX) {
+      modalContent.scrollTop -= parentRect.top + KEYBOARD_FIELD_MARGIN_PX - nextRect.top;
+    } else if (nextRect.bottom > parentRect.bottom - KEYBOARD_FIELD_MARGIN_PX) {
+      modalContent.scrollTop += nextRect.bottom - (parentRect.bottom - KEYBOARD_FIELD_MARGIN_PX);
+    }
     return;
   }
 
-  window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+  const rect = el.getBoundingClientRect();
+  const fullyVisible = rect.top >= visibleTop && rect.bottom <= visibleBottom;
+  if (fullyVisible) return;
+
+  // scrollIntoView + scroll-padding-bottom handles iOS/Android coordinate quirks.
+  try {
+    el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+  } catch (_) {
+    el.scrollIntoView();
+  }
+
+  // Second pass after layout settles: if still clipped, hard-correct with scrollBy.
+  window.setTimeout(() => {
+    if (document.activeElement !== el) return;
+    const next = el.getBoundingClientRect();
+    const nextMetrics = getVisualViewportMetrics();
+    const nextTop = nextMetrics.offsetTop + KEYBOARD_FIELD_MARGIN_PX;
+    const nextBottom =
+      nextMetrics.offsetTop + nextMetrics.height - doneSpace - KEYBOARD_FIELD_MARGIN_PX;
+    let delta = 0;
+    if (next.top < nextTop) delta = next.top - nextTop;
+    else if (next.bottom > nextBottom) delta = next.bottom - nextBottom;
+    if (Math.abs(delta) >= 2) {
+      window.scrollBy({ top: delta, left: 0, behavior: 'smooth' });
+    }
+  }, 50);
 }
 
 function syncKeyboardAvoidanceChrome() {

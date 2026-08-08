@@ -100,6 +100,7 @@ html.theme-cyberpunk {
 html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
+  scroll-padding-bottom: calc(var(--keyboard-inset, 0px) + 5.5rem);
 }
 
 body {
