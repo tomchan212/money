@@ -5821,6 +5821,38 @@ button.suica-wallet-card:focus-visible {
   margin-bottom: 0.75rem;
 }
 
+.person-spend-suica-topup-btn {
+  grid-column: 1 / -1;
+  appearance: none;
+  border: 1.5px solid #ece6e9;
+  border-radius: calc(var(--radius-sm) + 0.1rem);
+  background: #fff;
+  color: var(--text-dark);
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 600;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.person-spend-suica-topup-btn:hover {
+  border-color: rgba(31, 122, 84, 0.45);
+}
+
+.person-spend-suica-topup-btn:focus-visible {
+  outline: 2px solid #1f7a54;
+  outline-offset: 2px;
+}
+
+.person-spend-suica-topup-btn.is-active,
+.person-spend-suica-topup-btn[aria-pressed="true"] {
+  border-color: rgba(31, 122, 84, 0.55);
+  background: rgba(31, 122, 84, 0.1);
+  color: #1f7a54;
+}
+
 .person-spend-filters .filter-item label {
   display: flex;
   align-items: center;
