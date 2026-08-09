@@ -5100,12 +5100,122 @@ function buildPersonSpendReportCategoryRows(rows, person, currency) {
   const total = [...totals.values()].reduce((sum, item) => sum + item.amount, 0);
   return [...totals.values()]
     .sort((a, b) => b.amount - a.amount)
-    .map((item) => ({
+    .map((item, index) => ({
+      key: item.key,
       label: getChartCategoryLabel(item.key, item.sampleCategory),
+      sampleCategory: item.sampleCategory,
       amount: item.amount,
       count: item.count,
       pct: total > 0 ? (item.amount / total) * 100 : 0,
+      color: getCategoryChartColor(item.key, item.sampleCategory, index),
     }));
+}
+
+function buildReportDonutSvg(slices, total, currency) {
+  if (!slices.length || isNegligibleMoney(total, currency)) {
+    return `<div class="chart-empty">未有分類圖表</div>`;
+  }
+  const cx = 90;
+  const cy = 90;
+  const r = 78;
+  let paths = '';
+  if (slices.length === 1) {
+    paths = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${escapeHtml(slices[0].color)}"></circle>`;
+  } else {
+    let angle = 0;
+    paths = slices
+      .map((slice) => {
+        const sweep = total > 0 ? (slice.amount / total) * 360 : 0;
+        if (sweep <= 0) return '';
+        const start = angle;
+        let end = angle + sweep;
+        if (end - start >= 360) end = start + 359.999;
+        angle = end;
+        return `<path d="${describePieSlice(cx, cy, r, start, end)}" fill="${escapeHtml(slice.color)}"></path>`;
+      })
+      .join('');
+  }
+  return `<svg class="donut" viewBox="0 0 180 180" width="180" height="180" aria-hidden="true">
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="46" fill="#fff"></circle>
+    <text x="${cx}" y="${cy - 4}" text-anchor="middle" class="donut-label">合共</text>
+    <text x="${cx}" y="${cy + 14}" text-anchor="middle" class="donut-value">${escapeHtml(formatMoney(total, currency))}</text>
+  </svg>`;
+}
+
+function buildReportHBarRows(items, currency, { showPctOfTotal = true } = {}) {
+  const max = Math.max(...items.map((item) => Math.abs(item.amount)), 1);
+  const sum = items.reduce((s, item) => s + Math.max(0, item.amount), 0) || 1;
+  return items
+    .map((item) => {
+      const width = Math.max(2, Math.round((Math.abs(item.amount) / max) * 100));
+      const pct = showPctOfTotal ? formatChartPct((Math.abs(item.amount) / sum) * 100) : '';
+      const color = item.color || '#6b8cae';
+      return `<div class="hbar-row">
+        <div class="hbar-label">${escapeHtml(item.label)}</div>
+        <div class="hbar-track"><span class="hbar-fill" style="width:${width}%;background:${escapeHtml(color)}"></span></div>
+        <div class="hbar-meta">${pct ? `<span>${escapeHtml(pct)}</span>` : ''}<strong>${escapeHtml(formatMoney(item.amount, currency))}</strong></div>
+      </div>`;
+    })
+    .join('');
+}
+
+function buildReportDailyBarSvg(dayGroups, person, currency) {
+  if (!dayGroups.length) return `<div class="chart-empty">未有每日圖表</div>`;
+  const points = dayGroups.map((group) => ({
+    label: group.date ? String(group.date).slice(5) : '—',
+    fullLabel: group.date ? formatDayHeader(group.date) : '無日期',
+    amount: group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0),
+    count: group.items.length,
+  }));
+  const max = Math.max(...points.map((p) => p.amount), 1);
+  const n = points.length;
+  const plotW = Math.max(520, n * 28);
+  const plotH = 110;
+  const padL = 8;
+  const padR = 8;
+  const padT = 12;
+  const padB = 28;
+  const width = plotW + padL + padR;
+  const height = plotH + padT + padB;
+  const gap = n > 20 ? 2 : 4;
+  const barW = Math.max(6, (plotW - gap * (n - 1)) / n);
+  const bars = points
+    .map((p, i) => {
+      const h = Math.max(2, (p.amount / max) * plotH);
+      const x = padL + i * (barW + gap);
+      const y = padT + (plotH - h);
+      const showLabel = n <= 18 || i % Math.ceil(n / 12) === 0 || i === n - 1;
+      return `<g>
+        <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="#6b8cae">
+          <title>${escapeHtml(p.fullLabel)} · ${escapeHtml(formatMoney(p.amount, currency))} · ${p.count} 筆</title>
+        </rect>
+        ${
+          showLabel
+            ? `<text x="${(x + barW / 2).toFixed(1)}" y="${height - 8}" text-anchor="middle" class="axis-label">${escapeHtml(p.label)}</text>`
+            : ''
+        }
+      </g>`;
+    })
+    .join('');
+  return `<svg class="daily-bars" viewBox="0 0 ${width} ${height}" width="100%" height="${height}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <line x1="${padL}" y1="${padT + plotH}" x2="${padL + plotW}" y2="${padT + plotH}" stroke="#d0d0d0" stroke-width="1"></line>
+    ${bars}
+  </svg>`;
+}
+
+function buildReportBudgetMeterHtml(budget, used, remaining, currency) {
+  const safeBudget = Math.max(Math.abs(budget), Math.abs(used), 1);
+  const usedPct = Math.min(100, Math.round((Math.abs(used) / safeBudget) * 100));
+  const over = remaining < 0;
+  return `<div class="meter">
+    <div class="meter-head"><span>預算使用</span><strong>${usedPct}%</strong></div>
+    <div class="meter-track"><span class="meter-fill${over ? ' is-over' : ''}" style="width:${Math.min(100, usedPct)}%"></span></div>
+    <div class="meter-foot">
+      <span>用咗 ${escapeHtml(formatMoney(used, currency))}</span>
+      <span>剩餘 ${escapeHtml(formatMoney(remaining, currency))}</span>
+    </div>
+  </div>`;
 }
 
 function buildPersonSpendReportHtml() {
@@ -5123,57 +5233,58 @@ function buildPersonSpendReportHtml() {
   const personLabel = personName(person);
   const budget = Number(budgets?.[person]?.[currency]) || 0;
   const remaining = budget - total;
-  const generatedAt = new Date();
-  const generatedText = generatedAt.toLocaleString('zh-Hant', {
+  const generatedText = new Date().toLocaleString('zh-Hant', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
     hour12: false,
   });
   const rateText =
     currency === 'JPY' && exchangeRateJpyHkd
-      ? `目前匯率設定：1 JPY ≈ ${escapeHtml(String(exchangeRateJpyHkd))} HKD`
+      ? `匯率 1 JPY ≈ ${escapeHtml(String(exchangeRateJpyHkd))} HKD`
       : '';
+
+  const categories = buildPersonSpendReportCategoryRows(rows, person, currency);
+  const partItems = [
+    { label: '自己嘅', amount: parts.self, color: '#5b8def' },
+    { label: '一人一半', amount: parts.half, color: '#7aa2f7' },
+    { label: '對方幫你俾', amount: parts.helped, color: '#9b7ede' },
+    { label: 'Suica 增值', amount: parts.topup, color: '#1f7a54' },
+    { label: '餘額調整', amount: parts.adjust, color: '#8aa9c4' },
+    { label: '其他', amount: parts.other, color: '#b8b8b8' },
+  ].filter((item) => !isNegligibleMoney(item.amount, currency));
+
+  const dayGroups = groupPersonSpendRowsByDate(rows);
+  const donutSvg = buildReportDonutSvg(categories, total, currency);
+  const categoryBars = buildReportHBarRows(
+    categories.map((c) => ({ label: c.label, amount: c.amount, color: c.color })),
+    currency
+  );
+  const partBars = buildReportHBarRows(partItems, currency);
+  const dailySvg = buildReportDailyBarSvg(dayGroups, person, currency);
+  const budgetMeter = buildReportBudgetMeterHtml(budget, total, remaining, currency);
 
   let walletHtml = '';
   if (currency === 'JPY') {
     const wallet = calcSuicaWallet(person);
     walletHtml = `
-      <section class="rpt-section">
-        <h2>Suica 錢包狀況</h2>
-        <table>
-          <tbody>
-            <tr><th>出發前原有</th><td>${escapeHtml(formatMoney(wallet.initial, 'JPY'))}</td></tr>
-            <tr><th>其後增值合共</th><td>${escapeHtml(formatMoney(wallet.toppedUp, 'JPY'))}</td></tr>
-            <tr><th>已用 Suica 俾</th><td>${escapeHtml(formatMoney(wallet.spent, 'JPY'))}</td></tr>
-            <tr><th>而家餘額</th><td>${escapeHtml(formatMoney(wallet.balance, 'JPY'))}</td></tr>
-          </tbody>
-        </table>
-      </section>`;
+      <div class="panel">
+        <h3>Suica 錢包</h3>
+        <div class="mini-kpis">
+          <div><span>原有</span><strong>${escapeHtml(formatMoney(wallet.initial, 'JPY'))}</strong></div>
+          <div><span>增值</span><strong>${escapeHtml(formatMoney(wallet.toppedUp, 'JPY'))}</strong></div>
+          <div><span>已俾</span><strong>${escapeHtml(formatMoney(wallet.spent, 'JPY'))}</strong></div>
+          <div><span>餘額</span><strong>${escapeHtml(formatMoney(wallet.balance, 'JPY'))}</strong></div>
+        </div>
+      </div>`;
   }
 
-  const partRows = [
-    ['自己嘅', parts.self],
-    ['一人一半（你份）', parts.half],
-    ['對方幫你俾', parts.helped],
-    ['Suica 增值', parts.topup],
-    ['餘額調整', parts.adjust],
-    ['其他', parts.other],
-  ]
-    .filter(([, amount]) => !isNegligibleMoney(amount, currency))
-    .map(
-      ([label, amount]) =>
-        `<tr><td>${escapeHtml(label)}</td><td class="num">${escapeHtml(formatMoney(amount, currency))}</td></tr>`
-    )
-    .join('');
-
-  const categoryRows = buildPersonSpendReportCategoryRows(rows, person, currency)
+  const categoryLegend = categories
     .map(
       (item) => `<tr>
-        <td>${escapeHtml(item.label)}</td>
+        <td><span class="swatch" style="background:${escapeHtml(item.color)}"></span>${escapeHtml(item.label)}</td>
         <td class="num">${item.count}</td>
         <td class="num">${escapeHtml(formatChartPct(item.pct))}</td>
         <td class="num">${escapeHtml(formatMoney(item.amount, currency))}</td>
@@ -5181,212 +5292,222 @@ function buildPersonSpendReportHtml() {
     )
     .join('');
 
-  const dayGroups = groupPersonSpendRowsByDate(rows);
-  const daySummaryRows = dayGroups
-    .map((group) => {
-      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
-      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
-      return `<tr>
-        <td>${escapeHtml(dayLabel)}</td>
-        <td class="num">${group.items.length}</td>
-        <td class="num">${escapeHtml(formatMoney(dayTotal, currency))}</td>
-      </tr>`;
-    })
-    .join('');
-
   const detailRows = rows
     .map((tx, index) => {
       const share = getPersonShare(tx, person);
       const full = Number(tx.amount) || 0;
       const time = formatRecordTime(tx.time) || '—';
-      const location = getLocationText(tx) || '—';
-      const desc = getDisplayDescription(tx) || '—';
-      const aShare = Number(tx.a_share) || 0;
-      const bShare = Number(tx.b_share) || 0;
+      const location = getLocationText(tx);
+      const title = getTransactionTitle(tx);
       return `<tr>
         <td class="num">${index + 1}</td>
-        <td>${escapeHtml(tx.date || '—')}</td>
-        <td>${escapeHtml(time)}</td>
-        <td>${escapeHtml(getTransactionTitle(tx))}</td>
+        <td class="nowrap">${escapeHtml(tx.date || '—')}</td>
+        <td class="nowrap">${escapeHtml(time)}</td>
+        <td>${escapeHtml(title)}</td>
         <td>${escapeHtml(getCategoryLabel(tx.category) || '雜項')}</td>
         <td>${escapeHtml(personSpendSplitReportLabel(tx, person))}</td>
         <td>${escapeHtml(personSpendPaymentMethodLabel(tx))}</td>
         <td>${escapeHtml(personName(tx.payer))}</td>
-        <td class="num">${escapeHtml(formatMoney(full, currency))}</td>
-        <td class="num">${escapeHtml(formatMoney(aShare, currency))}</td>
-        <td class="num">${escapeHtml(formatMoney(bShare, currency))}</td>
-        <td class="num strong">${escapeHtml(formatMoney(share, currency))}</td>
-        <td>${escapeHtml(desc)}</td>
-        <td>${escapeHtml(location)}</td>
-        <td class="mono">${escapeHtml(String(tx.transaction_id || getTxKey(tx) || '—'))}</td>
+        <td class="num nowrap">${escapeHtml(formatMoney(full, currency))}</td>
+        <td class="num nowrap strong">${escapeHtml(formatMoney(share, currency))}</td>
+        <td>${escapeHtml(location || '—')}</td>
       </tr>`;
-    })
-    .join('');
-
-  const dayDetailSections = dayGroups
-    .map((group) => {
-      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
-      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
-      const lines = group.items
-        .map((tx) => {
-          const share = getPersonShare(tx, person);
-          const time = formatRecordTime(tx.time);
-          return `<li>
-            <span class="line-main">${escapeHtml(time ? `${time} · ` : '')}${escapeHtml(getTransactionTitle(tx))}</span>
-            <span class="line-meta">${escapeHtml(getCategoryLabel(tx.category) || '雜項')} · ${escapeHtml(personSpendSplitReportLabel(tx, person))} · ${escapeHtml(personSpendPaymentMethodLabel(tx))}</span>
-            <span class="line-amt">${escapeHtml(formatMoney(share, currency))}</span>
-          </li>`;
-        })
-        .join('');
-      return `<div class="day-block">
-        <div class="day-head"><strong>${escapeHtml(dayLabel)}</strong><span>${group.items.length} 筆 · ${escapeHtml(formatMoney(dayTotal, currency))}</span></div>
-        <ul class="day-lines">${lines}</ul>
-      </div>`;
     })
     .join('');
 
   const excludedNotes = getPersonSpendReportExcludedNotes(person, currency);
   const excludedHtml = excludedNotes.length
-    ? `<ul class="note-list">${excludedNotes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
-    : '<p class="muted">呢個模式下未有額外排除項目要列出。</p>';
-
-  const filterNote = personSpendView.category
-    ? `畫面而家篩咗分類「${getCategoryLabel(personSpendView.category) || personSpendView.category}」，但本報告輸出<strong>全部分類</strong>完整明細。`
-    : '本報告輸出目前計法下嘅<strong>全部分類</strong>完整明細。';
+    ? excludedNotes.map((n) => escapeHtml(n)).join(' · ')
+    : '呢個模式下未有額外排除項目。';
 
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>${escapeHtml(personLabel)} 用咗明細報告 · ${escapeHtml(currency)}</title>
+  <title>${escapeHtml(personLabel)} 用咗明細 · ${escapeHtml(currency)}</title>
   <style>
-    @page { size: A4; margin: 12mm 10mm; }
+    @page { size: A4; margin: 10mm 9mm; }
+    :root {
+      --fs: 9.5pt;
+      --fs-sm: 8.5pt;
+      --fs-md: 10pt;
+      --fs-lg: 12pt;
+      --fs-xl: 16pt;
+      --lh: 1.35;
+      --ink: #1a1a1a;
+      --muted: #5a5a5a;
+      --line: #d5d5d5;
+      --fill: #f5f6f7;
+      --accent: #2f5f8f;
+      --font: "PingFang TC", "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+    }
     * { box-sizing: border-box; }
-    body {
+    html, body {
       margin: 0;
-      color: #1d1a1b;
-      font: 11px/1.45 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      font: 400 var(--fs)/var(--lh) var(--font);
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
-    h1 { font-size: 18px; margin: 0 0 4px; }
+    h1, h2, h3, p, table, td, th, div, span, strong, li {
+      font-family: var(--font);
+      font-size: inherit;
+      line-height: inherit;
+      margin: 0;
+    }
+    h1 { font-size: var(--fs-xl); font-weight: 700; letter-spacing: 0.01em; }
     h2 {
-      font-size: 13px;
-      margin: 0 0 8px;
-      padding-bottom: 4px;
-      border-bottom: 1.5px solid #222;
-    }
-    h3 { font-size: 12px; margin: 0 0 6px; }
-    .muted { color: #666; }
-    .cover {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: flex-start;
-      margin-bottom: 14px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #111;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      background: #f0f4f8;
-      border: 1px solid #cfd8e3;
+      font-size: var(--fs-md);
       font-weight: 700;
-      font-size: 10px;
+      margin: 0 0 6px;
+      padding: 0 0 3px;
+      border-bottom: 1.5px solid var(--ink);
     }
-    .rpt-section { margin: 0 0 14px; break-inside: avoid; }
-    .kpi {
+    h3 { font-size: var(--fs); font-weight: 700; margin: 0 0 6px; }
+    .muted { color: var(--muted); }
+    .toolbar {
+      position: sticky; top: 0; z-index: 2;
+      display: flex; gap: 8px; align-items: center;
+      padding: 6px 0 8px; margin-bottom: 8px;
+      background: #fff; border-bottom: 1px solid var(--line);
+    }
+    .toolbar button {
+      font: 700 var(--fs)/1 var(--font);
+      padding: 7px 10px; border-radius: 6px;
+      border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer;
+    }
+    .toolbar button.secondary { background: #fff; color: var(--accent); }
+    .cover {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .cover-meta { color: var(--muted); margin-top: 3px; font-size: var(--fs-sm); }
+    .badge {
+      display: inline-block; margin-top: 4px;
+      padding: 1px 7px; border-radius: 999px;
+      border: 1px solid #c8d5e4; background: #f0f5fa;
+      font-size: var(--fs-sm); font-weight: 700;
+    }
+    .cover-total { text-align: right; }
+    .cover-total .label { font-size: var(--fs-sm); color: var(--muted); }
+    .cover-total .value { font-size: 18pt; font-weight: 800; line-height: 1.1; }
+    .kpis {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
-      margin: 8px 0 0;
+      margin-bottom: 8px;
     }
-    .kpi div {
-      border: 1px solid #ddd;
+    .kpis > div, .mini-kpis > div {
+      background: var(--fill);
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      padding: 5px 7px;
+    }
+    .kpis span, .mini-kpis span, .meter-head span, .meter-foot span {
+      display: block; color: var(--muted); font-size: var(--fs-sm);
+    }
+    .kpis strong, .mini-kpis strong { display: block; font-size: var(--fs-lg); font-weight: 700; margin-top: 1px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .panel {
+      border: 1px solid var(--line);
       border-radius: 6px;
-      padding: 6px 8px;
-      background: #fafafa;
+      padding: 7px 8px;
+      background: #fff;
+      break-inside: avoid;
     }
-    .kpi strong { display: block; font-size: 13px; margin-top: 2px; }
+    .chart-row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .donut-label { font-size: 8px; fill: var(--muted); }
+    .donut-value { font-size: 10px; font-weight: 700; fill: var(--ink); }
+    .chart-empty {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 80px; color: var(--muted); background: var(--fill);
+      border-radius: 5px; font-size: var(--fs-sm);
+    }
+    .hbar-row {
+      display: grid;
+      grid-template-columns: 68px 1fr 88px;
+      gap: 5px;
+      align-items: center;
+      margin: 0 0 4px;
+    }
+    .hbar-label { font-size: var(--fs-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hbar-track {
+      height: 8px; border-radius: 99px; background: #eceff2; overflow: hidden;
+    }
+    .hbar-fill { display: block; height: 100%; border-radius: 99px; }
+    .hbar-meta {
+      display: flex; justify-content: flex-end; gap: 5px;
+      font-size: var(--fs-sm); white-space: nowrap;
+    }
+    .hbar-meta span { color: var(--muted); }
+    .swatch {
+      display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+      margin-right: 4px; vertical-align: middle;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 10px;
+      font-size: var(--fs-sm);
     }
     th, td {
-      border: 1px solid #d8d8d8;
-      padding: 4px 5px;
+      border: 1px solid var(--line);
+      padding: 3px 4px;
       vertical-align: top;
       text-align: left;
     }
-    th { background: #f3f3f3; font-weight: 700; }
-    td.num, th.num { text-align: right; white-space: nowrap; }
+    th { background: var(--fill); font-weight: 700; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     td.strong { font-weight: 700; }
-    td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; word-break: break-all; }
-    .detail-table { font-size: 8.5px; }
-    .detail-table th, .detail-table td { padding: 3px 3px; }
-    .day-block {
-      border: 1px solid #e4e4e4;
-      border-radius: 6px;
-      margin: 0 0 8px;
-      padding: 6px 8px;
-      break-inside: avoid;
-    }
-    .day-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 4px;
-      font-size: 11px;
-    }
-    .day-lines { list-style: none; margin: 0; padding: 0; }
-    .day-lines li {
+    td.nowrap, th.nowrap { white-space: nowrap; }
+    .mini-kpis {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 2px 10px;
-      padding: 3px 0;
-      border-top: 1px dashed #ececec;
-      font-size: 10px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
     }
-    .line-meta { grid-column: 1; color: #666; font-size: 9px; }
-    .line-amt { grid-row: 1 / span 2; align-self: center; font-weight: 700; white-space: nowrap; }
-    .note-list { margin: 0; padding-left: 18px; }
+    .meter { margin-top: 4px; }
+    .meter-head, .meter-foot {
+      display: flex; justify-content: space-between; gap: 8px; margin: 2px 0;
+    }
+    .meter-track {
+      height: 9px; border-radius: 99px; background: #e8edf2; overflow: hidden;
+    }
+    .meter-fill {
+      display: block; height: 100%; background: #5b8def; border-radius: 99px;
+    }
+    .meter-fill.is-over { background: #c45c2a; }
+    .axis-label { font-size: 7.5px; fill: var(--muted); }
+    .daily-wrap { overflow: hidden; }
+    .section { margin: 0 0 9px; }
+    .section.tight { margin-bottom: 7px; }
+    .note {
+      font-size: var(--fs-sm); color: var(--muted);
+      padding: 5px 7px; background: var(--fill); border-radius: 5px;
+    }
     .footer {
-      margin-top: 16px;
-      padding-top: 8px;
-      border-top: 1px solid #ccc;
-      color: #666;
-      font-size: 9px;
+      margin-top: 8px; padding-top: 6px;
+      border-top: 1px solid var(--line);
+      color: var(--muted); font-size: var(--fs-sm);
     }
     @media print {
       .no-print { display: none !important; }
-      a { color: inherit; text-decoration: none; }
-    }
-    .toolbar {
-      position: sticky;
-      top: 0;
-      z-index: 2;
-      display: flex;
-      gap: 8px;
-      padding: 8px 0 10px;
-      background: #fff;
-      border-bottom: 1px solid #eee;
-      margin-bottom: 12px;
-    }
-    .toolbar button {
-      font: inherit;
-      font-weight: 700;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid #2f5f8f;
-      background: #2f5f8f;
-      color: #fff;
-      cursor: pointer;
-    }
-    .toolbar button.secondary {
-      background: #fff;
-      color: #2f5f8f;
+      .panel, .section, tr { break-inside: avoid; }
+      .detail-table { page-break-before: always; }
     }
   </style>
 </head>
@@ -5394,81 +5515,76 @@ function buildPersonSpendReportHtml() {
   <div class="toolbar no-print">
     <button type="button" onclick="window.print()">儲存／列印 PDF</button>
     <button type="button" class="secondary" onclick="window.close()">關閉</button>
-    <span class="muted">提示：列印對話框請揀「儲存為 PDF」</span>
+    <span class="muted">列印對話框請揀「儲存為 PDF」</span>
   </div>
+
   <header class="cover">
     <div>
       <h1>${escapeHtml(personLabel)} · 用咗明細報告</h1>
-      <p class="muted" style="margin:0">日本旅遊記帳 · ${escapeHtml(currency)} · 產生時間 ${escapeHtml(generatedText)}</p>
-      <p style="margin:6px 0 0"><span class="badge">${escapeHtml(modeLabel)}</span></p>
+      <p class="cover-meta">日本旅遊記帳 · ${escapeHtml(currency)} · ${escapeHtml(generatedText)}${rateText ? ` · ${rateText}` : ''}</p>
+      <span class="badge">${escapeHtml(modeLabel)}</span>
     </div>
-    <div style="text-align:right">
-      <div><strong>合共用咗</strong></div>
-      <div style="font-size:20px;font-weight:800">${escapeHtml(formatMoney(total, currency))}</div>
-      <div class="muted">${rows.length} 筆</div>
+    <div class="cover-total">
+      <div class="label">合共用咗</div>
+      <div class="value">${escapeHtml(formatMoney(total, currency))}</div>
+      <div class="cover-meta">${rows.length} 筆</div>
     </div>
   </header>
 
-  <section class="rpt-section">
-    <h2>1. 報告說明</h2>
-    <p>${escapeHtml(modeHint)}</p>
-    <p class="muted">${filterNote}</p>
-    ${rateText ? `<p class="muted">${rateText}</p>` : ''}
-  </section>
+  <div class="kpis">
+    <div><span>預算</span><strong>${escapeHtml(formatMoney(budget, currency))}</strong></div>
+    <div><span>用咗</span><strong>${escapeHtml(formatMoney(total, currency))}</strong></div>
+    <div><span>剩餘</span><strong>${escapeHtml(formatMoney(remaining, currency))}</strong></div>
+    <div><span>筆數</span><strong>${rows.length}</strong></div>
+  </div>
 
-  <section class="rpt-section">
-    <h2>2. 總覽</h2>
-    <div class="kpi">
-      <div><span class="muted">預算</span><strong>${escapeHtml(formatMoney(budget, currency))}</strong></div>
-      <div><span class="muted">用咗</span><strong>${escapeHtml(formatMoney(total, currency))}</strong></div>
-      <div><span class="muted">剩餘</span><strong>${escapeHtml(formatMoney(remaining, currency))}</strong></div>
-      <div><span class="muted">筆數</span><strong>${rows.length}</strong></div>
+  <section class="section tight">
+    <div class="grid-2">
+      <div class="panel">
+        <h3>分類占比</h3>
+        <div class="chart-row">
+          ${donutSvg}
+          <div>${categoryBars || '<div class="chart-empty">未有資料</div>'}</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>計法拆解</h3>
+        ${partBars || '<div class="chart-empty">未有資料</div>'}
+        ${budgetMeter}
+      </div>
     </div>
   </section>
 
-  ${walletHtml}
+  <section class="section tight">
+    <div class="grid-2">
+      <div class="panel">
+        <h3>分類一覽</h3>
+        <table>
+          <thead><tr><th>分類</th><th class="num">筆</th><th class="num">占比</th><th class="num">金額</th></tr></thead>
+          <tbody>
+            ${categoryLegend || '<tr><td colspan="4">未有資料</td></tr>'}
+            <tr><th>合共</th><th class="num">${rows.length}</th><th class="num">100%</th><th class="num">${escapeHtml(formatMoney(total, currency))}</th></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        ${walletHtml || `<div class="panel"><h3>報告說明</h3><p class="note">${escapeHtml(modeHint)}</p></div>`}
+        ${walletHtml ? `<div class="panel" style="margin-top:8px"><h3>報告說明</h3><p class="note">${escapeHtml(modeHint)}</p></div>` : ''}
+      </div>
+    </div>
+  </section>
 
-  <section class="rpt-section">
-    <h2>3. 計法拆解</h2>
+  <section class="section">
+    <div class="panel">
+      <h3>每日用咗趨勢</h3>
+      <div class="daily-wrap">${dailySvg}</div>
+    </div>
+  </section>
+
+  <section class="section detail-table">
+    <h2>完整交易明細</h2>
+    <p class="note" style="margin-bottom:6px">「${escapeHtml(personLabel)}計入」＝呢份報告合共入面每一筆實際計入嘅份額。</p>
     <table>
-      <thead><tr><th>項目</th><th class="num">金額</th></tr></thead>
-      <tbody>
-        ${partRows || '<tr><td colspan="2">未有資料</td></tr>'}
-        <tr><th>合共用咗</th><th class="num">${escapeHtml(formatMoney(total, currency))}</th></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="rpt-section">
-    <h2>4. 分類統計</h2>
-    <table>
-      <thead>
-        <tr><th>分類</th><th class="num">筆數</th><th class="num">占比</th><th class="num">金額</th></tr>
-      </thead>
-      <tbody>
-        ${categoryRows || '<tr><td colspan="4">未有資料</td></tr>'}
-        <tr><th>合共</th><th class="num">${rows.length}</th><th class="num">100%</th><th class="num">${escapeHtml(formatMoney(total, currency))}</th></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section class="rpt-section">
-    <h2>5. 每日小計</h2>
-    <table>
-      <thead><tr><th>日期</th><th class="num">筆數</th><th class="num">當日用咗</th></tr></thead>
-      <tbody>${daySummaryRows || '<tr><td colspan="3">未有資料</td></tr>'}</tbody>
-    </table>
-  </section>
-
-  <section class="rpt-section">
-    <h2>6. 按日流水明細</h2>
-    ${dayDetailSections || '<p class="muted">未有資料</p>'}
-  </section>
-
-  <section class="rpt-section">
-    <h2>7. 完整交易明細表</h2>
-    <p class="muted">欄位包含：全額、男孩份額、女生份額、以及「${escapeHtml(personLabel)}」計入用咗嘅份額。</p>
-    <table class="detail-table">
       <thead>
         <tr>
           <th class="num">#</th>
@@ -5477,28 +5593,24 @@ function buildPersonSpendReportHtml() {
           <th>項目</th>
           <th>分類</th>
           <th>計法</th>
-          <th>付款方式</th>
+          <th>付款</th>
           <th>邊個俾</th>
           <th class="num">全額</th>
-          <th class="num">男孩份</th>
-          <th class="num">女生份</th>
           <th class="num">${escapeHtml(personLabel)}計入</th>
-          <th>描述</th>
           <th>地點</th>
-          <th>交易 ID</th>
         </tr>
       </thead>
-      <tbody>${detailRows || '<tr><td colspan="15">未有資料</td></tr>'}</tbody>
+      <tbody>${detailRows || '<tr><td colspan="11">未有資料</td></tr>'}</tbody>
     </table>
   </section>
 
-  <section class="rpt-section">
-    <h2>8. 未計入／排除說明</h2>
-    ${excludedHtml}
+  <section class="section">
+    <h2>未計入／排除</h2>
+    <p class="note">${excludedHtml}</p>
   </section>
 
   <footer class="footer">
-    由「日本旅遊記帳」自動產生 · ${escapeHtml(personLabel)} · ${escapeHtml(currency)} · ${escapeHtml(modeLabel)} · ${escapeHtml(generatedText)}
+    日本旅遊記帳 · ${escapeHtml(personLabel)} · ${escapeHtml(currency)} · ${escapeHtml(modeLabel)} · ${escapeHtml(generatedText)}
   </footer>
   <script>
     window.addEventListener('load', function () {
