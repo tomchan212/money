@@ -3596,18 +3596,18 @@ function calcPersonJpySpentBreakdown(person) {
   };
 }
 
-function formatPersonSpentValueHtml(person, currency) {
+function formatPersonSpentMainText(person, currency) {
   if (currency !== 'JPY') {
-    return escapeHtml(formatMoney(calcSummary().spent[person][currency], currency));
+    return formatMoney(calcSummary().spent[person][currency], currency);
   }
+  return formatMoney(calcPersonJpySpentBreakdown(person).cash, 'JPY');
+}
 
-  const { cash, suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
-  const total = cash + suicaTopUpTotal;
-  const spentText = escapeHtml(formatMoney(total, 'JPY'));
-  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return spentText;
-
-  const suicaText = escapeHtml(formatMoney(suicaTopUpTotal, 'JPY'));
-  return `${spentText} <span class="spent-value-suica-extra">（含🐧${suicaText} 增值）</span>`;
+function formatPersonSuicaTopUpNote(person, currency) {
+  if (currency !== 'JPY') return '';
+  const { suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
+  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return '';
+  return `（＋🐧${formatMoney(suicaTopUpTotal, 'JPY')} 增值）`;
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4449,14 +4449,20 @@ function renderSummary() {
       const spentText = formatMoney(used, cur);
       const remainText = `剩餘 ${formatMoney(remaining, cur)}`;
 
+      const spentMainText = cur === 'JPY' ? formatPersonSpentMainText(person, cur) : spentText;
+      const suicaNote = formatPersonSuicaTopUpNote(person, cur);
+
       document
         .querySelectorAll(`.spent-value[data-person="${p}"][data-currency="${lower}"]`)
         .forEach((el) => {
-          if (cur === 'JPY') {
-            el.innerHTML = formatPersonSpentValueHtml(person, cur);
-          } else {
-            el.textContent = spentText;
-          }
+          el.textContent = spentMainText;
+        });
+
+      document
+        .querySelectorAll(`.spent-suica-extra[data-person="${p}"][data-currency="${lower}"]`)
+        .forEach((el) => {
+          el.textContent = suicaNote;
+          el.hidden = !suicaNote;
         });
 
       document

@@ -10,10 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="preload" href="boy.png" as="image">
   <link rel="preload" href="girl.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260809cashremain2">
+  <link rel="stylesheet" href="styles.css?v=20260809summary4">
   <script src="offlineQueue.js?v=20260730oq2" defer></script>
   <script src="syncManager.js?v=20260809syncfix" defer></script>
-  <script src="app.js?v=20260809cashremain2" defer></script>
+  <script src="app.js?v=20260809summary4" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -103,10 +103,12 @@
                   <button type="button" class="home-spent-item person-spend-btn" data-person="A" data-currency="JPY" aria-label="睇男孩 JPY 啲錢用咗去邊">
                     <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt="" decoding="async"></span>
                     <span class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></span>
+                    <span class="spent-suica-extra spent-value-suica-extra" data-person="a" data-currency="jpy" hidden></span>
                   </button>
                   <button type="button" class="home-spent-item person-spend-btn" data-person="B" data-currency="JPY" aria-label="睇女生 JPY 啲錢用咗去邊">
                     <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt="" decoding="async"></span>
                     <span class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></span>
+                    <span class="spent-suica-extra spent-value-suica-extra" data-person="b" data-currency="jpy" hidden></span>
                   </button>
                 </div>
               </div>
@@ -290,6 +292,7 @@
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="boy.png" alt="" loading="lazy" decoding="async"></span>
                 <div class="stat-chip-body">
                   <div class="stat-spent">用咗 <strong class="spent-value" data-person="a" data-currency="jpy">0</strong></div>
+                  <div class="spent-suica-extra spent-value-suica-extra" data-person="a" data-currency="jpy" hidden></div>
                   <div class="stat-remain remain-value" data-person="a" data-currency="jpy">剩餘 0</div>
                 </div>
               </button>
@@ -297,6 +300,7 @@
                 <span class="person-emoji" aria-hidden="true"><img class="person-avatar person-avatar-lg" src="girl.png" alt="" loading="lazy" decoding="async"></span>
                 <div class="stat-chip-body">
                   <div class="stat-spent">用咗 <strong class="spent-value" data-person="b" data-currency="jpy">0</strong></div>
+                  <div class="spent-suica-extra spent-value-suica-extra" data-person="b" data-currency="jpy" hidden></div>
                   <div class="stat-remain remain-value" data-person="b" data-currency="jpy">剩餘 0</div>
                 </div>
               </button>
