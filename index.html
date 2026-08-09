@@ -10,10 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="preload" href="boy.png" as="image">
   <link rel="preload" href="girl.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260808suicatopup">
+  <link rel="stylesheet" href="styles.css?v=20260809calcall">
   <script src="offlineQueue.js?v=20260730oq2" defer></script>
   <script src="syncManager.js?v=20260809syncfix" defer></script>
-  <script src="app.js?v=20260809syncfix" defer></script>
+  <script src="app.js?v=20260809calcall" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -159,7 +159,7 @@
               <span class="money-prefix prefix-jpy" id="expense-amount-prefix">¥</span>
               <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="expense-amount" name="amount" placeholder="0" required enterkeyhint="done">
             </div>
-            <button type="button" class="money-tool-btn" id="btn-open-calculator" aria-label="打開計數機">
+            <button type="button" class="money-tool-btn" id="btn-open-calculator" data-open-calculator data-calc-target="#expense-amount" data-calc-currency-input="#expense-currency" aria-label="打開計數機">
               <span aria-hidden="true">🧮</span>
               <span>計數機</span>
             </button>
@@ -645,9 +645,14 @@
           <label for="repay-amount" class="sr-only">還錢金額</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt="" loading="lazy" decoding="async"></span>
-            <div class="money-input-wrap form-icon-field-control">
-              <span class="money-prefix prefix-jpy" id="repay-amount-prefix">¥</span>
-              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="repay-amount" required>
+            <div class="money-input-actions form-icon-field-control">
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy" id="repay-amount-prefix">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="repay-amount" required>
+              </div>
+              <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#repay-amount" data-calc-currency-input="#repay-currency" aria-label="打開計數機">
+                <span aria-hidden="true">🧮</span>
+              </button>
             </div>
           </div>
         </div>
@@ -709,9 +714,14 @@
           <label for="loan-amount" class="sr-only">借錢金額</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt="" loading="lazy" decoding="async"></span>
-            <div class="money-input-wrap form-icon-field-control">
-              <span class="money-prefix prefix-jpy" id="loan-amount-prefix">¥</span>
-              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="loan-amount" required>
+            <div class="money-input-actions form-icon-field-control">
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy" id="loan-amount-prefix">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="loan-amount" required>
+              </div>
+              <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#loan-amount" data-calc-currency-input="#loan-currency" aria-label="打開計數機">
+                <span aria-hidden="true">🧮</span>
+              </button>
             </div>
           </div>
         </div>
@@ -742,9 +752,14 @@
           <label for="suica-adjust-amount" class="sr-only">新餘額</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt="" loading="lazy" decoding="async"></span>
-            <div class="money-input-wrap form-icon-field-control">
-              <span class="money-prefix prefix-jpy" id="suica-adjust-amount-prefix">¥</span>
-              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="suica-adjust-amount" required>
+            <div class="money-input-actions form-icon-field-control">
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy" id="suica-adjust-amount-prefix">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="suica-adjust-amount" required>
+              </div>
+              <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#suica-adjust-amount" data-calc-currency="JPY" aria-label="打開計數機">
+                <span aria-hidden="true">🧮</span>
+              </button>
             </div>
           </div>
         </div>
@@ -770,9 +785,14 @@
           <label for="partial-split-amount" class="sr-only">部分金額</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/savings.png" alt="" loading="lazy" decoding="async"></span>
-            <div class="money-input-wrap form-icon-field-control">
-              <span class="money-prefix prefix-jpy" id="partial-split-amount-prefix">¥</span>
-              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="partial-split-amount" required>
+            <div class="money-input-actions form-icon-field-control">
+              <div class="money-input-wrap">
+                <span class="money-prefix prefix-jpy" id="partial-split-amount-prefix">¥</span>
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="partial-split-amount" required>
+              </div>
+              <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#partial-split-amount" data-calc-currency-from-prefix="partial-split-prefix" aria-label="打開計數機">
+                <span aria-hidden="true">🧮</span>
+              </button>
             </div>
           </div>
         </div>
@@ -850,23 +870,38 @@
             <h4><img class="person-avatar person-avatar-inline" src="boy.png" alt="" aria-hidden="true" loading="lazy" decoding="async"></h4>
             <div class="form-row">
               <label for="budget-a-jpy">JPY</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-jpy">¥</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-jpy" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-jpy">¥</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-jpy" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-a-jpy" data-calc-currency="JPY" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
             <div class="form-row">
               <label for="budget-a-hkd">HKD</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-hkd">$</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-hkd" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-hkd">$</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-hkd" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-a-hkd" data-calc-currency="HKD" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
             <div class="form-row">
               <label for="budget-a-suica">🐧 Suica</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-jpy">¥</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-suica" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-jpy">¥</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-a-suica" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-a-suica" data-calc-currency="JPY" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
           </div>
@@ -874,23 +909,38 @@
             <h4><img class="person-avatar person-avatar-inline" src="girl.png" alt="" aria-hidden="true" loading="lazy" decoding="async"></h4>
             <div class="form-row">
               <label for="budget-b-jpy">JPY</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-jpy">¥</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-jpy" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-jpy">¥</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-jpy" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-b-jpy" data-calc-currency="JPY" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
             <div class="form-row">
               <label for="budget-b-hkd">HKD</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-hkd">$</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-hkd" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-hkd">$</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-hkd" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-b-hkd" data-calc-currency="HKD" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
             <div class="form-row">
               <label for="budget-b-suica">🐧 Suica</label>
-              <div class="money-input-wrap">
-                <span class="money-prefix prefix-jpy">¥</span>
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-suica" required>
+              <div class="money-input-actions">
+                <div class="money-input-wrap">
+                  <span class="money-prefix prefix-jpy">¥</span>
+                  <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="budget-b-suica" required>
+                </div>
+                <button type="button" class="money-tool-btn money-tool-btn-icon" data-open-calculator data-calc-target="#budget-b-suica" data-calc-currency="JPY" aria-label="打開計數機">
+                  <span aria-hidden="true">🧮</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1029,9 +1079,15 @@
         </div>
         <div class="form-row">
           <label for="edit-amount"><img class="ui-icon ui-icon-label" src="icons/savings.png" alt="" aria-hidden="true" loading="lazy" decoding="async"> 金額</label>
-          <div class="money-input-wrap">
-            <span class="money-prefix prefix-jpy" id="edit-amount-prefix">¥</span>
-            <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="edit-amount" required>
+          <div class="money-input-actions">
+            <div class="money-input-wrap">
+              <span class="money-prefix prefix-jpy" id="edit-amount-prefix">¥</span>
+              <input type="text" inputmode="decimal" pattern="[0-9]*[.]?[0-9]*" autocomplete="off" class="money-input" id="edit-amount" required>
+            </div>
+            <button type="button" class="money-tool-btn" data-open-calculator data-calc-target="#edit-amount" data-calc-currency-input="#edit-currency" aria-label="打開計數機">
+              <span aria-hidden="true">🧮</span>
+              <span>計數機</span>
+            </button>
           </div>
         </div>
         <div class="edit-form-actions">

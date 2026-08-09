@@ -2990,6 +2990,7 @@ button.suica-wallet-card:focus-visible {
 }
 
 .form-icon-field-control.money-input-wrap,
+.form-icon-field-control.money-input-actions,
 .form-icon-field-control.toggle-group,
 .form-icon-field-control.repay-note-combo {
   flex: 1 1 auto;
@@ -3166,6 +3167,15 @@ button.suica-wallet-card:focus-visible {
 
 .money-input-actions .money-input-wrap {
   flex: 1;
+  min-width: 0;
+}
+
+.form-icon-field .money-input-actions {
+  gap: 0.45rem;
+}
+
+.form-icon-field .money-input-actions .money-input-wrap {
+  min-height: var(--icon-rail);
 }
 
 .money-tool-btn {
@@ -3185,6 +3195,23 @@ button.suica-wallet-card:focus-visible {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  flex: 0 0 auto;
+}
+
+.money-tool-btn-icon {
+  min-width: 3rem;
+  padding: 0 0.55rem;
+  font-size: 1.15rem;
+}
+
+.budget-person .money-input-actions {
+  width: 100%;
+  gap: 0.4rem;
+}
+
+.budget-person .money-tool-btn-icon {
+  min-width: 2.75rem;
+  padding: 0 0.4rem;
 }
 
 .money-tool-btn:hover,
