@@ -1057,6 +1057,10 @@ button.currency-label.currency-icon-only .ui-icon-currency {
 }
 
 .home-spent-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
   background: #fff;
   border-radius: var(--radius-sm);
   padding: 0.3rem 0.4rem;
@@ -1094,13 +1098,6 @@ button.stat-chip.person-spend-btn {
 .home-spent-bar .person-avatar-lg {
   width: 2.75rem;
   height: 2.75rem;
-}
-
-.home-spent-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
 }
 
 .home-spent-item .stat-spent {
