@@ -519,9 +519,10 @@ function deleteTransaction_(params) {
     }
   }
 
+  // Idempotent: if the row is already gone (e.g. timeout after a successful
+  // delete), treat as success so the offline queue cannot get stuck.
   if (rowIndex < 0) {
-    const lookup = id || String(params.client_id || '').trim();
-    throw new Error('找不到該筆紀錄：' + lookup);
+    return getAllData_();
   }
 
   sheet.deleteRow(rowIndex);

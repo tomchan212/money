@@ -3,6 +3,7 @@
  */
 const SyncManager = (function () {
   const RETRY_DELAYS_MS = [0, 5000, 15000, 30000];
+  const PERMANENT_RETRY_MS = 120000;
   const SCHEDULE_DEBOUNCE_MS = 80;
 
   /** @type {Record<string, function>} */
@@ -40,9 +41,17 @@ const SyncManager = (function () {
     return online && navigator.onLine;
   }
 
+  function inferStatusMode() {
+    const op = OfflineQueue.peek();
+    if (!op) return undefined;
+    if (op.syncFailed) return 'error';
+    if (op.nextRetryAt && Date.now() < op.nextRetryAt) return 'retry';
+    return undefined;
+  }
+
   function refreshStatus(mode) {
     if (hooks.updateSyncStatusFromQueue) {
-      hooks.updateSyncStatusFromQueue(mode);
+      hooks.updateSyncStatusFromQueue(mode || inferStatusMode());
     }
   }
 
@@ -55,9 +64,52 @@ const SyncManager = (function () {
 
   function scheduleRetry(delayMs) {
     clearTimeout(retryTimer);
+    // Keep a tiny floor so delay-0 retries cannot busy-loop the event queue.
     retryTimer = setTimeout(() => {
       processQueue();
-    }, Math.max(delayMs, 0));
+    }, Math.max(delayMs, 1));
+  }
+
+  function errorMessage(err) {
+    return String(err?.message || err || '').trim();
+  }
+
+  /** Deletes that already vanished server-side are safe to treat as done. */
+  function isIdempotentSuccess(op, err) {
+    const msg = errorMessage(err);
+    if (op.type !== 'delete') return false;
+    return msg.includes('找不到該筆紀錄') || msg.includes('缺少 transaction_id');
+  }
+
+  function isMissingRowError(err) {
+    const msg = errorMessage(err);
+    return msg.includes('找不到該筆紀錄') || msg.includes('缺少 transaction_id');
+  }
+
+  /** Input validation errors will not heal by waiting. */
+  function isNonRetryableError(err) {
+    const msg = errorMessage(err);
+    return (
+      msg.includes('金額必須大於 0') ||
+      msg.includes('幣別不正確') ||
+      msg.includes('付款人不正確')
+    );
+  }
+
+  function recoverEditAsCreate(op) {
+    const clientId = op.payload?.clientId || op.clientId || OfflineQueue.generateId();
+    const tx = {
+      ...(op.payload?.tx || {}),
+      client_id: clientId,
+      _uid: clientId,
+      time: op.payload?.tx?.time || '',
+    };
+    OfflineQueue.dequeue();
+    OfflineQueue.enqueue({
+      type: 'create',
+      clientId,
+      payload: tx,
+    });
   }
 
   async function executeOperation(op) {
@@ -129,6 +181,27 @@ const SyncManager = (function () {
           const applySeq = hooks.beginServerApply();
           hooks.applyServerDataWithQueue(data, applySeq);
         } catch (err) {
+          if (isIdempotentSuccess(op, err)) {
+            console.warn('SyncManager: treating delete as done', err);
+            OfflineQueue.dequeue();
+            if (hooks.onSyncIdempotentSkip) hooks.onSyncIdempotentSkip(op, err);
+            continue;
+          }
+
+          if (op.type === 'edit' && isMissingRowError(err)) {
+            console.warn('SyncManager: recovering edit as create', err);
+            recoverEditAsCreate(op);
+            if (hooks.onSyncRecoveredAsCreate) hooks.onSyncRecoveredAsCreate(op, err);
+            continue;
+          }
+
+          if (isNonRetryableError(err)) {
+            console.warn('SyncManager: dropping non-retryable op', op.type, err);
+            OfflineQueue.dequeue();
+            if (hooks.onSyncDropped) hooks.onSyncDropped(op, err);
+            continue;
+          }
+
           op.retryCount = (op.retryCount || 0) + 1;
           if (op.retryCount <= RETRY_DELAYS_MS.length) {
             op.nextRetryAt = Date.now() + RETRY_DELAYS_MS[op.retryCount - 1];
@@ -137,11 +210,14 @@ const SyncManager = (function () {
             refreshStatus('retry');
             scheduleRetry(op.nextRetryAt - Date.now());
           } else {
+            const firstPermanent = !op.syncFailed;
             op.syncFailed = true;
-            op.nextRetryAt = Date.now() + 120000;
+            op.nextRetryAt = Date.now() + PERMANENT_RETRY_MS;
             OfflineQueue.updateHead(op);
             refreshStatus('error');
-            if (hooks.onSyncPermanentFailure) hooks.onSyncPermanentFailure(op, err);
+            if (firstPermanent && hooks.onSyncPermanentFailure) {
+              hooks.onSyncPermanentFailure(op, err);
+            }
             scheduleRetry(op.nextRetryAt - Date.now());
           }
           console.warn('SyncManager: op failed', op.type, err);
