@@ -321,8 +321,8 @@ const personSpendView = {
   currency: null,
   category: '',
   sort: 'date-desc',
-  /** When true: show cash + Suica top-ups; hide Suica payments. */
-  showSuicaTopUp: false,
+  /** When true: show cash + Suica top-ups; hide Suica payments. 預設：增值＝用咗 */
+  showSuicaTopUp: true,
   /** day | category | calc | chart */
   view: 'day',
 };
@@ -1409,8 +1409,17 @@ function getLoanBorrower(tx) {
   return tx.payer === 'A' ? 'B' : 'A';
 }
 
-function matchesCategoryFilter(txCategory, filterValue) {
+function matchesCategoryFilter(txOrCategory, filterValue) {
   if (!filterValue) return true;
+  const tx = txOrCategory && typeof txOrCategory === 'object' ? txOrCategory : null;
+  const txCategory = tx ? tx.category : txOrCategory;
+
+  if (filterValue === SUICA_CATEGORY) {
+    if (tx) {
+      return isSuicaTopUp(tx) || isSuicaPayment(tx) || isSuicaCredit(tx);
+    }
+    return txCategory === SUICA_CATEGORY;
+  }
   if (filterValue === '餐飲') {
     return txCategory === '餐飲' || String(txCategory).startsWith('餐飲-');
   }
@@ -3585,8 +3594,9 @@ function calcPersonJpySpentBreakdown(person) {
     if (isRepayTransaction(tx) || isLoanTransaction(tx)) continue;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, 'JPY')) continue;
-    // 用 Suica 俾唔計入現金用咗；餘額調整除外
-    if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) continue;
+    // 增值＝用咗：餘額調整唔計；用 Suica 俾唔重複計
+    if (isSuicaBalanceAdjust(tx)) continue;
+    if (isSuicaPayment(tx)) continue;
     if (isSuicaTopUp(tx)) {
       suicaTopUp += share;
       continue;
@@ -3604,14 +3614,14 @@ function calcPersonJpySpentBreakdown(person) {
 
 /**
  * 個人真正用／買嘅合計（同「啲錢用咗去邊 → 合共用咗」一致）。
- * countTopUpAsSpent=true：增值計入、Suica 俾錢唔重複計；餘額調整一律計。
- * countTopUpAsSpent=false：增值當轉移、Suica 俾錢計入；餘額調整一律計。
+ * countTopUpAsSpent=true（增值＝用咗）：增值計入、Suica 俾錢唔重複計；餘額調整唔計。
+ * countTopUpAsSpent=false（增值＝轉移）：增值唔計、Suica 俾錢計入；餘額調整當用咗。
  */
 function isPersonConsumptionTx(tx, { countTopUpAsSpent = true } = {}) {
   if (!tx) return false;
   if (isRepayTransaction(tx) || isLoanTransaction(tx)) return false;
-  if (isSuicaBalanceAdjust(tx)) return true;
   if (countTopUpAsSpent) {
+    if (isSuicaBalanceAdjust(tx)) return false;
     if (isSuicaPayment(tx)) return false;
     return true;
   }
@@ -3641,8 +3651,10 @@ function formatPersonSpentMainText(person, currency) {
 }
 
 function formatPersonSuicaTopUpNote(person, currency) {
-  // 主數字已含增值（同合共用咗），唔再另外顯示括號
-  return '';
+  if (currency !== 'JPY') return '';
+  const { suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
+  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return '';
+  return `(Suica 增值 ${formatMoney(suicaTopUpTotal, 'JPY')})`;
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4731,7 +4743,7 @@ function getFilteredTransactions() {
     if (listFilters.category === CUSTOM_CATEGORY) {
       list = list.filter((tx) => !isPredefinedCategory(tx.category));
     } else {
-      list = list.filter((tx) => matchesCategoryFilter(tx.category, listFilters.category));
+      list = list.filter((tx) => matchesCategoryFilter(tx, listFilters.category));
     }
   }
   if (listFilters.splitMode) {
@@ -4949,7 +4961,7 @@ function isPersonSpendExpenseTx(tx) {
 
 function personSpendSuicaBadgeHtml(tx) {
   if (isSuicaBalanceAdjust(tx)) {
-    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 餘額調整（當用咗）">🐧±</span>';
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 餘額調整">🐧±</span>';
   }
   if (isSuicaPayment(tx)) {
     return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 俾錢">🐧</span>';
@@ -4969,8 +4981,8 @@ function syncPersonSpendSuicaTopUpBtn() {
   // on：增值當用咗；off：增值當轉移去錢包，用 Suica 俾先算用咗
   btn.textContent = on ? '增值＝用咗' : '增值＝轉移';
   btn.title = on
-    ? '而家：Suica 增值計入用咗；用 Suica 俾嘅消費唔重複計。撳一下改做「增值＝轉移」。'
-    : '而家：增值只係錢轉入錢包；用 Suica 俾先算用咗。餘額調整一律當用咗。撳一下改做「增值＝用咗」。';
+    ? '而家：Suica 增值計入用咗；用 Suica 俾同餘額調整唔計。撳一下改做「增值＝轉移」。'
+    : '而家：增值只係錢轉入錢包；用 Suica 俾同餘額調整先算用咗。撳一下改做「增值＝用咗」。';
   btn.setAttribute(
     'aria-label',
     on
@@ -5081,7 +5093,7 @@ function getPersonSpendRows() {
     if (!isPersonSpendExpenseTx(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
-    if (!matchesCategoryFilter(tx.category, category)) return false;
+    if (!matchesCategoryFilter(tx, category)) return false;
     return true;
   });
 
@@ -5108,7 +5120,7 @@ function getPersonSpendChartRows() {
     if (!isPersonSpendExpenseTx(tx)) return false;
     const share = getPersonShare(tx, person);
     if (isNegligibleMoney(share, currency)) return false;
-    if (!matchesCategoryFilter(tx.category, category)) return false;
+    if (!matchesCategoryFilter(tx, category)) return false;
     return true;
   });
 }
@@ -5502,7 +5514,7 @@ function renderPersonSpendCalcPanel(rows, person, currency) {
       ${line('自己嘅', parts.self)}
       ${line('一人一半（你份）', parts.half)}
       ${line('對方幫你俾', parts.helped)}
-      ${line('餘額調整', parts.adjust, '一律當用咗')}
+      ${line('餘額調整', parts.adjust, personSpendView.showSuicaTopUp ? '' : '而家當用咗')}
       ${line('Suica 增值', parts.topup, personSpendView.showSuicaTopUp ? '而家計入用咗' : '而家當轉移，唔計入')}
       ${line('其他', parts.other)}
       <div class="person-spend-calc-row person-spend-calc-row-total">
@@ -5544,8 +5556,8 @@ function renderPersonSpendList() {
   }
   if (methodHintEl) {
     methodHintEl.textContent = personSpendView.showSuicaTopUp
-      ? '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當用咗，Suica 俾錢唔重複計；餘額調整一律當用咗。'
-      : '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當轉移，用 Suica 俾先算用咗；餘額調整一律當用咗。';
+      ? '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當用咗；Suica 俾錢同餘額調整唔計。'
+      : '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當轉移；用 Suica 俾同餘額調整先算用咗。';
   }
 
   syncPersonSpendViewTabs();
@@ -5572,7 +5584,7 @@ function openPersonSpendModal(person, currency) {
   personSpendView.category = '';
   personSpendView.sort = 'date-desc';
   personSpendView.view = 'day';
-  // JPY 預設：增值當用咗（同現金預算／剩餘常見睇法）；可切去「增值＝轉移」
+  // 預設：增值＝用咗（JPY）；可切去「增值＝轉移」
   personSpendView.showSuicaTopUp = currency === 'JPY';
 
   const catEl = $('#person-spend-category');
@@ -5591,7 +5603,7 @@ function closePersonSpendModal() {
   closeModal(els.personSpendModal);
   personSpendView.person = null;
   personSpendView.currency = null;
-  personSpendView.showSuicaTopUp = false;
+  personSpendView.showSuicaTopUp = true;
   personSpendView.view = 'day';
 }
 
