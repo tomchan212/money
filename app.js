@@ -54,6 +54,7 @@ let API_URL = getApiUrl();
 const SUICA_CATEGORY = '🐧Suica';
 const SUICA_PAY_PREFIX = '「Suica」';
 const SUICA_CREDIT_PREFIX = '「Suica+」';
+const SUICA_ADJUST_NOTE = 'Suica 餘額調整';
 const PAYMENT_CASH = '';
 const PAYMENT_SUICA = 'SUICA';
 const REPAY_NOTE_CUSTOM = '__custom__';
@@ -1360,6 +1361,14 @@ function isSuicaPayment(tx) {
 
 function isSuicaCredit(tx) {
   return Boolean(tx) && String(tx.description || '').startsWith(SUICA_CREDIT_PREFIX);
+}
+
+/** 手動改 Suica 餘額（＋／−）——現金預算當已使用，避免同現實對唔齊 */
+function isSuicaBalanceAdjust(tx) {
+  if (!tx) return false;
+  if (isSuicaCredit(tx)) return true;
+  if (!isSuicaPayment(tx)) return false;
+  return stripSuicaMarkers(tx.description) === SUICA_ADJUST_NOTE;
 }
 
 function isSuicaWalletTx(tx) {
@@ -3495,8 +3504,8 @@ function calcSummary() {
     if (cur !== 'JPY' && cur !== 'HKD') continue;
     net[cur] += tx.net_b_owes_a;
 
-    // 增值／餘額調整＝Suica 錢包帳；Suica 俾錢＝實際消費，計入用咗
-    if (isSuicaTopUp(tx) || isSuicaCredit(tx)) continue;
+    // 剩餘＝預算−現金使用（含增值＋餘額調整）；用 Suica 俾唔重複扣現金預算
+    if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) continue;
 
     spent.A[cur] += tx.a_share;
     spent.B[cur] += tx.b_share;
@@ -3566,22 +3575,23 @@ function calcSuicaWallet(person) {
 }
 
 function calcPersonJpySpentBreakdown(person) {
-  let consumption = 0;
+  let cash = 0;
   let suicaTopUp = 0;
 
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
     const share = getPersonShare(tx, person);
-    if (isSuicaCredit(tx)) continue;
+    // 用 Suica 俾唔計入現金用咗；餘額調整除外
+    if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) continue;
     if (isSuicaTopUp(tx)) {
       suicaTopUp += share;
       continue;
     }
-    consumption += share;
+    cash += share;
   }
 
   return {
-    consumption,
+    cash,
     suicaTopUpTotal: suicaTopUp,
   };
 }
@@ -3591,12 +3601,13 @@ function formatPersonSpentValueHtml(person, currency) {
     return escapeHtml(formatMoney(calcSummary().spent[person][currency], currency));
   }
 
-  const { consumption, suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
-  const spentText = escapeHtml(formatMoney(consumption, 'JPY'));
+  const { cash, suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
+  const total = cash + suicaTopUpTotal;
+  const spentText = escapeHtml(formatMoney(total, 'JPY'));
   if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return spentText;
 
   const suicaText = escapeHtml(formatMoney(suicaTopUpTotal, 'JPY'));
-  return `${spentText} <span class="spent-value-suica-extra">（＋🐧${suicaText} 增值）</span>`;
+  return `${spentText} <span class="spent-value-suica-extra">（含🐧${suicaText} 增值）</span>`;
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4890,17 +4901,20 @@ function getPersonShare(tx, person) {
 
 function isPersonSpendExpenseTx(tx) {
   if (isRepayTransaction(tx) || isLoanTransaction(tx)) return false;
-  if (isSuicaCredit(tx)) return false;
   if (personSpendView.showSuicaTopUp) {
-    // Cash-spent view: keep cash expenses + Suica top-ups; drop wallet payments.
-    if (isSuicaPayment(tx)) return false;
+    // 同剩餘一致：現金＋增值＋餘額調整；普通 Suica 俾錢唔重複計
+    if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) return false;
     return true;
   }
   if (isSuicaTopUp(tx)) return false;
+  if (isSuicaCredit(tx)) return false;
   return true;
 }
 
 function personSpendSuicaBadgeHtml(tx) {
+  if (isSuicaBalanceAdjust(tx)) {
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 餘額調整">🐧±</span>';
+  }
   if (isSuicaPayment(tx)) {
     return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 俾錢">🐧</span>';
   }
@@ -5242,7 +5256,8 @@ function openPersonSpendModal(person, currency) {
   personSpendView.currency = currency;
   personSpendView.category = '';
   personSpendView.sort = 'date-desc';
-  personSpendView.showSuicaTopUp = false;
+  // JPY 預設顯示「現金用咗」視圖（含增值／調整），同剩餘計法一致
+  personSpendView.showSuicaTopUp = currency === 'JPY';
 
   const catEl = $('#person-spend-category');
   const sortEl = $('#person-spend-sort');
@@ -5432,11 +5447,11 @@ function updateExpenseSplitHint(prefix = 'expense') {
     const topUpHint = isHelp
       ? `${personImg(payer, 'inline')} 幫 ${personImg(owner, 'inline')} 增值 Suica`
       : `${personImg(owner, 'inline')} 自己增值 Suica`;
-    hint.innerHTML = `${base ? `${base}<br>` : ''}${topUpHint} · 現金轉入錢包（唔算用咗）· 強制 JPY`;
+    hint.innerHTML = `${base ? `${base}<br>` : ''}${topUpHint} · 現金轉入錢包（計入現金用咗／扣剩餘）· 強制 JPY`;
     return;
   }
   if (payment === PAYMENT_SUICA) {
-    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 用 Suica 俾：扣錢包餘額，計入 Suica「用咗」`;
+    hint.innerHTML = `${base ? `${base}<br>` : ''}🐧 用 Suica 俾：扣錢包餘額，唔再扣現金預算`;
     return;
   }
 
@@ -6615,8 +6630,8 @@ function setupEventListeners() {
       date: todayISO(),
       category,
       description: isCredit
-        ? encodeSuicaCreditDescription('Suica 餘額調整')
-        : encodeSuicaPayDescription('Suica 餘額調整'),
+        ? encodeSuicaCreditDescription(SUICA_ADJUST_NOTE)
+        : encodeSuicaPayDescription(SUICA_ADJUST_NOTE),
       currency: 'JPY',
       amount,
       payer: person,
@@ -7067,7 +7082,7 @@ function setupEventListeners() {
     if (paymentMethod === PAYMENT_SUICA) {
       description = encodeSuicaPayDescription(description);
     } else if (isSuicaCredit(existing) && category !== SUICA_CATEGORY) {
-      description = encodeSuicaCreditDescription(description || 'Suica 餘額調整');
+      description = encodeSuicaCreditDescription(description || SUICA_ADJUST_NOTE);
     }
 
     if (paymentMethod === PAYMENT_SUICA) {

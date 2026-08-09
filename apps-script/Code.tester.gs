@@ -199,6 +199,7 @@ function txNum_(value) {
 var SUICA_CATEGORY_ = '🐧Suica';
 var SUICA_PAY_PREFIX_ = '「Suica」';
 var SUICA_CREDIT_PREFIX_ = '「Suica+」';
+var SUICA_ADJUST_NOTE_ = 'Suica 餘額調整';
 
 function normalizeBudgetCurrency_(currency) {
   var value = String(currency || '').trim();
@@ -216,6 +217,24 @@ function isSuicaPayment_(tx) {
 
 function isSuicaCredit_(tx) {
   return String(tx.description || '').indexOf(SUICA_CREDIT_PREFIX_) === 0;
+}
+
+function stripSuicaMarkers_(description) {
+  var text = String(description || '').trim();
+  if (text.indexOf(SUICA_PAY_PREFIX_) === 0) {
+    text = text.slice(SUICA_PAY_PREFIX_.length).trim();
+  }
+  if (text.indexOf(SUICA_CREDIT_PREFIX_) === 0) {
+    text = text.slice(SUICA_CREDIT_PREFIX_.length).trim();
+  }
+  return text;
+}
+
+/** 手動改 Suica 餘額——計入現金用咗；普通 Suica 俾錢唔重複扣預算 */
+function isSuicaBalanceAdjust_(tx) {
+  if (isSuicaCredit_(tx)) return true;
+  if (!isSuicaPayment_(tx)) return false;
+  return stripSuicaMarkers_(tx.description) === SUICA_ADJUST_NOTE_;
 }
 
 function getSuicaWalletOwner_(tx) {
@@ -253,18 +272,30 @@ function buildSummary_(transactions, budgets) {
       if (cur === 'JPY') {
         suica[getSuicaWalletOwner_(tx)].toppedUp += Number(tx.amount) || 0;
       }
+      // 增值＝現金轉入錢包，計入現金用咗／扣剩餘
+      spent.A[cur] += tx.a_share;
+      spent.B[cur] += tx.b_share;
       return;
     }
     if (isSuicaCredit_(tx)) {
       if (cur === 'JPY') {
         suica[getSuicaWalletOwner_(tx)].toppedUp += Number(tx.amount) || 0;
       }
+      // 餘額調整（＋）當已使用
+      spent.A[cur] += tx.a_share;
+      spent.B[cur] += tx.b_share;
       return;
     }
     if (isSuicaPayment_(tx)) {
       if (cur === 'JPY') {
         suica[getSuicaWalletOwner_(tx)].spent += Number(tx.amount) || 0;
       }
+      // 普通 Suica 俾錢只扣錢包；餘額調整（−）先計入現金用咗
+      if (isSuicaBalanceAdjust_(tx)) {
+        spent.A[cur] += tx.a_share;
+        spent.B[cur] += tx.b_share;
+      }
+      return;
     }
 
     spent.A[cur] += tx.a_share;

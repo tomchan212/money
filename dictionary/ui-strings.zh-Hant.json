@@ -105,7 +105,7 @@
     "placeholderAmount": "0",
     "submitExpense": "記錄俾錢",
     "defaultCategory": "午餐",
-    "suicaTopUpHint": "🐧 Suica 增值：強制 JPY，用現金入錢包",
+    "suicaTopUpHint": "🐧 Suica 增值：強制 JPY，用現金入錢包（計入現金用咗／扣剩餘）",
     "suicaPayHint": "🐧 用 Suica 俾：扣錢包餘額，唔再扣現金預算",
     "suicaInsufficient": "Suica 餘額不足（而家 {amount}）"
   },
