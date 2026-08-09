@@ -720,6 +720,12 @@ function setLoading(show) {
     if (loadingCount > 0) return;
     els.syncBanner?.classList.add('hidden');
     setLoadingProgress(0);
+    const pending = typeof OfflineQueue !== 'undefined' ? OfflineQueue.size() : 0;
+    if (pending > 0) {
+      // Don't paint "✅ 已同步" over a queue that is still draining / retrying.
+      updateSyncStatusFromQueue();
+      return;
+    }
     const statusEl = $('#sync-status');
     if (statusEl?.classList.contains('syncing')) {
       if (lastSyncedAt) {
@@ -2775,10 +2781,37 @@ function updateSyncStatus(state, syncedAt) {
 
   if (refreshBtn) refreshBtn.disabled = isRefreshBlocked();
 
+  // Never claim full sync success while local mutations are still queued.
+  if (pending > 0 && (state === 'success' || state === 'synced')) {
+    state = 'pending';
+  }
+
   if (state === 'offline') {
     el.textContent = `📴 已離線（${pending} 筆待同步）${sheetHint}`;
     el.className = 'sync-status offline';
     el.disabled = false;
+    return;
+  }
+
+  if (state === 'retry') {
+    el.textContent =
+      pending > 0
+        ? `⚠️ 同步失敗（${pending} 筆），稍後自動重試${sheetHint}`
+        : `⚠️ 同步失敗，稍後自動重試${sheetHint}`;
+    el.className = 'sync-status error';
+    el.disabled = false;
+    if (refreshBtn) refreshBtn.disabled = isRefreshBlocked();
+    return;
+  }
+
+  if (state === 'error') {
+    el.textContent =
+      pending > 0
+        ? `⚠️ 同步唔到（${pending} 筆），稍後再試${sheetHint}`
+        : `⚠️ 無法連線試算表${sheetHint}`;
+    el.className = 'sync-status error';
+    el.disabled = false;
+    if (refreshBtn) refreshBtn.disabled = isRefreshBlocked();
     return;
   }
 
@@ -2789,26 +2822,10 @@ function updateSyncStatus(state, syncedAt) {
     return;
   }
 
-  if (state === 'retry') {
-    el.textContent = `⚠️ 同步失敗，稍後自動重試${sheetHint}`;
-    el.className = 'sync-status error';
-    el.disabled = false;
-    if (refreshBtn) refreshBtn.disabled = isRefreshBlocked();
-    return;
-  }
-
   if (state === 'syncing') {
     el.textContent = `☁️ 同步中…${sheetHint}`;
     el.className = 'sync-status syncing';
     el.disabled = true;
-    return;
-  }
-
-  if (state === 'error') {
-    el.textContent = `⚠️ 無法連線試算表${sheetHint}`;
-    el.className = 'sync-status error';
-    el.disabled = false;
-    if (refreshBtn) refreshBtn.disabled = isRefreshBlocked();
     return;
   }
 
@@ -2830,16 +2847,18 @@ function updateSyncStatus(state, syncedAt) {
 function updateSyncStatusFromQueue(mode) {
   const pending = typeof OfflineQueue !== 'undefined' ? OfflineQueue.size() : 0;
   const online = typeof SyncManager !== 'undefined' ? SyncManager.isNetworkOnline() : navigator.onLine;
+  const head = typeof OfflineQueue !== 'undefined' ? OfflineQueue.peek() : null;
+  const waitingRetry = !!(head?.nextRetryAt && Date.now() < head.nextRetryAt);
 
   if (!online) {
     updateSyncStatus('offline');
     return;
   }
-  if (mode === 'retry') {
+  if (mode === 'retry' || (pending > 0 && waitingRetry && !head?.syncFailed && mode !== 'syncing')) {
     updateSyncStatus('retry');
     return;
   }
-  if (mode === 'error') {
+  if (mode === 'error' || (pending > 0 && head?.syncFailed && mode !== 'syncing')) {
     updateSyncStatus('error');
     return;
   }
@@ -2848,13 +2867,30 @@ function updateSyncStatusFromQueue(mode) {
     return;
   }
   if (pending > 0) {
-    updateSyncStatus('pending');
+    updateSyncStatus(waitingRetry || head?.syncFailed ? (head.syncFailed ? 'error' : 'retry') : 'pending');
     return;
   }
   if (lastSyncedAt) {
     updateSyncStatus('success', lastSyncedAt);
   } else {
     updateSyncStatus('syncing');
+  }
+}
+
+function describeQueueOp(op) {
+  switch (op?.type) {
+    case 'create':
+      return '新增';
+    case 'edit':
+      return '修改';
+    case 'delete':
+      return '刪除';
+    case 'updateBudget':
+      return '預算更新';
+    case 'clearTransactions':
+      return '清空紀錄';
+    default:
+      return '變更';
   }
 }
 
@@ -7248,8 +7284,17 @@ async function init() {
     syncClearAllTransactions,
     updateSyncStatusFromQueue,
     isSyncBlocked: () => isMutating,
-    onSyncPermanentFailure: () => {
-      showToast('同步失敗，2 分鐘後會再試', 'error');
+    onSyncPermanentFailure: (op, err) => {
+      const detail = formatApiError(err);
+      showToast(`${describeQueueOp(op)}同步失敗：${detail}（2 分鐘後會再試）`, 'error');
+    },
+    onSyncDropped: (op, err) => {
+      const detail = formatApiError(err);
+      showToast(`${describeQueueOp(op)}無法同步，已略過：${detail}`, 'error');
+      updateSyncStatusFromQueue();
+    },
+    onSyncIdempotentSkip: () => {
+      updateSyncStatusFromQueue();
     },
   });
 

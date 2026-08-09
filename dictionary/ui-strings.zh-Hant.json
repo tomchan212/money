@@ -323,9 +323,11 @@
   "syncStatus": {
     "offline": "📴 已離線（{pending} 筆待同步）",
     "pending": "☁️ 同步中（{pending} 筆）",
-    "retry": "⚠️ 同步失敗，稍後自動重試",
+    "retry": "⚠️ 同步失敗（{pending} 筆），稍後自動重試",
+    "retryNoPending": "⚠️ 同步失敗，稍後自動重試",
     "syncing": "☁️ 同步中…",
     "error": "⚠️ 無法連線試算表",
+    "errorPending": "⚠️ 同步唔到（{pending} 筆），稍後再試",
     "success": "✅ 已同步 {time}"
   },
 
