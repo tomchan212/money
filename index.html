@@ -1120,8 +1120,18 @@
           <button type="button" class="modal-close" data-close-person-spend aria-label="關閉">&times;</button>
         </div>
       </div>
-      <p id="person-spend-total" class="person-spend-total">—</p>
-      <div class="person-spend-filters">
+      <div class="person-spend-summary" id="person-spend-summary">
+        <p id="person-spend-total" class="person-spend-total">—</p>
+        <p id="person-spend-breakdown" class="person-spend-breakdown" aria-live="polite"></p>
+        <p id="person-spend-method-hint" class="person-spend-method-hint">只計呢個人真正用／買嘅份額；唔計還錢、借錢。</p>
+      </div>
+      <div class="person-spend-view-tabs" role="tablist" aria-label="呈現方式">
+        <button type="button" class="person-spend-view-tab is-active" role="tab" data-spend-view="day" aria-selected="true">按日</button>
+        <button type="button" class="person-spend-view-tab" role="tab" data-spend-view="category" aria-selected="false">分類表</button>
+        <button type="button" class="person-spend-view-tab" role="tab" data-spend-view="calc" aria-selected="false">計法</button>
+        <button type="button" class="person-spend-view-tab" role="tab" data-spend-view="chart" aria-selected="false">圖表</button>
+      </div>
+      <div class="person-spend-filters" id="person-spend-filters">
         <div class="filter-item filter-item-icon-field">
           <label for="person-spend-category" class="sr-only">分類</label>
           <div class="form-icon-field">
@@ -1138,7 +1148,7 @@
             </select>
           </div>
         </div>
-        <div class="filter-item filter-item-icon-field">
+        <div class="filter-item filter-item-icon-field" id="person-spend-sort-wrap">
           <label for="person-spend-sort" class="sr-only">排序</label>
           <div class="form-icon-field">
             <span class="form-field-icon" aria-hidden="true"><img class="ui-icon form-field-icon-img" src="icons/sort-time.png" alt="" loading="lazy" decoding="async"></span>
@@ -1155,11 +1165,29 @@
           class="person-spend-suica-topup-btn"
           id="person-spend-show-suica-topup"
           aria-pressed="false"
+          title="撳一下切換：增值當用咗／增值當轉移去錢包"
         >
-          顯示Suica增值
+          增值＝轉移
         </button>
       </div>
-      <ul id="person-spend-list" class="person-spend-list" aria-label="個人啲錢用咗去邊"></ul>
+      <div class="person-spend-panels">
+        <div class="person-spend-panel" id="person-spend-panel-day" data-spend-panel="day">
+          <ul id="person-spend-list" class="person-spend-list" aria-label="按日流水"></ul>
+        </div>
+        <div class="person-spend-panel hidden" id="person-spend-panel-category" data-spend-panel="category">
+          <div id="person-spend-category-table" class="person-spend-category-table" role="table" aria-label="分類表"></div>
+        </div>
+        <div class="person-spend-panel hidden" id="person-spend-panel-calc" data-spend-panel="calc">
+          <div id="person-spend-calc-body" class="person-spend-calc-body" aria-label="計法過程"></div>
+        </div>
+        <div class="person-spend-panel hidden" id="person-spend-panel-chart" data-spend-panel="chart">
+          <p id="person-spend-inline-chart-subtitle" class="person-spend-chart-subtitle">—</p>
+          <div id="person-spend-inline-chart-wrap" class="person-spend-chart-wrap" aria-hidden="false">
+            <svg id="person-spend-inline-chart-svg" class="person-spend-chart-svg" viewBox="0 0 220 220" role="img" aria-label="分類圓形圖"></svg>
+          </div>
+          <ul id="person-spend-inline-chart-legend" class="person-spend-chart-legend" aria-label="分類比例"></ul>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -287,9 +287,9 @@ let loadingProgressTimer = null;
 let loadingProgressValue = 0;
 let listViewExpanded = false;
 
-/** JPY / HKD 是否顯示「剩餘」 */
+/** JPY / HKD 是否顯示「剩餘」（預設關閉） */
 let remainDisplayPrefs = {
-  JPY: true,
+  JPY: false,
   HKD: false,
 };
 
@@ -323,6 +323,8 @@ const personSpendView = {
   sort: 'date-desc',
   /** When true: show cash + Suica top-ups; hide Suica payments. */
   showSuicaTopUp: false,
+  /** day | category | calc | chart */
+  view: 'day',
 };
 
 /** 圖表分析 → 分類 drill-down */
@@ -3580,7 +3582,9 @@ function calcPersonJpySpentBreakdown(person) {
 
   for (const tx of transactions) {
     if (tx.currency !== 'JPY') continue;
+    if (isRepayTransaction(tx) || isLoanTransaction(tx)) continue;
     const share = getPersonShare(tx, person);
+    if (isNegligibleMoney(share, 'JPY')) continue;
     // 用 Suica 俾唔計入現金用咗；餘額調整除外
     if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) continue;
     if (isSuicaTopUp(tx)) {
@@ -3593,21 +3597,52 @@ function calcPersonJpySpentBreakdown(person) {
   return {
     cash,
     suicaTopUpTotal: suicaTopUp,
+    /** 同「啲錢用咗去邊」預設合共：增值當用咗 */
+    totalAsSpent: cash + suicaTopUp,
   };
 }
 
-function formatPersonSpentMainText(person, currency) {
-  if (currency !== 'JPY') {
-    return formatMoney(calcSummary().spent[person][currency], currency);
+/**
+ * 個人真正用／買嘅合計（同「啲錢用咗去邊 → 合共用咗」一致）。
+ * countTopUpAsSpent=true：增值計入、Suica 俾錢唔重複計；餘額調整一律計。
+ * countTopUpAsSpent=false：增值當轉移、Suica 俾錢計入；餘額調整一律計。
+ */
+function isPersonConsumptionTx(tx, { countTopUpAsSpent = true } = {}) {
+  if (!tx) return false;
+  if (isRepayTransaction(tx) || isLoanTransaction(tx)) return false;
+  if (isSuicaBalanceAdjust(tx)) return true;
+  if (countTopUpAsSpent) {
+    if (isSuicaPayment(tx)) return false;
+    return true;
   }
-  return formatMoney(calcPersonJpySpentBreakdown(person).cash, 'JPY');
+  if (isSuicaTopUp(tx)) return false;
+  return true;
+}
+
+function calcPersonConsumptionTotal(person, currency, { countTopUpAsSpent = true } = {}) {
+  let total = 0;
+  for (const tx of transactions) {
+    if (tx.currency !== currency) continue;
+    if (!isPersonConsumptionTx(tx, { countTopUpAsSpent })) continue;
+    const share = getPersonShare(tx, person);
+    if (isNegligibleMoney(share, currency)) continue;
+    total += share;
+  }
+  return total;
+}
+
+function formatPersonSpentMainText(person, currency) {
+  // 同「合共用咗」預設（JPY 增值＝用咗）對齊
+  const countTopUpAsSpent = currency === 'JPY';
+  return formatMoney(
+    calcPersonConsumptionTotal(person, currency, { countTopUpAsSpent }),
+    currency
+  );
 }
 
 function formatPersonSuicaTopUpNote(person, currency) {
-  if (currency !== 'JPY') return '';
-  const { suicaTopUpTotal } = calcPersonJpySpentBreakdown(person);
-  if (isNegligibleMoney(suicaTopUpTotal, 'JPY')) return '';
-  return `（＋🐧${formatMoney(suicaTopUpTotal, 'JPY')} 增值）`;
+  // 主數字已含增值（同合共用咗），唔再另外顯示括號
+  return '';
 }
 
 function getSortedCurrencyTxs(currency) {
@@ -4437,19 +4472,20 @@ function updateExplainPreview() {
 
 /* ===== Render ===== */
 function renderSummary() {
-  const { spent, net } = calcSummary();
+  const { net } = calcSummary();
 
   ['JPY', 'HKD'].forEach((cur) => {
     const lower = cur.toLowerCase();
     ['A', 'B'].forEach((person) => {
       const p = person.toLowerCase();
-      const used = spent[person][cur];
+      // 用咗／剩餘同「啲錢用咗去邊 → 合共用咗」預設計法一致（JPY：增值＝用咗）
+      const used = calcPersonConsumptionTotal(person, cur, {
+        countTopUpAsSpent: cur === 'JPY',
+      });
       const remaining = budgets[person][cur] - used;
 
-      const spentText = formatMoney(used, cur);
       const remainText = `剩餘 ${formatMoney(remaining, cur)}`;
-
-      const spentMainText = cur === 'JPY' ? formatPersonSpentMainText(person, cur) : spentText;
+      const spentMainText = formatPersonSpentMainText(person, cur);
       const suicaNote = formatPersonSuicaTopUpNote(person, cur);
 
       document
@@ -4906,26 +4942,20 @@ function getPersonShare(tx, person) {
 }
 
 function isPersonSpendExpenseTx(tx) {
-  if (isRepayTransaction(tx) || isLoanTransaction(tx)) return false;
-  if (personSpendView.showSuicaTopUp) {
-    // 同剩餘一致：現金＋增值＋餘額調整；普通 Suica 俾錢唔重複計
-    if (isSuicaPayment(tx) && !isSuicaBalanceAdjust(tx)) return false;
-    return true;
-  }
-  if (isSuicaTopUp(tx)) return false;
-  if (isSuicaCredit(tx)) return false;
-  return true;
+  return isPersonConsumptionTx(tx, {
+    countTopUpAsSpent: Boolean(personSpendView.showSuicaTopUp),
+  });
 }
 
 function personSpendSuicaBadgeHtml(tx) {
   if (isSuicaBalanceAdjust(tx)) {
-    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 餘額調整">🐧±</span>';
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 餘額調整（當用咗）">🐧±</span>';
   }
   if (isSuicaPayment(tx)) {
     return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 俾錢">🐧</span>';
   }
   if (isSuicaTopUp(tx)) {
-    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 增值">🐧+</span>';
+    return '<span class="tx-suica-badge person-spend-suica-badge" title="Suica 增值（當用咗）">🐧+</span>';
   }
   return '';
 }
@@ -4936,23 +4966,110 @@ function syncPersonSpendSuicaTopUpBtn() {
   const on = Boolean(personSpendView.showSuicaTopUp);
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   btn.classList.toggle('is-active', on);
-  btn.textContent = on ? '顯示緊Suica增值' : '顯示Suica增值';
+  // on：增值當用咗；off：增值當轉移去錢包，用 Suica 俾先算用咗
+  btn.textContent = on ? '增值＝用咗' : '增值＝轉移';
+  btn.title = on
+    ? '而家：Suica 增值計入用咗；用 Suica 俾嘅消費唔重複計。撳一下改做「增值＝轉移」。'
+    : '而家：增值只係錢轉入錢包；用 Suica 俾先算用咗。餘額調整一律當用咗。撳一下改做「增值＝用咗」。';
+  btn.setAttribute(
+    'aria-label',
+    on
+      ? 'Suica 增值計法：當用咗。撳一下改做當轉移'
+      : 'Suica 增值計法：當轉移。撳一下改做當用咗'
+  );
 }
 
-function personSpendRowHtml(tx, person, currency) {
+function personSpendShareKindLabel(tx, person) {
+  if (isSuicaBalanceAdjust(tx)) return '餘額調整';
+  if (isSuicaTopUp(tx)) return 'Suica 增值';
+  if (tx.split_mode === 'SPLIT_5050') {
+    const full = Number(tx.amount) || 0;
+    const share = getPersonShare(tx, person);
+    if (!isNegligibleMoney(full, tx.currency) && Math.abs(full - share * 2) <= moneyEpsilon(tx.currency) * 2) {
+      return `一人一半 · 你份`;
+    }
+    return '一人一半 · 你份';
+  }
+  if (isHelpPaySplit(tx)) return '對方幫你俾';
+  if (isSelfSplit(tx)) return '自己嘅';
+  if (isSuicaPayment(tx)) return 'Suica 俾';
+  return '';
+}
+
+function personSpendRowHtml(tx, person, currency, { hideDate = false } = {}) {
   const share = getPersonShare(tx, person);
   const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
   const key = escapeHtml(getTxKey(tx));
   const suicaBadge = personSpendSuicaBadgeHtml(tx);
+  const time = formatRecordTime(tx.time);
+  const kind = personSpendShareKindLabel(tx, person);
+  const metaParts = [];
+  if (!hideDate && tx.date) metaParts.push(tx.date);
+  if (time) metaParts.push(time);
+  metaParts.push(getCategoryLabel(tx.category) || '雜項');
+  if (kind) metaParts.push(kind);
+
   return `<li class="person-spend-row">
         <button type="button" class="person-spend-row-btn" data-detail-key="${key}">
           <span class="person-spend-row-main">
             <span class="person-spend-row-title">${escapeHtml(getTransactionTitle(tx))}${suicaBadge}</span>
-            <span class="person-spend-row-meta">${escapeHtml(tx.date || '')} · ${escapeHtml(getCategoryLabel(tx.category))}</span>
+            <span class="person-spend-row-meta">${escapeHtml(metaParts.join(' · '))}</span>
           </span>
           <span class="person-spend-row-amount ${curClass}">${escapeHtml(formatMoney(share, currency))}</span>
         </button>
       </li>`;
+}
+
+function groupPersonSpendRowsByDate(rows) {
+  const groups = [];
+  const indexByDate = new Map();
+  for (const tx of rows) {
+    const date = tx.date || '';
+    if (!indexByDate.has(date)) {
+      indexByDate.set(date, groups.length);
+      groups.push({ date, items: [] });
+    }
+    groups[indexByDate.get(date)].items.push(tx);
+  }
+  return groups;
+}
+
+function buildPersonSpendBreakdown(rows, person, currency) {
+  const parts = {
+    self: 0,
+    half: 0,
+    helped: 0,
+    topup: 0,
+    adjust: 0,
+    other: 0,
+  };
+  for (const tx of rows) {
+    const share = getPersonShare(tx, person);
+    if (isSuicaBalanceAdjust(tx)) parts.adjust += share;
+    else if (isSuicaTopUp(tx)) parts.topup += share;
+    else if (tx.split_mode === 'SPLIT_5050') parts.half += share;
+    else if (isHelpPaySplit(tx)) parts.helped += share;
+    else if (isSelfSplit(tx)) parts.self += share;
+    else parts.other += share;
+  }
+  return parts;
+}
+
+function formatPersonSpendBreakdownHtml(parts, currency) {
+  const chips = [];
+  const push = (label, amount) => {
+    if (isNegligibleMoney(amount, currency)) return;
+    chips.push(
+      `<span class="person-spend-breakdown-chip"><span class="person-spend-breakdown-label">${escapeHtml(label)}</span> <strong>${escapeHtml(formatMoney(amount, currency))}</strong></span>`
+    );
+  };
+  push('自己嘅', parts.self);
+  push('一人一半（你份）', parts.half);
+  push('對方幫你俾', parts.helped);
+  push('餘額調整', parts.adjust);
+  push('Suica 增值', parts.topup);
+  push('其他', parts.other);
+  return chips.join('');
 }
 
 function getPersonSpendRows() {
@@ -5026,8 +5143,9 @@ function buildPersonSpendChartSlices() {
     const existing = totals.get(key);
     if (existing) {
       existing.amount += share;
+      existing.count += 1;
     } else {
-      totals.set(key, { key, sampleCategory: tx.category, amount: share });
+      totals.set(key, { key, sampleCategory: tx.category, amount: share, count: 1 });
     }
   }
 
@@ -5041,6 +5159,7 @@ function buildPersonSpendChartSlices() {
         label,
         sampleCategory: item.sampleCategory,
         amount: item.amount,
+        count: item.count,
         pct: total > 0 ? (item.amount / total) * 100 : 0,
         color: getCategoryChartColor(item.key, item.sampleCategory, index),
       };
@@ -5139,11 +5258,12 @@ function formatChartPct(pct) {
   return '0%';
 }
 
-function renderPersonSpendChart() {
-  const subtitleEl = $('#person-spend-chart-subtitle');
-  const svgEl = $('#person-spend-chart-svg');
-  const legendEl = $('#person-spend-chart-legend');
-  const wrapEl = $('#person-spend-chart-wrap');
+function renderPersonSpendChartInto({
+  subtitleEl,
+  svgEl,
+  legendEl,
+  wrapEl,
+} = {}) {
   if (!subtitleEl || !svgEl || !legendEl || !wrapEl) return;
 
   const person = personSpendView.person;
@@ -5153,7 +5273,7 @@ function renderPersonSpendChart() {
   const { slices, total } = buildPersonSpendChartSlices();
   const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
 
-  const totalLabel = personSpendView.showSuicaTopUp ? '合共現金用咗' : '合共用咗';
+  const totalLabel = personSpendView.showSuicaTopUp ? '合共用咗（增值＝用咗）' : '合共用咗（增值＝轉移）';
   subtitleEl.innerHTML = `${personImg(person, 'inline')} ${escapeHtml(currency)} · ${totalLabel} ${escapeHtml(formatMoney(total, currency))}`;
 
   if (!slices.length || isNegligibleMoney(total, currency)) {
@@ -5216,10 +5336,26 @@ function renderPersonSpendChart() {
     .join('');
 }
 
+function renderPersonSpendChart() {
+  renderPersonSpendChartInto({
+    subtitleEl: $('#person-spend-chart-subtitle'),
+    svgEl: $('#person-spend-chart-svg'),
+    legendEl: $('#person-spend-chart-legend'),
+    wrapEl: $('#person-spend-chart-wrap'),
+  });
+}
+
+function renderPersonSpendInlineChart() {
+  renderPersonSpendChartInto({
+    subtitleEl: $('#person-spend-inline-chart-subtitle'),
+    svgEl: $('#person-spend-inline-chart-svg'),
+    legendEl: $('#person-spend-inline-chart-legend'),
+    wrapEl: $('#person-spend-inline-chart-wrap'),
+  });
+}
+
 function openPersonSpendChartModal() {
-  if (!personSpendView.person || !personSpendView.currency) return;
-  renderPersonSpendChart();
-  openModal(els.personSpendChartModal);
+  setPersonSpendView('chart');
 }
 
 function closePersonSpendChartModal() {
@@ -5227,33 +5363,206 @@ function closePersonSpendChartModal() {
   closeModal(els.personSpendChartModal);
 }
 
-function renderPersonSpendList() {
+function syncPersonSpendViewTabs() {
+  const view = personSpendView.view || 'day';
+  $$('.person-spend-view-tab').forEach((btn) => {
+    const active = btn.dataset.spendView === view;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  $$('[data-spend-panel]').forEach((panel) => {
+    panel.classList.toggle('hidden', panel.dataset.spendPanel !== view);
+  });
+  const sortWrap = $('#person-spend-sort-wrap');
+  sortWrap?.classList.toggle('hidden', view !== 'day');
+}
+
+function setPersonSpendView(view) {
+  const next = ['day', 'category', 'calc', 'chart'].includes(view) ? view : 'day';
+  personSpendView.view = next;
+  syncPersonSpendViewTabs();
+  renderPersonSpendList();
+}
+
+function renderPersonSpendDayPanel(rows, person, currency) {
   const list = $('#person-spend-list');
-  const totalEl = $('#person-spend-total');
-  const titleEl = $('#person-spend-title');
-  if (!list || !personSpendView.person || !personSpendView.currency) return;
-
-  const person = personSpendView.person;
-  const currency = personSpendView.currency;
-  const rows = getPersonSpendRows();
-  const total = rows.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
-
-  if (titleEl) {
-    titleEl.innerHTML = `${personImg(person, 'inline')} 啲錢用咗去邊 · ${escapeHtml(currency)}`;
-  }
-  if (totalEl) {
-    const totalLabel = personSpendView.showSuicaTopUp ? '合共現金用咗' : '合共用咗';
-    totalEl.textContent = `${totalLabel} ${formatMoney(total, currency)} · ${rows.length} 筆`;
-  }
+  if (!list) return;
+  const sort = personSpendView.sort || 'date-desc';
 
   if (!rows.length) {
     list.innerHTML = `<li class="person-spend-empty">呢個篩選之下未有用咗紀錄</li>`;
     return;
   }
 
-  list.innerHTML = rows.map((tx) => personSpendRowHtml(tx, person, currency)).join('');
+  const useDayGroups = sort === 'date-desc' || sort === 'date-asc';
+  if (!useDayGroups) {
+    list.innerHTML = rows.map((tx) => personSpendRowHtml(tx, person, currency)).join('');
+    bindDetailTriggers(list);
+    return;
+  }
+
+  const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
+  list.innerHTML = groupPersonSpendRowsByDate(rows)
+    .map((group) => {
+      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
+      const header = `<li class="person-spend-day-header">
+        <span class="person-spend-day-label">${escapeHtml(dayLabel)}</span>
+        <span class="person-spend-day-total ${curClass}">小計 ${escapeHtml(formatMoney(dayTotal, currency))}</span>
+      </li>`;
+      const items = group.items
+        .map((tx) => personSpendRowHtml(tx, person, currency, { hideDate: true }))
+        .join('');
+      return `${header}${items}`;
+    })
+    .join('');
 
   bindDetailTriggers(list);
+}
+
+function renderPersonSpendCategoryPanel(rows, person, currency) {
+  const host = $('#person-spend-category-table');
+  if (!host) return;
+  if (!rows.length) {
+    host.innerHTML = `<p class="person-spend-empty">呢個篩選之下未有用咗紀錄</p>`;
+    return;
+  }
+
+  const { slices, total } = buildPersonSpendChartSlices();
+  const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
+  const head = `<div class="person-spend-cat-row person-spend-cat-row-head" role="row">
+    <span role="columnheader">分類</span>
+    <span role="columnheader">筆數</span>
+    <span role="columnheader">占比</span>
+    <span role="columnheader">金額</span>
+  </div>`;
+  const body = slices
+    .map((slice) => {
+      const icon =
+        categoryIconHtml(slice.sampleCategory, 'inline', slice.label) ||
+        `<span class="category-emoji-fallback" aria-hidden="true">${getCategoryEmoji(slice.sampleCategory)}</span>`;
+      return `<button type="button" class="person-spend-cat-row" role="row" data-chart-category-key="${encodeURIComponent(slice.key)}" aria-label="睇 ${escapeHtml(slice.label)} 明細">
+        <span class="person-spend-cat-label">${icon}<span>${escapeHtml(slice.label)}</span></span>
+        <span>${slice.count}</span>
+        <span>${escapeHtml(formatChartPct(slice.pct))}</span>
+        <span class="person-spend-cat-amount ${curClass}">${escapeHtml(formatMoney(slice.amount, currency))}</span>
+      </button>`;
+    })
+    .join('');
+  const foot = `<div class="person-spend-cat-row person-spend-cat-row-foot" role="row">
+    <span>合共</span>
+    <span>${rows.length}</span>
+    <span>100%</span>
+    <span class="person-spend-cat-amount ${curClass}">${escapeHtml(formatMoney(total, currency))}</span>
+  </div>`;
+  host.innerHTML = `${head}${body}${foot}`;
+}
+
+function renderPersonSpendCalcPanel(rows, person, currency) {
+  const host = $('#person-spend-calc-body');
+  if (!host) return;
+  const total = rows.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+  const parts = buildPersonSpendBreakdown(rows, person, currency);
+  const modeLabel = personSpendView.showSuicaTopUp ? '增值＝用咗' : '增值＝轉移';
+  const curClass = currency === 'JPY' ? 'jpy' : 'hkd';
+
+  if (!rows.length) {
+    host.innerHTML = `<p class="person-spend-empty">呢個篩選之下未有用咗紀錄</p>`;
+    return;
+  }
+
+  const line = (label, amount, note = '') => {
+    if (isNegligibleMoney(amount, currency) && !note) return '';
+    return `<div class="person-spend-calc-row">
+      <span class="person-spend-calc-desc">${label}${note ? `<small>${escapeHtml(note)}</small>` : ''}</span>
+      <span class="person-spend-calc-amount ${curClass}">${escapeHtml(formatMoney(amount, currency))}</span>
+    </div>`;
+  };
+
+  const dayGroups = groupPersonSpendRowsByDate(
+    rows.slice().sort((a, b) => {
+      const da = `${a.date || ''}T${formatRecordTime(a.time) || '00:00'}`;
+      const db = `${b.date || ''}T${formatRecordTime(b.time) || '00:00'}`;
+      return db.localeCompare(da);
+    })
+  );
+
+  const dayLines = dayGroups
+    .map((group) => {
+      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
+      return line(escapeHtml(dayLabel), dayTotal, `${group.items.length} 筆`);
+    })
+    .join('');
+
+  host.innerHTML = `
+    <section class="person-spend-calc-section">
+      <h4 class="person-spend-calc-title">合共點嚟</h4>
+      <p class="person-spend-calc-lead">模式：${escapeHtml(modeLabel)} · 只計你真正用／買嘅份額</p>
+      ${line('自己嘅', parts.self)}
+      ${line('一人一半（你份）', parts.half)}
+      ${line('對方幫你俾', parts.helped)}
+      ${line('餘額調整', parts.adjust, '一律當用咗')}
+      ${line('Suica 增值', parts.topup, personSpendView.showSuicaTopUp ? '而家計入用咗' : '而家當轉移，唔計入')}
+      ${line('其他', parts.other)}
+      <div class="person-spend-calc-row person-spend-calc-row-total">
+        <span class="person-spend-calc-desc">合共用咗</span>
+        <span class="person-spend-calc-amount ${curClass}">${escapeHtml(formatMoney(total, currency))}</span>
+      </div>
+    </section>
+    <section class="person-spend-calc-section">
+      <h4 class="person-spend-calc-title">每日小計加總</h4>
+      ${dayLines || '<p class="person-spend-empty">未有按日資料</p>'}
+    </section>
+  `;
+}
+
+function renderPersonSpendList() {
+  const totalEl = $('#person-spend-total');
+  const breakdownEl = $('#person-spend-breakdown');
+  const methodHintEl = $('#person-spend-method-hint');
+  const titleEl = $('#person-spend-title');
+  if (!personSpendView.person || !personSpendView.currency) return;
+
+  const person = personSpendView.person;
+  const currency = personSpendView.currency;
+  const view = personSpendView.view || 'day';
+  const rows = getPersonSpendRows();
+  const total = rows.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+  const modeLabel = personSpendView.showSuicaTopUp ? '增值＝用咗' : '增值＝轉移';
+
+  if (titleEl) {
+    titleEl.innerHTML = `${personImg(person, 'inline')} 啲錢用咗去邊 · ${escapeHtml(currency)}`;
+  }
+  if (totalEl) {
+    totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆 · ${modeLabel}`;
+  }
+  if (breakdownEl) {
+    breakdownEl.innerHTML = rows.length
+      ? formatPersonSpendBreakdownHtml(buildPersonSpendBreakdown(rows, person, currency), currency)
+      : '';
+  }
+  if (methodHintEl) {
+    methodHintEl.textContent = personSpendView.showSuicaTopUp
+      ? '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當用咗，Suica 俾錢唔重複計；餘額調整一律當用咗。'
+      : '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當轉移，用 Suica 俾先算用咗；餘額調整一律當用咗。';
+  }
+
+  syncPersonSpendViewTabs();
+
+  if (view === 'category') {
+    renderPersonSpendCategoryPanel(rows, person, currency);
+    return;
+  }
+  if (view === 'calc') {
+    renderPersonSpendCalcPanel(rows, person, currency);
+    return;
+  }
+  if (view === 'chart') {
+    renderPersonSpendInlineChart();
+    return;
+  }
+  renderPersonSpendDayPanel(rows, person, currency);
 }
 
 function openPersonSpendModal(person, currency) {
@@ -5262,7 +5571,8 @@ function openPersonSpendModal(person, currency) {
   personSpendView.currency = currency;
   personSpendView.category = '';
   personSpendView.sort = 'date-desc';
-  // JPY 預設顯示「現金用咗」視圖（含增值／調整），同剩餘計法一致
+  personSpendView.view = 'day';
+  // JPY 預設：增值當用咗（同現金預算／剩餘常見睇法）；可切去「增值＝轉移」
   personSpendView.showSuicaTopUp = currency === 'JPY';
 
   const catEl = $('#person-spend-category');
@@ -5270,6 +5580,7 @@ function openPersonSpendModal(person, currency) {
   if (catEl) catEl.value = '';
   if (sortEl) sortEl.value = 'date-desc';
   syncPersonSpendSuicaTopUpBtn();
+  syncPersonSpendViewTabs();
 
   renderPersonSpendList();
   openModal(els.personSpendModal);
@@ -5281,12 +5592,19 @@ function closePersonSpendModal() {
   personSpendView.person = null;
   personSpendView.currency = null;
   personSpendView.showSuicaTopUp = false;
+  personSpendView.view = 'day';
 }
 
 function setupPersonSpendUI() {
   $$('.person-spend-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       openPersonSpendModal(btn.dataset.person, btn.dataset.currency);
+    });
+  });
+
+  $$('.person-spend-view-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setPersonSpendView(btn.dataset.spendView || 'day');
     });
   });
 
@@ -5304,7 +5622,6 @@ function setupPersonSpendUI() {
     personSpendView.showSuicaTopUp = !personSpendView.showSuicaTopUp;
     syncPersonSpendSuicaTopUpBtn();
     renderPersonSpendList();
-    // Keep chart in sync if it is already open.
     if (els.personSpendChartModal && !els.personSpendChartModal.classList.contains('hidden')) {
       renderPersonSpendChart();
     }
@@ -5314,7 +5631,7 @@ function setupPersonSpendUI() {
     el.addEventListener('click', closePersonSpendModal);
   });
 
-  $('#person-spend-chart-btn')?.addEventListener('click', openPersonSpendChartModal);
+  $('#person-spend-chart-btn')?.addEventListener('click', () => setPersonSpendView('chart'));
 
   $$('[data-close-person-spend-chart]').forEach((el) => {
     el.addEventListener('click', closePersonSpendChartModal);
@@ -5324,17 +5641,18 @@ function setupPersonSpendUI() {
     el.addEventListener('click', closePersonSpendChartCategoryModal);
   });
 
-  $('#person-spend-chart-legend')?.addEventListener('click', (e) => {
+  const openCategoryFromEvent = (e) => {
     const btn = e.target.closest('[data-chart-category-key]');
     if (!btn?.dataset.chartCategoryKey) return;
     openPersonSpendChartCategoryModal(decodeURIComponent(btn.dataset.chartCategoryKey));
-  });
+  };
 
-  $('#person-spend-chart-svg')?.addEventListener('click', (e) => {
-    const slice = e.target.closest('[data-chart-category-key]');
-    if (!slice?.dataset.chartCategoryKey) return;
-    openPersonSpendChartCategoryModal(decodeURIComponent(slice.dataset.chartCategoryKey));
-  });
+  $('#person-spend-chart-legend')?.addEventListener('click', openCategoryFromEvent);
+  $('#person-spend-inline-chart-legend')?.addEventListener('click', openCategoryFromEvent);
+  $('#person-spend-category-table')?.addEventListener('click', openCategoryFromEvent);
+
+  $('#person-spend-chart-svg')?.addEventListener('click', openCategoryFromEvent);
+  $('#person-spend-inline-chart-svg')?.addEventListener('click', openCategoryFromEvent);
 }
 
 function renderAll() {
@@ -5784,7 +6102,7 @@ function saveRemainDisplayPrefs() {
 }
 
 function isRemainDisplayEnabled(currency) {
-  return remainDisplayPrefs[currency] !== false;
+  return remainDisplayPrefs[currency] === true;
 }
 
 function applyRemainDisplayVisibility() {
