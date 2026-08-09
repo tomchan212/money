@@ -6081,13 +6081,12 @@ function renderPersonSpendList() {
   const view = personSpendView.view || 'day';
   const rows = getPersonSpendRows();
   const total = rows.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
-  const modeLabel = personSpendView.showSuicaTopUp ? '增值＝用咗' : '增值＝轉移';
 
   if (titleEl) {
     titleEl.innerHTML = `${personImg(person, 'inline')} 啲錢用咗去邊 · ${escapeHtml(currency)}`;
   }
   if (totalEl) {
-    totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆 · ${modeLabel}`;
+    totalEl.textContent = `合共用咗 ${formatMoney(total, currency)} · ${rows.length} 筆`;
   }
   if (breakdownEl) {
     breakdownEl.innerHTML = rows.length
@@ -6095,9 +6094,8 @@ function renderPersonSpendList() {
       : '';
   }
   if (methodHintEl) {
-    methodHintEl.textContent = personSpendView.showSuicaTopUp
-      ? '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當用咗；Suica 俾錢同餘額調整唔計。'
-      : '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當轉移；用 Suica 俾同餘額調整先算用咗。';
+    methodHintEl.textContent = '';
+    methodHintEl.hidden = true;
   }
 
   syncPersonSpendSummaryExpanded();
