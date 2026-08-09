@@ -332,6 +332,7 @@ const personSpendChartView = {
 const calculatorState = {
   targetInputSelector: '#expense-amount',
   targetCurrencySelector: '#expense-currency',
+  fixedCurrency: null,
 };
 
 /* ===== DOM References ===== */
@@ -5858,7 +5859,11 @@ function formatCalculatorExpressionForDisplay(expr) {
 }
 
 function getCalculatorCurrency() {
-  return $(calculatorState.targetCurrencySelector)?.value || $('#expense-currency')?.value || 'JPY';
+  if (calculatorState.fixedCurrency) return calculatorState.fixedCurrency;
+  if (calculatorState.targetCurrencySelector) {
+    return $(calculatorState.targetCurrencySelector)?.value || 'JPY';
+  }
+  return 'JPY';
 }
 
 function renderCalculator() {
@@ -5928,17 +5933,57 @@ function resolveCalculatorResult() {
   return result;
 }
 
-function openCalculatorModal() {
-  const amountInput = $('#expense-amount');
-  calculatorState.targetInputSelector = '#expense-amount';
-  calculatorState.targetCurrencySelector = '#expense-currency';
-  calculatorExpression = sanitizeCalculatorExpression(amountInput?.value || '');
+function openCalculatorModal(options = {}) {
+  const {
+    inputSelector = '#expense-amount',
+    currencySelector = null,
+    fixedCurrency = null,
+    contextText = '計完可以直接填返去金額',
+  } = options;
+
+  const amountInput = $(inputSelector);
+  if (!amountInput) return;
+
+  calculatorState.targetInputSelector = inputSelector;
+  calculatorState.targetCurrencySelector = currencySelector;
+  calculatorState.fixedCurrency = fixedCurrency || null;
+  calculatorExpression = sanitizeCalculatorExpression(amountInput.value || '');
+
   const contextEl = $('#calculator-context');
   if (contextEl) {
-    contextEl.textContent = '計完可以直接填返去金額';
+    contextEl.textContent = contextText;
   }
   renderCalculator();
   openModal(els.calculatorModal);
+}
+
+function resolveCalculatorCurrencyOptions(btn) {
+  if (!btn) return { currencySelector: null, fixedCurrency: null };
+
+  if (btn.dataset.calcCurrencyFromPrefix) {
+    const prefixEl = $(`#${btn.dataset.calcCurrencyFromPrefix}`);
+    const prefix = prefixEl?.value === 'edit' ? 'edit' : 'expense';
+    return {
+      currencySelector: `#${prefix}-currency`,
+      fixedCurrency: null,
+    };
+  }
+
+  return {
+    currencySelector: btn.dataset.calcCurrencyInput || null,
+    fixedCurrency: btn.dataset.calcCurrency || null,
+  };
+}
+
+function openCalculatorModalFromButton(btn) {
+  const inputSelector = btn?.dataset?.calcTarget;
+  if (!inputSelector) return;
+  const { currencySelector, fixedCurrency } = resolveCalculatorCurrencyOptions(btn);
+  openCalculatorModal({
+    inputSelector,
+    currencySelector,
+    fixedCurrency,
+  });
 }
 
 function applyCalculatorResultToTarget() {
@@ -6463,7 +6508,9 @@ function setupEventListeners() {
     const extras = getPartialExtras('edit');
     if (extras.half > 0 || extras.forOther > 0) clearAllExpensePartialExtras('edit');
   });
-  $('#btn-open-calculator')?.addEventListener('click', openCalculatorModal);
+  $$('[data-open-calculator]').forEach((btn) => {
+    btn.addEventListener('click', () => openCalculatorModalFromButton(btn));
+  });
   $('#calculator-apply-btn')?.addEventListener('click', () => {
     try {
       const targetInput = applyCalculatorResultToTarget();
