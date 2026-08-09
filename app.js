@@ -325,6 +325,8 @@ const personSpendView = {
   showSuicaTopUp: true,
   /** day | category | calc | chart */
   view: 'day',
+  /** 摘要卡（breakdown／計法說明）展開 */
+  summaryExpanded: true,
 };
 
 /** 圖表分析 → 分類 drill-down */
@@ -4991,6 +4993,544 @@ function syncPersonSpendSuicaTopUpBtn() {
   );
 }
 
+function syncPersonSpendSummaryExpanded() {
+  const summary = $('#person-spend-summary');
+  const toggle = $('#person-spend-summary-toggle');
+  const expanded = personSpendView.summaryExpanded !== false;
+  summary?.classList.toggle('is-collapsed', !expanded);
+  if (toggle) {
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    toggle.title = expanded ? '收起摘要' : '展開摘要';
+    toggle.setAttribute('aria-label', expanded ? '收起摘要' : '展開摘要');
+  }
+}
+
+function togglePersonSpendSummaryExpanded() {
+  personSpendView.summaryExpanded = personSpendView.summaryExpanded === false;
+  syncPersonSpendSummaryExpanded();
+}
+
+function personSpendPaymentMethodLabel(tx) {
+  if (isSuicaBalanceAdjust(tx)) return 'Suica 餘額調整';
+  if (isSuicaTopUp(tx)) return '現金 → Suica 增值';
+  if (isSuicaPayment(tx) || isSuicaCredit(tx)) return 'Suica';
+  return '現金';
+}
+
+function personSpendSplitReportLabel(tx, person) {
+  if (isSuicaBalanceAdjust(tx)) return '餘額調整';
+  if (isSuicaTopUp(tx)) return 'Suica 增值';
+  if (tx.split_mode === 'SPLIT_5050') return '一人一半';
+  if (isHelpPaySplit(tx)) return '對方幫你俾';
+  if (isSelfSplit(tx)) return '自己嘅';
+  if (isRepayTransaction(tx)) return '還錢';
+  if (isLoanTransaction(tx)) return '借錢';
+  return SPLIT_LABELS[tx.split_mode] || tx.split_mode || '—';
+}
+
+/** 報告用：該人該幣全部用咗（跟而家增值模式；唔受分類篩選限制；按日期由舊到新） */
+function getPersonSpendReportRows() {
+  const { person, currency } = personSpendView;
+  if (!person || !currency) return [];
+
+  return transactions
+    .filter((tx) => {
+      if (tx.currency !== currency) return false;
+      if (!isPersonSpendExpenseTx(tx)) return false;
+      const share = getPersonShare(tx, person);
+      return !isNegligibleMoney(share, currency);
+    })
+    .slice()
+    .sort((a, b) => {
+      const da = `${a.date || ''}T${formatRecordTime(a.time) || '00:00'}`;
+      const db = `${b.date || ''}T${formatRecordTime(b.time) || '00:00'}`;
+      const cmp = da.localeCompare(db);
+      if (cmp !== 0) return cmp;
+      return String(a.transaction_id || '').localeCompare(String(b.transaction_id || ''));
+    });
+}
+
+function getPersonSpendReportExcludedNotes(person, currency) {
+  const notes = [];
+  const modeOn = Boolean(personSpendView.showSuicaTopUp);
+  let repayLoan = 0;
+  let suicaPaySkipped = 0;
+  let adjustSkipped = 0;
+  let topupSkipped = 0;
+
+  for (const tx of transactions) {
+    if (tx.currency !== currency) continue;
+    const share = getPersonShare(tx, person);
+    if (isNegligibleMoney(share, currency)) continue;
+    if (isRepayTransaction(tx) || isLoanTransaction(tx)) {
+      repayLoan += 1;
+      continue;
+    }
+    if (modeOn) {
+      if (isSuicaBalanceAdjust(tx)) adjustSkipped += 1;
+      else if (isSuicaPayment(tx)) suicaPaySkipped += 1;
+    } else if (isSuicaTopUp(tx)) {
+      topupSkipped += 1;
+    }
+  }
+
+  if (repayLoan) notes.push(`還錢／借錢 ${repayLoan} 筆（唔計入用咗）`);
+  if (modeOn) {
+    if (suicaPaySkipped) notes.push(`Suica 俾錢 ${suicaPaySkipped} 筆（增值＝用咗模式唔重複計）`);
+    if (adjustSkipped) notes.push(`Suica 餘額調整 ${adjustSkipped} 筆（增值＝用咗模式唔計）`);
+  } else if (topupSkipped) {
+    notes.push(`Suica 增值 ${topupSkipped} 筆（增值＝轉移模式當轉移，唔計入用咗）`);
+  }
+  return notes;
+}
+
+function buildPersonSpendReportCategoryRows(rows, person, currency) {
+  const totals = new Map();
+  for (const tx of rows) {
+    const key = normalizeChartCategoryKey(tx.category);
+    const share = getPersonShare(tx, person);
+    const existing = totals.get(key);
+    if (existing) {
+      existing.amount += share;
+      existing.count += 1;
+    } else {
+      totals.set(key, { key, sampleCategory: tx.category, amount: share, count: 1 });
+    }
+  }
+  const total = [...totals.values()].reduce((sum, item) => sum + item.amount, 0);
+  return [...totals.values()]
+    .sort((a, b) => b.amount - a.amount)
+    .map((item) => ({
+      label: getChartCategoryLabel(item.key, item.sampleCategory),
+      amount: item.amount,
+      count: item.count,
+      pct: total > 0 ? (item.amount / total) * 100 : 0,
+    }));
+}
+
+function buildPersonSpendReportHtml() {
+  const person = personSpendView.person;
+  const currency = personSpendView.currency;
+  if (!person || !currency) return '';
+
+  const rows = getPersonSpendReportRows();
+  const total = rows.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+  const parts = buildPersonSpendBreakdown(rows, person, currency);
+  const modeLabel = personSpendView.showSuicaTopUp ? '增值＝用咗' : '增值＝轉移';
+  const modeHint = personSpendView.showSuicaTopUp
+    ? '增值計入用咗；Suica 俾錢同餘額調整唔計；唔計還錢／借錢。'
+    : '增值當轉移唔計；Suica 俾錢同餘額調整計入用咗；唔計還錢／借錢。';
+  const personLabel = personName(person);
+  const budget = Number(budgets?.[person]?.[currency]) || 0;
+  const remaining = budget - total;
+  const generatedAt = new Date();
+  const generatedText = generatedAt.toLocaleString('zh-Hant', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+  const rateText =
+    currency === 'JPY' && exchangeRateJpyHkd
+      ? `目前匯率設定：1 JPY ≈ ${escapeHtml(String(exchangeRateJpyHkd))} HKD`
+      : '';
+
+  let walletHtml = '';
+  if (currency === 'JPY') {
+    const wallet = calcSuicaWallet(person);
+    walletHtml = `
+      <section class="rpt-section">
+        <h2>Suica 錢包狀況</h2>
+        <table>
+          <tbody>
+            <tr><th>出發前原有</th><td>${escapeHtml(formatMoney(wallet.initial, 'JPY'))}</td></tr>
+            <tr><th>其後增值合共</th><td>${escapeHtml(formatMoney(wallet.toppedUp, 'JPY'))}</td></tr>
+            <tr><th>已用 Suica 俾</th><td>${escapeHtml(formatMoney(wallet.spent, 'JPY'))}</td></tr>
+            <tr><th>而家餘額</th><td>${escapeHtml(formatMoney(wallet.balance, 'JPY'))}</td></tr>
+          </tbody>
+        </table>
+      </section>`;
+  }
+
+  const partRows = [
+    ['自己嘅', parts.self],
+    ['一人一半（你份）', parts.half],
+    ['對方幫你俾', parts.helped],
+    ['Suica 增值', parts.topup],
+    ['餘額調整', parts.adjust],
+    ['其他', parts.other],
+  ]
+    .filter(([, amount]) => !isNegligibleMoney(amount, currency))
+    .map(
+      ([label, amount]) =>
+        `<tr><td>${escapeHtml(label)}</td><td class="num">${escapeHtml(formatMoney(amount, currency))}</td></tr>`
+    )
+    .join('');
+
+  const categoryRows = buildPersonSpendReportCategoryRows(rows, person, currency)
+    .map(
+      (item) => `<tr>
+        <td>${escapeHtml(item.label)}</td>
+        <td class="num">${item.count}</td>
+        <td class="num">${escapeHtml(formatChartPct(item.pct))}</td>
+        <td class="num">${escapeHtml(formatMoney(item.amount, currency))}</td>
+      </tr>`
+    )
+    .join('');
+
+  const dayGroups = groupPersonSpendRowsByDate(rows);
+  const daySummaryRows = dayGroups
+    .map((group) => {
+      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
+      return `<tr>
+        <td>${escapeHtml(dayLabel)}</td>
+        <td class="num">${group.items.length}</td>
+        <td class="num">${escapeHtml(formatMoney(dayTotal, currency))}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const detailRows = rows
+    .map((tx, index) => {
+      const share = getPersonShare(tx, person);
+      const full = Number(tx.amount) || 0;
+      const time = formatRecordTime(tx.time) || '—';
+      const location = getLocationText(tx) || '—';
+      const desc = getDisplayDescription(tx) || '—';
+      const aShare = Number(tx.a_share) || 0;
+      const bShare = Number(tx.b_share) || 0;
+      return `<tr>
+        <td class="num">${index + 1}</td>
+        <td>${escapeHtml(tx.date || '—')}</td>
+        <td>${escapeHtml(time)}</td>
+        <td>${escapeHtml(getTransactionTitle(tx))}</td>
+        <td>${escapeHtml(getCategoryLabel(tx.category) || '雜項')}</td>
+        <td>${escapeHtml(personSpendSplitReportLabel(tx, person))}</td>
+        <td>${escapeHtml(personSpendPaymentMethodLabel(tx))}</td>
+        <td>${escapeHtml(personName(tx.payer))}</td>
+        <td class="num">${escapeHtml(formatMoney(full, currency))}</td>
+        <td class="num">${escapeHtml(formatMoney(aShare, currency))}</td>
+        <td class="num">${escapeHtml(formatMoney(bShare, currency))}</td>
+        <td class="num strong">${escapeHtml(formatMoney(share, currency))}</td>
+        <td>${escapeHtml(desc)}</td>
+        <td>${escapeHtml(location)}</td>
+        <td class="mono">${escapeHtml(String(tx.transaction_id || getTxKey(tx) || '—'))}</td>
+      </tr>`;
+    })
+    .join('');
+
+  const dayDetailSections = dayGroups
+    .map((group) => {
+      const dayTotal = group.items.reduce((sum, tx) => sum + getPersonShare(tx, person), 0);
+      const dayLabel = group.date ? formatDayHeader(group.date) : '無日期';
+      const lines = group.items
+        .map((tx) => {
+          const share = getPersonShare(tx, person);
+          const time = formatRecordTime(tx.time);
+          return `<li>
+            <span class="line-main">${escapeHtml(time ? `${time} · ` : '')}${escapeHtml(getTransactionTitle(tx))}</span>
+            <span class="line-meta">${escapeHtml(getCategoryLabel(tx.category) || '雜項')} · ${escapeHtml(personSpendSplitReportLabel(tx, person))} · ${escapeHtml(personSpendPaymentMethodLabel(tx))}</span>
+            <span class="line-amt">${escapeHtml(formatMoney(share, currency))}</span>
+          </li>`;
+        })
+        .join('');
+      return `<div class="day-block">
+        <div class="day-head"><strong>${escapeHtml(dayLabel)}</strong><span>${group.items.length} 筆 · ${escapeHtml(formatMoney(dayTotal, currency))}</span></div>
+        <ul class="day-lines">${lines}</ul>
+      </div>`;
+    })
+    .join('');
+
+  const excludedNotes = getPersonSpendReportExcludedNotes(person, currency);
+  const excludedHtml = excludedNotes.length
+    ? `<ul class="note-list">${excludedNotes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>`
+    : '<p class="muted">呢個模式下未有額外排除項目要列出。</p>';
+
+  const filterNote = personSpendView.category
+    ? `畫面而家篩咗分類「${getCategoryLabel(personSpendView.category) || personSpendView.category}」，但本報告輸出<strong>全部分類</strong>完整明細。`
+    : '本報告輸出目前計法下嘅<strong>全部分類</strong>完整明細。';
+
+  return `<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHtml(personLabel)} 用咗明細報告 · ${escapeHtml(currency)}</title>
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #1d1a1b;
+      font: 11px/1.45 -apple-system, BlinkMacSystemFont, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+      background: #fff;
+    }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    h2 {
+      font-size: 13px;
+      margin: 0 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1.5px solid #222;
+    }
+    h3 { font-size: 12px; margin: 0 0 6px; }
+    .muted { color: #666; }
+    .cover {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #111;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f0f4f8;
+      border: 1px solid #cfd8e3;
+      font-weight: 700;
+      font-size: 10px;
+    }
+    .rpt-section { margin: 0 0 14px; break-inside: avoid; }
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin: 8px 0 0;
+    }
+    .kpi div {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: #fafafa;
+    }
+    .kpi strong { display: block; font-size: 13px; margin-top: 2px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+    th, td {
+      border: 1px solid #d8d8d8;
+      padding: 4px 5px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #f3f3f3; font-weight: 700; }
+    td.num, th.num { text-align: right; white-space: nowrap; }
+    td.strong { font-weight: 700; }
+    td.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 8.5px; word-break: break-all; }
+    .detail-table { font-size: 8.5px; }
+    .detail-table th, .detail-table td { padding: 3px 3px; }
+    .day-block {
+      border: 1px solid #e4e4e4;
+      border-radius: 6px;
+      margin: 0 0 8px;
+      padding: 6px 8px;
+      break-inside: avoid;
+    }
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+    .day-lines { list-style: none; margin: 0; padding: 0; }
+    .day-lines li {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2px 10px;
+      padding: 3px 0;
+      border-top: 1px dashed #ececec;
+      font-size: 10px;
+    }
+    .line-meta { grid-column: 1; color: #666; font-size: 9px; }
+    .line-amt { grid-row: 1 / span 2; align-self: center; font-weight: 700; white-space: nowrap; }
+    .note-list { margin: 0; padding-left: 18px; }
+    .footer {
+      margin-top: 16px;
+      padding-top: 8px;
+      border-top: 1px solid #ccc;
+      color: #666;
+      font-size: 9px;
+    }
+    @media print {
+      .no-print { display: none !important; }
+      a { color: inherit; text-decoration: none; }
+    }
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      gap: 8px;
+      padding: 8px 0 10px;
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 12px;
+    }
+    .toolbar button {
+      font: inherit;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #2f5f8f;
+      background: #2f5f8f;
+      color: #fff;
+      cursor: pointer;
+    }
+    .toolbar button.secondary {
+      background: #fff;
+      color: #2f5f8f;
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <button type="button" onclick="window.print()">儲存／列印 PDF</button>
+    <button type="button" class="secondary" onclick="window.close()">關閉</button>
+    <span class="muted">提示：列印對話框請揀「儲存為 PDF」</span>
+  </div>
+  <header class="cover">
+    <div>
+      <h1>${escapeHtml(personLabel)} · 用咗明細報告</h1>
+      <p class="muted" style="margin:0">日本旅遊記帳 · ${escapeHtml(currency)} · 產生時間 ${escapeHtml(generatedText)}</p>
+      <p style="margin:6px 0 0"><span class="badge">${escapeHtml(modeLabel)}</span></p>
+    </div>
+    <div style="text-align:right">
+      <div><strong>合共用咗</strong></div>
+      <div style="font-size:20px;font-weight:800">${escapeHtml(formatMoney(total, currency))}</div>
+      <div class="muted">${rows.length} 筆</div>
+    </div>
+  </header>
+
+  <section class="rpt-section">
+    <h2>1. 報告說明</h2>
+    <p>${escapeHtml(modeHint)}</p>
+    <p class="muted">${filterNote}</p>
+    ${rateText ? `<p class="muted">${rateText}</p>` : ''}
+  </section>
+
+  <section class="rpt-section">
+    <h2>2. 總覽</h2>
+    <div class="kpi">
+      <div><span class="muted">預算</span><strong>${escapeHtml(formatMoney(budget, currency))}</strong></div>
+      <div><span class="muted">用咗</span><strong>${escapeHtml(formatMoney(total, currency))}</strong></div>
+      <div><span class="muted">剩餘</span><strong>${escapeHtml(formatMoney(remaining, currency))}</strong></div>
+      <div><span class="muted">筆數</span><strong>${rows.length}</strong></div>
+    </div>
+  </section>
+
+  ${walletHtml}
+
+  <section class="rpt-section">
+    <h2>3. 計法拆解</h2>
+    <table>
+      <thead><tr><th>項目</th><th class="num">金額</th></tr></thead>
+      <tbody>
+        ${partRows || '<tr><td colspan="2">未有資料</td></tr>'}
+        <tr><th>合共用咗</th><th class="num">${escapeHtml(formatMoney(total, currency))}</th></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="rpt-section">
+    <h2>4. 分類統計</h2>
+    <table>
+      <thead>
+        <tr><th>分類</th><th class="num">筆數</th><th class="num">占比</th><th class="num">金額</th></tr>
+      </thead>
+      <tbody>
+        ${categoryRows || '<tr><td colspan="4">未有資料</td></tr>'}
+        <tr><th>合共</th><th class="num">${rows.length}</th><th class="num">100%</th><th class="num">${escapeHtml(formatMoney(total, currency))}</th></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="rpt-section">
+    <h2>5. 每日小計</h2>
+    <table>
+      <thead><tr><th>日期</th><th class="num">筆數</th><th class="num">當日用咗</th></tr></thead>
+      <tbody>${daySummaryRows || '<tr><td colspan="3">未有資料</td></tr>'}</tbody>
+    </table>
+  </section>
+
+  <section class="rpt-section">
+    <h2>6. 按日流水明細</h2>
+    ${dayDetailSections || '<p class="muted">未有資料</p>'}
+  </section>
+
+  <section class="rpt-section">
+    <h2>7. 完整交易明細表</h2>
+    <p class="muted">欄位包含：全額、男孩份額、女生份額、以及「${escapeHtml(personLabel)}」計入用咗嘅份額。</p>
+    <table class="detail-table">
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>日期</th>
+          <th>時間</th>
+          <th>項目</th>
+          <th>分類</th>
+          <th>計法</th>
+          <th>付款方式</th>
+          <th>邊個俾</th>
+          <th class="num">全額</th>
+          <th class="num">男孩份</th>
+          <th class="num">女生份</th>
+          <th class="num">${escapeHtml(personLabel)}計入</th>
+          <th>描述</th>
+          <th>地點</th>
+          <th>交易 ID</th>
+        </tr>
+      </thead>
+      <tbody>${detailRows || '<tr><td colspan="15">未有資料</td></tr>'}</tbody>
+    </table>
+  </section>
+
+  <section class="rpt-section">
+    <h2>8. 未計入／排除說明</h2>
+    ${excludedHtml}
+  </section>
+
+  <footer class="footer">
+    由「日本旅遊記帳」自動產生 · ${escapeHtml(personLabel)} · ${escapeHtml(currency)} · ${escapeHtml(modeLabel)} · ${escapeHtml(generatedText)}
+  </footer>
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); }, 350);
+    });
+  </script>
+</body>
+</html>`;
+}
+
+function exportPersonSpendPdfReport() {
+  if (!personSpendView.person || !personSpendView.currency) {
+    showToast('未有可匯出嘅用咗資料', 'error');
+    return;
+  }
+  const html = buildPersonSpendReportHtml();
+  if (!html) {
+    showToast('產生報告失敗', 'error');
+    return;
+  }
+
+  const reportWindow = window.open('', '_blank');
+  if (!reportWindow) {
+    showToast('瀏覽器阻擋咗彈窗，請允許彈窗後再試', 'error');
+    return;
+  }
+  reportWindow.document.open();
+  reportWindow.document.write(html);
+  reportWindow.document.close();
+  showToast('已開啟明細報告，請喺列印對話框揀「儲存為 PDF」', 'info');
+}
+
 function personSpendShareKindLabel(tx, person) {
   if (isSuicaBalanceAdjust(tx)) return '餘額調整';
   if (isSuicaTopUp(tx)) return 'Suica 增值';
@@ -5560,6 +6100,7 @@ function renderPersonSpendList() {
       : '只計真正用／買嘅份額；唔計還錢、借錢。而家增值當轉移；用 Suica 俾同餘額調整先算用咗。';
   }
 
+  syncPersonSpendSummaryExpanded();
   syncPersonSpendViewTabs();
 
   if (view === 'category') {
@@ -5586,6 +6127,7 @@ function openPersonSpendModal(person, currency) {
   personSpendView.view = 'day';
   // 預設：增值＝用咗（JPY）；可切去「增值＝轉移」
   personSpendView.showSuicaTopUp = currency === 'JPY';
+  personSpendView.summaryExpanded = true;
 
   const catEl = $('#person-spend-category');
   const sortEl = $('#person-spend-sort');
@@ -5639,11 +6181,12 @@ function setupPersonSpendUI() {
     }
   });
 
+  $('#person-spend-summary-toggle')?.addEventListener('click', togglePersonSpendSummaryExpanded);
+  $('#person-spend-export-pdf')?.addEventListener('click', exportPersonSpendPdfReport);
+
   $$('[data-close-person-spend]').forEach((el) => {
     el.addEventListener('click', closePersonSpendModal);
   });
-
-  $('#person-spend-chart-btn')?.addEventListener('click', () => setPersonSpendView('chart'));
 
   $$('[data-close-person-spend-chart]').forEach((el) => {
     el.addEventListener('click', closePersonSpendChartModal);

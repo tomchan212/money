@@ -3037,18 +3037,23 @@ button.suica-wallet-card:focus-visible {
 
 .person-spend-filters .filter-item-icon-field .form-icon-field {
   width: 100%;
+  gap: 0.3rem;
 }
 
 .person-spend-filters .form-icon-field > select {
   width: 100%;
+  min-height: 1.85rem;
+  height: 1.85rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  padding: 0.15rem 0.4rem;
 }
 
 /* Icon-rail control alignment: text height matches adjacent icon box */
 .form-icon-field > input[type="date"],
 .form-icon-field > input[type="text"]:not(.money-input),
 .form-icon-field > select,
-.filter-item .form-icon-field > select,
-.person-spend-filters .form-icon-field > select {
+.filter-item .form-icon-field > select {
   min-height: var(--icon-rail);
   font-size: var(--type-control);
   line-height: 1.35;
@@ -5855,11 +5860,96 @@ button.suica-wallet-card:focus-visible {
   border: 1.5px solid #f0e4e8;
 }
 
+.person-spend-total-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .person-spend-total {
   margin: 0;
+  flex: 1;
+  min-width: 0;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--text-dark);
+  line-height: 1.35;
+}
+
+.modal-content-person-spend .modal-header-actions .person-spend-suica-topup-btn,
+.modal-content-person-spend .modal-header-actions .person-spend-export-pdf-btn {
+  white-space: nowrap;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.person-spend-export-pdf-btn {
+  appearance: none;
+  border: 1.5px solid #d7e3f4;
+  border-radius: calc(var(--radius-sm) + 0.1rem);
+  background: #f4f8fd;
+  color: #2f5f8f;
+  font: inherit;
+  font-size: var(--type-label);
+  font-weight: 600;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.person-spend-export-pdf-btn:hover,
+.person-spend-export-pdf-btn:focus-visible {
+  border-color: rgba(47, 95, 143, 0.55);
+  background: #eaf2fb;
+  outline: none;
+}
+
+.person-spend-summary-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin: -0.25rem -0.25rem 0 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted, #7a6e74);
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+
+.person-spend-summary-toggle:hover,
+.person-spend-summary-toggle:focus-visible {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-dark);
+  outline: none;
+}
+
+.person-spend-summary-chevron {
+  display: inline-block;
+  font-size: 1.7rem;
+  line-height: 1;
+  transition: transform 0.15s ease;
+}
+
+.person-spend-summary.is-collapsed .person-spend-summary-chevron {
+  transform: rotate(-90deg);
+}
+
+.person-spend-summary.is-collapsed .person-spend-summary-body {
+  display: none;
+}
+
+.person-spend-summary-body {
+  margin: 0;
 }
 
 .person-spend-breakdown {
@@ -5937,8 +6027,8 @@ button.suica-wallet-card:focus-visible {
 .person-spend-view-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.35rem;
-  margin: 0 0 0.7rem;
+  gap: 0.3rem;
+  margin: 0 0 0.5rem;
 }
 
 .person-spend-view-tab {
@@ -5948,9 +6038,9 @@ button.suica-wallet-card:focus-visible {
   background: #fff;
   color: var(--text-muted, #7a6e74);
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.45rem 0.35rem;
+  padding: 0.28rem 0.3rem;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
@@ -6133,12 +6223,58 @@ button.person-spend-cat-row:focus-visible {
 .person-spend-filters {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.person-spend-filters .filter-item-icon-field .form-icon-field {
+  gap: 0.3rem;
+}
+
+.person-spend-filters .form-field-icon {
+  width: 1.85rem;
+  min-height: 1.85rem;
+  border-width: 1px;
+  border-radius: 0.4rem;
+}
+
+.person-spend-filters .form-field-icon-img,
+.person-spend-filters .form-field-icon .ui-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  min-width: 1.15rem;
+  min-height: 1.15rem;
+}
+
+.person-spend-filters .filter-item .form-icon-field > select,
+.person-spend-filters .form-icon-field > select,
+.person-spend-filters select {
+  width: 100%;
+  min-height: 1.85rem;
+  height: 1.85rem;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border-soft, #efe6ea);
+  background: #fff;
+  color: var(--text-dark);
+}
+
+.person-spend-filters .filter-item label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.12em;
+  font-size: var(--type-micro);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.15rem;
 }
 
 .person-spend-suica-topup-btn {
-  grid-column: 1 / -1;
   appearance: none;
   border: 1.5px solid #ece6e9;
   border-radius: calc(var(--radius-sm) + 0.1rem);
@@ -6167,27 +6303,6 @@ button.person-spend-cat-row:focus-visible {
   border-color: rgba(31, 122, 84, 0.55);
   background: rgba(31, 122, 84, 0.1);
   color: #1f7a54;
-}
-
-.person-spend-filters .filter-item label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.12em;
-  font-size: var(--type-micro);
-  font-weight: 600;
-  color: var(--text-muted);
-  margin-bottom: 0.25rem;
-}
-
-.person-spend-filters select {
-  width: 100%;
-  font: inherit;
-  font-size: var(--type-label);
-  padding: 0.4rem 0.45rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-soft, #efe6ea);
-  background: #fff;
 }
 
 .person-spend-list {

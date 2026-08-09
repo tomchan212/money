@@ -10,10 +10,10 @@
   <link rel="apple-touch-icon" href="icon.png">
   <link rel="preload" href="boy.png" as="image">
   <link rel="preload" href="girl.png" as="image">
-  <link rel="stylesheet" href="styles.css?v=20260809summary4">
+  <link rel="stylesheet" href="styles.css?v=20260809pdf1">
   <script src="offlineQueue.js?v=20260730oq2" defer></script>
   <script src="syncManager.js?v=20260809syncfix" defer></script>
-  <script src="app.js?v=20260809summary4" defer></script>
+  <script src="app.js?v=20260809pdf1" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -1109,21 +1109,45 @@
       <div class="modal-header modal-header-with-actions">
         <h3 id="person-spend-title">啲錢用咗去邊</h3>
         <div class="modal-header-actions">
-          <button type="button" class="person-spend-chart-btn" id="person-spend-chart-btn" aria-label="圖表分析">
-            <svg class="person-spend-chart-btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"></circle>
-              <path d="M12 12 L12 2 A10 10 0 0 1 20.5 15 Z" fill="currentColor" opacity="0.85"></path>
-              <path d="M12 12 L20.5 15 A10 10 0 0 1 7 21 Z" fill="currentColor" opacity="0.55"></path>
-            </svg>
-            圖表
+          <button
+            type="button"
+            class="person-spend-suica-topup-btn"
+            id="person-spend-show-suica-topup"
+            aria-pressed="false"
+            title="撳一下切換：增值當用咗／增值當轉移去錢包"
+          >
+            增值＝轉移
+          </button>
+          <button
+            type="button"
+            class="person-spend-export-pdf-btn"
+            id="person-spend-export-pdf"
+            title="匯出超詳細用咗明細 PDF"
+          >
+            匯出 PDF
           </button>
           <button type="button" class="modal-close" data-close-person-spend aria-label="關閉">&times;</button>
         </div>
       </div>
       <div class="person-spend-summary" id="person-spend-summary">
-        <p id="person-spend-total" class="person-spend-total">—</p>
-        <p id="person-spend-breakdown" class="person-spend-breakdown" aria-live="polite"></p>
-        <p id="person-spend-method-hint" class="person-spend-method-hint">只計呢個人真正用／買嘅份額；唔計還錢、借錢。</p>
+        <div class="person-spend-total-row">
+          <p id="person-spend-total" class="person-spend-total">—</p>
+          <button
+            type="button"
+            class="person-spend-summary-toggle"
+            id="person-spend-summary-toggle"
+            aria-expanded="true"
+            aria-controls="person-spend-summary-body"
+            title="收起／展開摘要"
+            aria-label="收起／展開摘要"
+          >
+            <span class="person-spend-summary-chevron" aria-hidden="true">▾</span>
+          </button>
+        </div>
+        <div id="person-spend-summary-body" class="person-spend-summary-body">
+          <p id="person-spend-breakdown" class="person-spend-breakdown" aria-live="polite"></p>
+          <p id="person-spend-method-hint" class="person-spend-method-hint">只計呢個人真正用／買嘅份額；唔計還錢、借錢。</p>
+        </div>
       </div>
       <div class="person-spend-view-tabs" role="tablist" aria-label="呈現方式">
         <button type="button" class="person-spend-view-tab is-active" role="tab" data-spend-view="day" aria-selected="true">按日</button>
@@ -1161,15 +1185,6 @@
             </select>
           </div>
         </div>
-        <button
-          type="button"
-          class="person-spend-suica-topup-btn"
-          id="person-spend-show-suica-topup"
-          aria-pressed="false"
-          title="撳一下切換：增值當用咗／增值當轉移去錢包"
-        >
-          增值＝轉移
-        </button>
       </div>
       <div class="person-spend-panels">
         <div class="person-spend-panel" id="person-spend-panel-day" data-spend-panel="day">
