@@ -5521,7 +5521,7 @@ function buildPersonSpendReportHtml() {
   <header class="cover">
     <div>
       <h1>${escapeHtml(personLabel)} · 用咗明細報告</h1>
-      <p class="cover-meta">日本旅遊記帳 · ${escapeHtml(currency)} · ${escapeHtml(generatedText)}${rateText ? ` · ${rateText}` : ''}</p>
+      <p class="cover-meta">日本記帳 · ${escapeHtml(currency)} · ${escapeHtml(generatedText)}${rateText ? ` · ${rateText}` : ''}</p>
       <span class="badge">${escapeHtml(modeLabel)}</span>
     </div>
     <div class="cover-total">
@@ -5610,7 +5610,7 @@ function buildPersonSpendReportHtml() {
   </section>
 
   <footer class="footer">
-    日本旅遊記帳 · ${escapeHtml(personLabel)} · ${escapeHtml(currency)} · ${escapeHtml(modeLabel)} · ${escapeHtml(generatedText)}
+    日本記帳 · ${escapeHtml(personLabel)} · ${escapeHtml(currency)} · ${escapeHtml(modeLabel)} · ${escapeHtml(generatedText)}
   </footer>
   <script>
     window.addEventListener('load', function () {

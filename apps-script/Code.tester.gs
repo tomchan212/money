@@ -1,5 +1,5 @@
 /**
- * 日本旅遊記帳 — Google Apps Script 後端（測試 / Tester）
+ * 日本記帳 — Google Apps Script 後端（測試 / Tester）
  * 對應試算表分頁：Transactions / Budgets / Summary
  *
  * 試算表：
